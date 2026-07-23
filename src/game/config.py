@@ -68,3 +68,37 @@ FLOOR_B: Final[tuple[int, int, int]] = (32, 32, 48)
 FRAGMENT_COLOR: Final[tuple[int, int, int]] = (90, 200, 255)
 CORE_COLOR: Final[tuple[int, int, int]] = (120, 255, 180)
 PLAYER_COLOR: Final[tuple[int, int, int]] = (240, 240, 255)
+
+# --- Combat: player -----------------------------------------------------------
+PLAYER_MAX_HP: Final[float] = 100.0
+
+# --- Combat: dodge ------------------------------------------------------------
+DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash
+DODGE_DURATION: Final[float] = 0.18  # seconds of dash movement
+DODGE_IFRAMES: Final[float] = 0.30  # seconds of invulnerability
+DODGE_COOLDOWN: Final[float] = 0.80  # seconds before dodging again
+RESPAWN_DELAY: Final[float] = 2.0  # seconds dead before respawn
+RESPAWN_IFRAMES: Final[float] = 1.5  # invulnerability granted on respawn
+
+# --- Combat: virus enemy ------------------------------------------------------
+VIRUS_HP: Final[float] = 30.0
+VIRUS_SPEED: Final[float] = 140.0  # px/s toward the player
+VIRUS_RADIUS: Final[float] = 11.0
+VIRUS_CONTACT_DPS: Final[float] = 20.0  # hp/s while touching the player
+VIRUS_SPAWN_INTERVAL: Final[float] = 3.0
+VIRUS_SPAWN_MAX: Final[int] = 15
+
+# --- Combat: weapon / projectile ----------------------------------------------
+WEAPON_DAMAGE: Final[float] = 12.0
+WEAPON_FIRE_RATE: Final[float] = 4.0  # shots per second while held
+PROJECTILE_SPEED: Final[float] = 520.0  # px/s
+PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
+PROJECTILE_RADIUS: Final[float] = 4.0
+
+# --- Combat: trojan -----------------------------------------------------------
+TROJAN_CHANCE: Final[float] = 0.15  # chance a spawned fragment is a trap
+
+# --- Combat: colours (RGB) ----------------------------------------------------
+VIRUS_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
+PROJECTILE_COLOR: Final[tuple[int, int, int]] = (255, 240, 150)
+HP_COLOR: Final[tuple[int, int, int]] = (220, 70, 80)
