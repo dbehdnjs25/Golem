@@ -1,5 +1,6 @@
 import pygame
 
+from game.entities.enemy import Virus
 from game.entities.projectile import Projectile
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
@@ -51,3 +52,30 @@ def test_no_fire_on_degenerate_aim():
         fire_timer=0.0,
     )
     assert shots == []
+
+
+def test_projectile_hits_and_kills_enemy():
+    enemy = Virus(pos=pygame.Vector2(100, 100), hp=5)
+    shot = Projectile(pos=pygame.Vector2(100, 100), vel=pygame.Vector2(0, 0), damage=5)
+    projectiles = [shot]
+    enemies = [enemy]
+    combat.update_projectiles(0.016, projectiles, enemies, (2400, 1600))
+    assert projectiles == []  # consumed on hit
+    assert enemies == []  # died at 0 hp
+
+
+def test_projectile_misses_and_survives():
+    enemy = Virus(pos=pygame.Vector2(1000, 1000), hp=5)
+    shot = Projectile(pos=pygame.Vector2(0, 0), vel=pygame.Vector2(10, 0), damage=5, ttl=1.0)
+    projectiles = [shot]
+    enemies = [enemy]
+    combat.update_projectiles(0.016, projectiles, enemies, (2400, 1600))
+    assert len(projectiles) == 1
+    assert len(enemies) == 1
+
+
+def test_expired_projectile_removed():
+    shot = Projectile(pos=pygame.Vector2(0, 0), vel=pygame.Vector2(0, 0), damage=5, ttl=0.01)
+    projectiles = [shot]
+    combat.update_projectiles(0.02, projectiles, [], (2400, 1600))
+    assert projectiles == []
