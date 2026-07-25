@@ -86,3 +86,8 @@ def update_enemies(
             continue
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
             player.hp -= config.VIRUS_CONTACT_DPS * dt
+
+
+def apply_death_penalty(backpack: Folder) -> None:
+    """Halve the backpack's item count, rounding up. Documents are untouched."""
+    backpack.count = (backpack.count + 1) // 2

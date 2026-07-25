@@ -1,9 +1,11 @@
 import pygame
+import pytest
 
 from game import config
 from game.entities.enemy import Virus
 from game.entities.player import Player
 from game.entities.projectile import Projectile
+from game.inventory.storage import Folder
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
 
@@ -102,3 +104,10 @@ def test_distant_enemy_deals_no_damage():
     enemy = Virus(pos=pygame.Vector2(2000, 1500))
     combat.update_enemies(0.5, [enemy], player, (2400, 1600))
     assert player.hp == config.PLAYER_MAX_HP
+
+
+@pytest.mark.parametrize("start,expected", [(5, 3), (4, 2), (1, 1), (0, 0)])
+def test_death_penalty_halves_round_up(start, expected):
+    backpack = Folder(cap_mb=1000, count=start)
+    combat.apply_death_penalty(backpack)
+    assert backpack.count == expected
