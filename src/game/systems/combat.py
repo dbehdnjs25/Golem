@@ -61,7 +61,6 @@ def update_projectiles(
     bounds: tuple[int, int],
 ) -> None:
     surviving: list[Projectile] = []
-    any_killed = False
     for shot in projectiles:
         shot.update(dt)
         if shot.is_expired or not _in_bounds(shot.pos, bounds):
@@ -69,12 +68,11 @@ def update_projectiles(
         hit = _first_hit(shot, enemies)
         if hit is not None:
             hit.damage(shot.damage)
-            any_killed = any_killed or hit.is_dead
             continue  # projectile consumed
         surviving.append(shot)
     projectiles[:] = surviving
-    if any_killed:  # skip rebuilding the list on the common no-kill frame
-        enemies[:] = [e for e in enemies if not e.is_dead]
+    # cull unconditionally: dead is dead, whatever killed it
+    enemies[:] = [e for e in enemies if not e.is_dead]
 
 
 def update_enemies(
