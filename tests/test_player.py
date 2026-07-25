@@ -30,3 +30,35 @@ def test_clamped_to_bounds():
     p.update(1.0, pygame.Vector2(-1, -1), (2400, 1600))
     assert p.pos.x == config.PLAYER_RADIUS
     assert p.pos.y == config.PLAYER_RADIUS
+
+
+def test_dodge_grants_iframes_and_cooldown():
+    p = Player(pos=pygame.Vector2(500, 500))
+    assert p.invulnerable is False
+    p.update(0.0, pygame.Vector2(0, 0), (2400, 1600), dodge_pressed=True)
+    assert p.invulnerable is True
+    assert p.dodge_cooldown_timer == config.DODGE_COOLDOWN
+
+
+def test_dodge_iframes_expire():
+    p = Player(pos=pygame.Vector2(500, 500))
+    p.update(0.0, pygame.Vector2(0, 0), (2400, 1600), dodge_pressed=True)
+    p.update(config.DODGE_IFRAMES, pygame.Vector2(0, 0), (2400, 1600))
+    assert p.invulnerable is False
+
+
+def test_dodge_dashes_faster_when_moving():
+    normal = Player(pos=pygame.Vector2(500, 500))
+    normal.update(config.DODGE_DURATION, pygame.Vector2(1, 0), (2400, 1600))
+    dashed = Player(pos=pygame.Vector2(500, 500))
+    dashed.update(config.DODGE_DURATION, pygame.Vector2(1, 0), (2400, 1600), dodge_pressed=True)
+    assert dashed.pos.x > normal.pos.x
+
+
+def test_dodge_blocked_during_cooldown():
+    p = Player(pos=pygame.Vector2(500, 500))
+    p.update(0.0, pygame.Vector2(0, 0), (2400, 1600), dodge_pressed=True)
+    p.update(config.DODGE_IFRAMES, pygame.Vector2(0, 0), (2400, 1600))  # iframes end, still cooling
+    assert p.invulnerable is False
+    p.update(0.0, pygame.Vector2(0, 0), (2400, 1600), dodge_pressed=True)  # re-press mid-cooldown
+    assert p.invulnerable is False  # blocked
