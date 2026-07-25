@@ -11,13 +11,16 @@ import pygame
 from game import config
 from game.core.scene import Scene
 from game.entities.core import Core
+from game.entities.enemy import Virus
 from game.entities.fragment import Fragment
 from game.entities.player import Player
+from game.entities.projectile import Projectile
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Folder, transfer
-from game.items.tools import MiningTool
-from game.systems import mining
+from game.items.tools import MiningTool, WeaponTool
+from game.systems import combat, mining
 from game.systems.camera import LOCKED, Camera
+from game.systems.enemy_spawner import EnemySpawner
 from game.systems.spawner import Spawner
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
@@ -38,12 +41,19 @@ class PlayScene(Scene):
         self.backpack = Folder(cap_mb=config.BACKPACK_CAP_MB)
         self.documents = Folder(cap_mb=config.DOCUMENTS_CAP_MB)
         self.hotbar = Hotbar.create()
-        # slot 0 holds the mining tool; the other unlocked slot (key "2") is
-        # reserved for the weapon, added by the combat milestone.
+        # slot 0 mines (key "1"); slot 1 shoots (key "2").
         self.hotbar.slots[0] = MiningTool()
+        self.hotbar.slots[1] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()
         self.rng = random.Random(1234)
+
+        self.enemies: list[Virus] = []
+        self.projectiles: list[Projectile] = []
+        self.enemy_spawner = EnemySpawner()
+        self._fire_timer = 0.0
+        self._dodge_pressed = False
+        self._respawn_timer = 0.0
 
         self._held_keys: set[int] = set()
         self._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2)
@@ -60,6 +70,8 @@ class PlayScene(Scene):
                 self.hotbar.select(1)
             elif event.key == pygame.K_y:
                 self.camera.toggle_lock(self.player.pos)
+            elif event.key == pygame.K_SPACE:
+                self._dodge_pressed = True
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -85,21 +97,55 @@ class PlayScene(Scene):
 
     # --- logic -----------------------------------------------------------
     def update(self, dt: float) -> None:
-        self.player.update(dt, self._move_dir(), config.WORLD_SIZE)
+        if self._respawn_timer > 0:
+            self._respawn_timer -= dt
+            if self._respawn_timer <= 0:
+                self.player.pos = pygame.Vector2(self.core.pos)
+                self.player.hp = self.player.max_hp
+                self.player.iframe_timer = config.RESPAWN_IFRAMES
+            self._dodge_pressed = False
+            return
+
+        self.player.update(dt, self._move_dir(), config.WORLD_SIZE, self._dodge_pressed)
+        self._dodge_pressed = False
         self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
         aim_world = self.camera.screen_to_world(self._mouse_screen)
+
+        tool = self.hotbar.active_tool
         mining.update_mining(
             dt,
-            active_tool=self.hotbar.active_tool,
+            active_tool=tool,
             held=self._mouse_held,
             aim_world=aim_world,
             player_pos=self.player.pos,
             fragments=self.fragments,
             backpack=self.backpack,
         )
-        self.spawner.update(dt, self.fragments, self.core, self.rng)
+        self._fire_timer, shots = combat.fire_weapon(
+            dt,
+            weapon=tool,
+            held=self._mouse_held,
+            aim_world=aim_world,
+            player_pos=self.player.pos,
+            fire_timer=self._fire_timer,
+        )
+        self.projectiles.extend(shots)
+        combat.update_projectiles(dt, self.projectiles, self.enemies, config.WORLD_SIZE)
+        combat.update_enemies(dt, self.enemies, self.player, config.WORLD_SIZE)
+
+        new_fragment = self.spawner.update(dt, self.fragments, self.core, self.rng)
+        if new_fragment is not None and self.rng.random() < config.TROJAN_CHANCE:
+            new_fragment.on_depleted = lambda f: self.enemies.append(
+                Virus(pos=pygame.Vector2(f.pos))
+            )
+        self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
+
         if self.core.is_in_sync_range(self.player.pos):
             transfer(self.backpack, self.documents)
+
+        if self.player.hp <= 0:
+            combat.apply_death_penalty(self.backpack)
+            self._respawn_timer = config.RESPAWN_DELAY
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
@@ -111,6 +157,20 @@ class PlayScene(Scene):
                 config.FRAGMENT_COLOR,
                 self.camera.world_to_screen(fragment.pos),
                 config.FRAGMENT_RADIUS,
+            )
+        for enemy in self.enemies:
+            pygame.draw.circle(
+                surface,
+                config.VIRUS_COLOR,
+                self.camera.world_to_screen(enemy.pos),
+                enemy.radius,
+            )
+        for shot in self.projectiles:
+            pygame.draw.circle(
+                surface,
+                config.PROJECTILE_COLOR,
+                self.camera.world_to_screen(shot.pos),
+                shot.radius,
             )
         pygame.draw.circle(
             surface, config.CORE_COLOR, self.camera.world_to_screen(self.core.pos), self.core.radius
@@ -140,6 +200,14 @@ class PlayScene(Scene):
         pygame.draw.rect(surface, (60, 60, 80), pygame.Rect(10, 10, 120, 14))
         frac = self.backpack.used_mb / self.backpack.cap_mb if self.backpack.cap_mb else 0.0
         pygame.draw.rect(surface, (90, 200, 120), pygame.Rect(10, 10, int(120 * frac), 14))
+        # hp bar
+        pygame.draw.rect(surface, (60, 60, 80), pygame.Rect(10, 30, 120, 14))
+        hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0
+        pygame.draw.rect(surface, config.HP_COLOR, pygame.Rect(10, 30, int(120 * hp_frac), 14))
+        # dodge cooldown strip (empty = ready)
+        cd = self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
+        pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(10, 48, 120, 5))
+        pygame.draw.rect(surface, (120, 160, 220), pygame.Rect(10, 48, int(120 * (1 - cd)), 5))
         # hotbar (bottom-left), only unlocked slots
         for i in range(self.hotbar.unlocked):
             x = 10 + i * 44
