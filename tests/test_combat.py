@@ -1,6 +1,8 @@
 import pygame
 
+from game import config
 from game.entities.enemy import Virus
+from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
@@ -79,3 +81,24 @@ def test_expired_projectile_removed():
     projectiles = [shot]
     combat.update_projectiles(0.02, projectiles, [], (2400, 1600))
     assert projectiles == []
+
+
+def test_enemy_contact_damages_player():
+    player = Player(pos=pygame.Vector2(500, 500))
+    enemy = Virus(pos=pygame.Vector2(500, 500))
+    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    assert player.hp == config.PLAYER_MAX_HP - config.VIRUS_CONTACT_DPS * 0.5
+
+
+def test_invulnerable_player_takes_no_contact_damage():
+    player = Player(pos=pygame.Vector2(500, 500), iframe_timer=1.0)
+    enemy = Virus(pos=pygame.Vector2(500, 500))
+    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    assert player.hp == config.PLAYER_MAX_HP
+
+
+def test_distant_enemy_deals_no_damage():
+    player = Player(pos=pygame.Vector2(0, 0))
+    enemy = Virus(pos=pygame.Vector2(2000, 1500))
+    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    assert player.hp == config.PLAYER_MAX_HP

@@ -72,3 +72,17 @@ def update_projectiles(
         surviving.append(shot)
     projectiles[:] = surviving
     enemies[:] = [e for e in enemies if not e.is_dead]
+
+
+def update_enemies(
+    dt: float,
+    enemies: list[Virus],
+    player: Player,
+    bounds: tuple[int, int],
+) -> None:
+    for enemy in enemies:
+        enemy.update(dt, player.pos, bounds)
+        if player.invulnerable:
+            continue
+        if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
+            player.hp -= config.VIRUS_CONTACT_DPS * dt
