@@ -47,6 +47,13 @@ def _in_bounds(pos: pygame.Vector2, bounds: tuple[int, int]) -> bool:
     return 0 <= pos.x <= width and 0 <= pos.y <= height
 
 
+def _first_hit(shot: Projectile, enemies: list[Virus]) -> Virus | None:
+    for enemy in enemies:
+        if not enemy.is_dead and shot.pos.distance_to(enemy.pos) <= shot.radius + enemy.radius:
+            return enemy
+    return None
+
+
 def update_projectiles(
     dt: float,
     projectiles: list[Projectile],
@@ -54,24 +61,20 @@ def update_projectiles(
     bounds: tuple[int, int],
 ) -> None:
     surviving: list[Projectile] = []
+    any_killed = False
     for shot in projectiles:
         shot.update(dt)
         if shot.is_expired or not _in_bounds(shot.pos, bounds):
             continue
-        hit = next(
-            (
-                e
-                for e in enemies
-                if not e.is_dead and shot.pos.distance_to(e.pos) <= shot.radius + e.radius
-            ),
-            None,
-        )
+        hit = _first_hit(shot, enemies)
         if hit is not None:
             hit.damage(shot.damage)
+            any_killed = any_killed or hit.is_dead
             continue  # projectile consumed
         surviving.append(shot)
     projectiles[:] = surviving
-    enemies[:] = [e for e in enemies if not e.is_dead]
+    if any_killed:  # skip rebuilding the list on the common no-kill frame
+        enemies[:] = [e for e in enemies if not e.is_dead]
 
 
 def update_enemies(
@@ -89,5 +92,5 @@ def update_enemies(
 
 
 def apply_death_penalty(backpack: Folder) -> None:
-    """Halve the backpack's item count, rounding up. Documents are untouched."""
-    backpack.count = (backpack.count + 1) // 2
+    """Drop half the backpack, keeping the rounded-up half. Documents are untouched."""
+    backpack.remove(backpack.count // 2)

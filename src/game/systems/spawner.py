@@ -1,28 +1,24 @@
-"""Time-based fragment spawner. Randomness comes from an injected
-``random.Random`` so tests are deterministic. Spawn spots avoid the core's
-sync zone and existing fragments; a capped retry count prevents an infinite
-loop when the world is saturated."""
+"""Time-based fragment spawner. Spawn spots avoid the core's sync zone and
+existing fragments; the cadence, the retry cap and the random point rule come
+from ``spawn_common`` and are shared with the virus spawner."""
 
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pygame
 
 from game import config
 from game.entities.core import Core
 from game.entities.fragment import Fragment
-
-_MARGIN = 64
-_SPAWN_ATTEMPTS = 20
+from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, random_point
 
 
 @dataclass
-class Spawner:
+class Spawner(TimedSpawner):
     interval: float = config.SPAWN_INTERVAL
     max_fragments: int = config.SPAWN_MAX
-    _accumulator: float = field(default=0.0, init=False)
 
     def update(
         self,
@@ -31,10 +27,8 @@ class Spawner:
         core: Core,
         rng: random.Random,
     ) -> Fragment | None:
-        self._accumulator += dt
-        if self._accumulator < self.interval:
+        if not self.is_due(dt):
             return None
-        self._accumulator -= self.interval
         if len(fragments) >= self.max_fragments:
             return None
         spot = self._find_spot(fragments, core, rng)
@@ -50,11 +44,8 @@ class Spawner:
         core: Core,
         rng: random.Random,
     ) -> pygame.Vector2 | None:
-        for _ in range(_SPAWN_ATTEMPTS):
-            point = pygame.Vector2(
-                rng.uniform(_MARGIN, config.WORLD_WIDTH - _MARGIN),
-                rng.uniform(_MARGIN, config.WORLD_HEIGHT - _MARGIN),
-            )
+        for _ in range(SPAWN_ATTEMPTS):
+            point = random_point(rng)
             if core.pos.distance_to(point) < core.sync_radius + config.FRAGMENT_RADIUS:
                 continue
             too_close = any(

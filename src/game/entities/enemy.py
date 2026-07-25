@@ -8,6 +8,7 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
+from game.systems.physics import clamp_to_bounds
 
 
 @dataclass
@@ -28,6 +29,4 @@ class Virus:
         to_target = target - self.pos
         if to_target.length_squared() > 0:
             self.pos += to_target.normalize() * self.speed * dt
-        width, height = bounds
-        self.pos.x = max(self.radius, min(width - self.radius, self.pos.x))
-        self.pos.y = max(self.radius, min(height - self.radius, self.pos.y))
+        clamp_to_bounds(self.pos, self.radius, bounds)

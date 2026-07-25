@@ -15,6 +15,20 @@ def test_add_caps_at_capacity_and_reports_actual() -> None:
     assert f.add(1) == 0  # no room left
 
 
+def test_remove_decreases_count_and_reports_actual() -> None:
+    f = Folder(cap_mb=50, mb_per_item=5)
+    f.add(4)
+    assert f.remove(3) == 3
+    assert f.count == 1
+
+
+def test_remove_cannot_go_below_empty() -> None:
+    f = Folder(cap_mb=50, mb_per_item=5)
+    f.add(2)
+    assert f.remove(99) == 2  # bounded by what is stored
+    assert f.count == 0
+
+
 def test_transfer_moves_what_fits() -> None:
     src = Folder(cap_mb=50, mb_per_item=5)
     dst = Folder(cap_mb=15, mb_per_item=5)  # holds 3

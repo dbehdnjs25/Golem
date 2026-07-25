@@ -25,6 +25,24 @@ from game.systems.spawner import Spawner
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
 
+# HUD gauges: same left edge and width, stacked down the top-left corner.
+_BAR_X = 10
+_BAR_W = 120
+_BAR_BG = (60, 60, 80)
+
+
+def _draw_bar(
+    surface: pygame.Surface,
+    y: int,
+    height: int,
+    frac: float,
+    color: tuple[int, int, int],
+    bg: tuple[int, int, int] = _BAR_BG,
+) -> None:
+    """A left-anchored gauge filled to ``frac`` (0..1) of its width."""
+    pygame.draw.rect(surface, bg, pygame.Rect(_BAR_X, y, _BAR_W, height))
+    pygame.draw.rect(surface, color, pygame.Rect(_BAR_X, y, int(_BAR_W * frac), height))
+
 
 class PlayScene(Scene):
     def __init__(self) -> None:
@@ -97,17 +115,20 @@ class PlayScene(Scene):
 
     # --- logic -----------------------------------------------------------
     def update(self, dt: float) -> None:
+        # consumed once per step whether or not we are dead, so a press during
+        # the respawn wait cannot queue up a dodge for the frame we come back
+        dodge = self._dodge_pressed
+        self._dodge_pressed = False
+
         if self._respawn_timer > 0:
             self._respawn_timer -= dt
             if self._respawn_timer <= 0:
                 self.player.pos = pygame.Vector2(self.core.pos)
                 self.player.hp = self.player.max_hp
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
-            self._dodge_pressed = False
             return
 
-        self.player.update(dt, self._move_dir(), config.WORLD_SIZE, self._dodge_pressed)
-        self._dodge_pressed = False
+        self.player.update(dt, self._move_dir(), config.WORLD_SIZE, dodge)
         self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
@@ -135,9 +156,7 @@ class PlayScene(Scene):
 
         new_fragment = self.spawner.update(dt, self.fragments, self.core, self.rng)
         if new_fragment is not None and self.rng.random() < config.TROJAN_CHANCE:
-            new_fragment.on_depleted = lambda f: self.enemies.append(
-                Virus(pos=pygame.Vector2(f.pos))
-            )
+            new_fragment.on_depleted = self._hatch_virus
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
         if self.core.is_in_sync_range(self.player.pos):
@@ -146,6 +165,10 @@ class PlayScene(Scene):
         if self.player.hp <= 0:
             combat.apply_death_penalty(self.backpack)
             self._respawn_timer = config.RESPAWN_DELAY
+
+    def _hatch_virus(self, fragment: Fragment) -> None:
+        """Trojan payload: mining this fragment out releases a virus in its place."""
+        self.enemies.append(Virus(pos=pygame.Vector2(fragment.pos)))
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
@@ -196,18 +219,15 @@ class PlayScene(Scene):
                 )
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
-        # backpack fill gauge (top-left)
-        pygame.draw.rect(surface, (60, 60, 80), pygame.Rect(10, 10, 120, 14))
+        # backpack fill gauge
         frac = self.backpack.used_mb / self.backpack.cap_mb if self.backpack.cap_mb else 0.0
-        pygame.draw.rect(surface, (90, 200, 120), pygame.Rect(10, 10, int(120 * frac), 14))
+        _draw_bar(surface, 10, 14, frac, (90, 200, 120))
         # hp bar
-        pygame.draw.rect(surface, (60, 60, 80), pygame.Rect(10, 30, 120, 14))
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0
-        pygame.draw.rect(surface, config.HP_COLOR, pygame.Rect(10, 30, int(120 * hp_frac), 14))
-        # dodge cooldown strip (empty = ready)
-        cd = self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
-        pygame.draw.rect(surface, (40, 40, 55), pygame.Rect(10, 48, 120, 5))
-        pygame.draw.rect(surface, (120, 160, 220), pygame.Rect(10, 48, int(120 * (1 - cd)), 5))
+        _draw_bar(surface, 30, 14, hp_frac, config.HP_COLOR)
+        # dodge cooldown strip (full = ready)
+        ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
+        _draw_bar(surface, 48, 5, ready, (120, 160, 220), bg=(40, 40, 55))
         # hotbar (bottom-left), only unlocked slots
         for i in range(self.hotbar.unlocked):
             x = 10 + i * 44

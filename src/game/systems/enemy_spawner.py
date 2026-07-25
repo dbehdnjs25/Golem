@@ -1,28 +1,26 @@
-"""Time-based virus spawner. Randomness comes from an injected ``random.Random``
-so tests are deterministic. Spawn spots avoid the core's sync zone and a radius
-around the player; a capped retry count prevents an infinite loop."""
+"""Time-based virus spawner. Spawn spots avoid the core's sync zone and a radius
+around the player, so viruses never appear on top of either; the cadence, the
+retry cap and the random point rule are shared with the fragment spawner."""
 
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pygame
 
 from game import config
 from game.entities.core import Core
 from game.entities.enemy import Virus
+from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, random_point
 
-_MARGIN = 64
-_SPAWN_ATTEMPTS = 20
 _MIN_PLAYER_DIST = 300.0
 
 
 @dataclass
-class EnemySpawner:
+class EnemySpawner(TimedSpawner):
     interval: float = config.VIRUS_SPAWN_INTERVAL
     max_enemies: int = config.VIRUS_SPAWN_MAX
-    _accumulator: float = field(default=0.0, init=False)
 
     def update(
         self,
@@ -32,10 +30,8 @@ class EnemySpawner:
         core: Core,
         rng: random.Random,
     ) -> Virus | None:
-        self._accumulator += dt
-        if self._accumulator < self.interval:
+        if not self.is_due(dt):
             return None
-        self._accumulator -= self.interval
         if len(enemies) >= self.max_enemies:
             return None
         spot = self._find_spot(player_pos, core, rng)
@@ -51,11 +47,8 @@ class EnemySpawner:
         core: Core,
         rng: random.Random,
     ) -> pygame.Vector2 | None:
-        for _ in range(_SPAWN_ATTEMPTS):
-            point = pygame.Vector2(
-                rng.uniform(_MARGIN, config.WORLD_WIDTH - _MARGIN),
-                rng.uniform(_MARGIN, config.WORLD_HEIGHT - _MARGIN),
-            )
+        for _ in range(SPAWN_ATTEMPTS):
+            point = random_point(rng)
             if core.pos.distance_to(point) < core.sync_radius + config.VIRUS_RADIUS:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:

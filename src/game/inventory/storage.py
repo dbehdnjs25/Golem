@@ -37,6 +37,12 @@ class Folder:
         self.count += added
         return added
 
+    def remove(self, n: int = 1) -> int:
+        """Remove up to ``n`` items, bounded by what is stored. Return the number removed."""
+        removed = max(0, min(n, self.count))
+        self.count -= removed
+        return removed
+
 
 def transfer(src: Folder, dst: Folder) -> int:
     """Move as many items as fit from ``src`` into ``dst``. Return count moved."""

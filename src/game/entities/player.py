@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
+from game.systems.physics import clamp_to_bounds
 
 
 @dataclass
@@ -44,9 +45,7 @@ class Player:
         speed = self.speed * (config.DODGE_SPEED_MULT if self.dodge_timer > 0 else 1.0)
         if move_dir.length_squared() > 0:
             self.pos += move_dir.normalize() * speed * dt
-        width, height = bounds
-        self.pos.x = max(self.radius, min(width - self.radius, self.pos.x))
-        self.pos.y = max(self.radius, min(height - self.radius, self.pos.y))
+        clamp_to_bounds(self.pos, self.radius, bounds)
 
         self.dodge_timer = max(0.0, self.dodge_timer - dt)
         self.iframe_timer = max(0.0, self.iframe_timer - dt)
