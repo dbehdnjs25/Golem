@@ -123,7 +123,6 @@ class PlayScene(Scene):
         if self._respawn_timer > 0:
             self._respawn_timer -= dt
             if self._respawn_timer <= 0:
-                self._respawn_timer = 0.0  # "seconds left", never a negative leftover
                 self.player.pos = pygame.Vector2(self.core.pos)
                 self.player.hp = self.player.max_hp
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
