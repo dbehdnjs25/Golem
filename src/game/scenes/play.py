@@ -1,6 +1,6 @@
 """Core-loop gameplay scene: mine fragments, fill the backpack, return to the
-core to auto-sync into /Documents. Wires the entities and systems together;
-accumulates input from events (no polling) and owns all rendering."""
+core and press E to sync into /Documents. Wires the entities and systems
+together; accumulates input from events (no polling) and owns all rendering."""
 
 from __future__ import annotations
 
@@ -71,6 +71,7 @@ class PlayScene(Scene):
         self.enemy_spawner = EnemySpawner()
         self._fire_timer = 0.0
         self._dodge_pressed = False
+        self._sync_pressed = False
         self._respawn_timer = 0.0
 
         self._held_keys: set[int] = set()
@@ -90,6 +91,8 @@ class PlayScene(Scene):
                 self.camera.toggle_lock(self.player.pos)
             elif event.key == pygame.K_SPACE:
                 self._dodge_pressed = True
+            elif event.key == pygame.K_e:
+                self._sync_pressed = True
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -116,9 +119,11 @@ class PlayScene(Scene):
     # --- logic -----------------------------------------------------------
     def update(self, dt: float) -> None:
         # consumed once per step whether or not we are dead, so a press during
-        # the respawn wait cannot queue up a dodge for the frame we come back
+        # the respawn wait cannot queue up an action for the frame we come back
         dodge = self._dodge_pressed
+        sync = self._sync_pressed
         self._dodge_pressed = False
+        self._sync_pressed = False
 
         if self._respawn_timer > 0:
             self._respawn_timer -= dt
@@ -159,7 +164,7 @@ class PlayScene(Scene):
             new_fragment.on_depleted = self._hatch_virus
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
-        if self.core.is_in_sync_range(self.player.pos):
+        if sync and self.core.is_in_sync_range(self.player.pos):
             transfer(self.backpack, self.documents)
 
         if self.player.hp <= 0:

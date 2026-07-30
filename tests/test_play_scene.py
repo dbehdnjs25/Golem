@@ -36,12 +36,44 @@ def test_movement_key_moves_player():
     assert scene.player.pos.x > start_x
 
 
-def test_sync_transfers_backpack_at_core():
+def test_standing_on_core_does_not_sync_by_itself():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)  # stand on the core
     scene.backpack.add(3)
     scene.update(config.FIXED_DT)
+    assert scene.backpack.count == 3  # sync is manual now
+    assert scene.documents.count == 0
+
+
+def test_sync_key_transfers_backpack_at_core():
+    scene = PlayScene()
+    scene.player.pos = pygame.Vector2(scene.core.pos)
+    scene.backpack.add(3)
+    scene.handle_event(_key_event(pygame.K_e))
+    scene.update(config.FIXED_DT)
     assert scene.backpack.count == 0
+    assert scene.documents.count == 3
+
+
+def test_sync_key_does_nothing_out_of_range():
+    scene = PlayScene()
+    scene.player.pos = pygame.Vector2(1000, 1000)  # outside the core's sync zone
+    scene.backpack.add(3)
+    scene.handle_event(_key_event(pygame.K_e))
+    scene.update(config.FIXED_DT)
+    assert scene.backpack.count == 3
+    assert scene.documents.count == 0
+
+
+def test_sync_key_is_consumed_after_one_step():
+    scene = PlayScene()
+    scene.player.pos = pygame.Vector2(scene.core.pos)
+    scene.backpack.add(3)
+    scene.handle_event(_key_event(pygame.K_e))
+    scene.update(config.FIXED_DT)
+    scene.backpack.add(2)  # mined more without pressing again
+    scene.update(config.FIXED_DT)
+    assert scene.backpack.count == 2  # one press, one transfer
     assert scene.documents.count == 3
 
 
