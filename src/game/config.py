@@ -40,11 +40,11 @@ FRAGMENT_HP: Final[float] = 60.0
 FRAGMENT_RADIUS: Final[float] = 10.0
 MINING_DPS: Final[float] = 40.0  # hp per second while channelling
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
-FRAGMENT_MB: Final[int] = 5  # storage size of one fragment
+FRAGMENT_MB: Final[int] = 3  # storage size of one fragment
 
 # --- Storage ----------------------------------------------------------------
-BACKPACK_CAP_MB: Final[int] = 50  # small field carry -> forces return trips
-DOCUMENTS_CAP_MB: Final[int] = 500  # drive store (the "warehouse")
+BACKPACK_CAP_MB: Final[int] = 100  # small field carry -> forces return trips (33 fragments)
+DOCUMENTS_CAP_MB: Final[int] = 750  # drive store, the "warehouse" (250 fragments)
 
 # --- Camera -----------------------------------------------------------------
 CAMERA_PAN_SPEED: Final[float] = 400.0  # px/s free-pan speed
