@@ -1,58 +1,55 @@
-# Core Defense — Design Spec
+# 코어 방어 — 설계 스펙
 
-_Date: 2026-07-30 · Project: Defrag (pygame-ce)_
+_작성일: 2026-07-30 · 프로젝트: Defrag (pygame-ce)_
 
-## Goal
+## 목표
 
-Give the game a losing condition and the tension that comes with it. The Core
-gains HP, enemies split into kinds that either march on the Core or hunt the
-player, and the player must decide, moment to moment, whether to mine or to
-defend.
+게임에 패배 조건과 그로 인한 긴장감을 넣는다. 코어에 HP가 생기고, 적은 코어로
+직행하는 부류와 플레이어를 사냥하는 부류로 나뉘며, 플레이어는 매 순간 "캘 것인가
+지킬 것인가"를 판단하게 된다.
 
-Today the game has no failure state: dying costs half a backpack and time, so
-enough patience always wins. This spec makes *leaving the Core unattended* the
-real cost, and makes the same resource pay for both survival (repair) and — in
-a later spec — victory (summoning the boss).
+지금 게임에는 실패가 없다. 죽어도 백팩 절반과 시간만 잃으므로 인내심만 있으면
+무조건 이긴다. 이 스펙은 **코어를 방치한 시간**을 진짜 대가로 만들고, 같은 자원이
+생존(수리)과 — 나중 스펙에서 — 승리(보스 소환) 양쪽에 쓰이게 만든다.
 
-Everything follows existing patterns: logic lives in pure `update(dt, ...)`
-functions (headless-testable), enemy stats are frozen dataclasses the way tools
-already are, and rendering stays in the scene.
+구현은 기존 패턴을 그대로 따른다. 로직은 순수 `update(dt, ...)` 함수에 두어
+헤드리스로 테스트하고, 적 능력치는 도구가 이미 그러하듯 frozen dataclass로 두며,
+렌더링은 씬에만 남긴다.
 
-## Position in the roadmap
+## 로드맵에서의 위치
 
-The larger win/lose structure was decomposed into four specs. This is **A**.
+승패 구조 전체를 네 개의 스펙으로 쪼갰고, 이 문서는 그중 **A**다.
 
-| Spec | Content | Depends on |
+| 스펙 | 내용 | 의존 |
 |---|---|---|
-| **A. Core defense** (this) | Core HP, enemy kinds, aggro, repair, defeat signal | — |
-| B. Boss | Resource threshold → summon → boss fight → victory signal | A |
-| C. Scene flow | Title / pause / victory / game-over screens | A, B |
-| D. Save | Multiple save slots, what and when to persist | C |
+| **A. 코어 방어** (이 문서) | 코어 HP, 적 종류, 어그로, 수리, 패배 신호 | — |
+| B. 보스 | 자원 임계치 → 소환 → 보스전 → 승리 신호 | A |
+| C. 씬 흐름 | 타이틀 / 일시정지 / 승리 / 게임오버 화면 | A, B |
+| D. 세이브 | 슬롯 여러 개, 무엇을 언제 저장할지 | C |
 
-## Scope (in / out)
+## 범위 (포함 / 제외)
 
-**In:** Core HP and destruction, the `EnemyKind` catalogue (2×3 axes designed,
-4 kinds implemented), target policy with aggro hysteresis, melee and suicide
-attacks with per-kind attack speed, resource-funded repair, screen-edge pulse
-on Core damage, Core HP bar, world simulation continuing while the player is
-dead, defeat **signal**, unit tests for all new logic.
+**포함:** 코어 HP와 파괴, `EnemyKind` 카탈로그(2×3 축을 설계하고 4종 구현), 히스테리시스가
+있는 타겟 정책, 종류별 공격 속도를 갖는 근거리·자폭 공격, 자원으로 하는 수리, 코어 피격 시
+화면 가장자리 맥동, 코어 HP 바, 플레이어가 죽어있는 동안에도 도는 월드, 패배 **신호**,
+새로 만드는 모든 로직의 단위 테스트.
 
-**Out (deferred, not rejected):** the two ranged kinds (they pull in enemy
-projectiles — own spec), the boss, the game-over **screen** (spec C), save.
+**제외 (미룬 것이지 버린 것이 아님):** 원거리 2종(적 발사체를 통째로 끌고 오므로 별도 스펙),
+보스, 게임오버 **화면**(C 스펙), 세이브.
 
-Defeat stops at a signal on purpose: `PlayScene` sets a `defeated` flag and
-halts updates. Spec C reads that flag and pushes a screen. Cutting here is what
-keeps A finishable now and leaves C a stable contract to build against.
+패배를 신호까지만 만드는 건 의도적이다. `PlayScene`이 `defeated` 플래그를 세우고 갱신을
+멈추는 데까지가 A이고, C 스펙이 그 플래그를 읽어 화면을 띄운다. 여기서 잘라야 A를 지금
+끝낼 수 있고, C는 안정된 접점을 두고 작업할 수 있다.
 
-## Enemy taxonomy
+## 적 분류 체계
 
-Two orthogonal axes. An enemy kind is a point in that grid, not a bespoke class.
+축이 두 개다. 적 종류는 이 격자 위의 한 점이지, 저마다 따로 만든 클래스가 아니다.
 
-- **Target policy** — who it walks toward: `TARGET_CORE`, `TARGET_HUNTER`
-- **Attack** — what it does on arrival: `ATTACK_MELEE`, `ATTACK_SUICIDE`,
-  `ATTACK_RANGED` (designed, not implemented here)
+- **타겟 정책** — 누구를 향해 가는가: `TARGET_CORE`, `TARGET_HUNTER`
+- **공격 방식** — 도달해서 무엇을 하는가: `ATTACK_MELEE`, `ATTACK_SUICIDE`,
+  `ATTACK_RANGED` (설계만 하고 이번엔 구현 안 함)
 
-### `entities/enemy_kinds.py` (new) — `EnemyKind` (frozen dataclass)
+### `entities/enemy_kinds.py` (신규) — `EnemyKind` (frozen dataclass)
 
 ```
 name: str
@@ -61,259 +58,237 @@ attack: str          # ATTACK_MELEE | ATTACK_SUICIDE | ATTACK_RANGED
 hp: float
 speed: float
 radius: float
-damage: float        # per hit (melee) or per blast (suicide)
+damage: float        # 근거리는 1회 타격, 자폭은 1회 폭발
 attack_interval: float
 spawn_weight: int
 color: tuple[int, int, int]
 ```
 
-`attack_interval` reads consistently across all three attacks: it is the time
-the kind needs to deliver one attack. For melee it is the swing period, for
-suicide the fuse, for ranged (later) the reload.
+`attack_interval`은 세 공격 방식에 일관되게 읽힌다 — **한 번의 공격을 완수하는 데 걸리는
+시간**이다. 근거리에겐 타격 주기, 자폭에겐 도화선, 원거리(나중)에겐 재장전 시간.
 
-### The four implemented kinds
+### 구현하는 4종
 
-| Name | Target | Attack | HP | Speed | Radius | Damage | Interval | Weight |
+| 이름 | 타겟 | 공격 | HP | 속도 | 반경 | 피해 | 간격 | 스폰 비중 |
 |---|---|---|---|---|---|---|---|---|
-| **Virus** | Hunter | Melee | 30 | 140 | 11 | 12 | 0.6 s | 50 % |
-| **Ransomware** | Hunter | Suicide | 20 | 190 | 10 | 25 | 0.7 s | 38 % |
-| **Worm** | Core | Melee | 45 | 110 | 12 | 20 | 1.2 s | 8 % |
-| **Logic Bomb** | Core | Suicide | 25 | 160 | 12 | 40 | 1.2 s | 4 % |
+| **Virus** | 헌터 | 근거리 | 30 | 140 | 11 | 12 | 0.6초 | 50 % |
+| **Ransomware** | 헌터 | 자폭 | 20 | 190 | 10 | 25 | 0.7초 | 38 % |
+| **Worm** | 코어 직행 | 근거리 | 45 | 110 | 12 | 20 | 1.2초 | 8 % |
+| **Logic Bomb** | 코어 직행 | 자폭 | 25 | 160 | 12 | 40 | 1.2초 | 4 % |
 
-Virus deals 12 ÷ 0.6 s = 20 dps, exactly today's `VIRUS_CONTACT_DPS`, so the
-existing feel is preserved.
+Virus는 12 ÷ 0.6초 = 초당 20으로, 현재 `VIRUS_CONTACT_DPS`와 정확히 같다. 기존 감각이
+그대로 유지된다.
 
-The roles are deliberately non-overlapping. **Worm** is slow and tough: ignore
-it and it piles up on the Core — the price of neglect. **Logic Bomb** is fast
-and fragile: easy to intercept, expensive to miss — the price of inattention.
-**Ransomware** threatens the player specifically, so mining trips stay tense.
+역할이 겹치지 않도록 일부러 이렇게 나눴다. **Worm**은 느리고 튼튼해서 무시하면 코어에
+쌓인다 — 방치의 대가. **Logic Bomb**은 빠르고 약해서 요격은 쉽지만 놓치면 크게 아프다 —
+주의력의 대가. **Ransomware**는 플레이어만 노리므로 채굴하러 나간 동안에도 긴장이 유지된다.
 
-**Why the dedicated Core-seekers are rare (12 %):** hunters also walk to the
-Core whenever the player is out of range. So Core pressure is not 12 % — it is
-12 % baseline plus *everything else* whenever the player is away. The dedicated
-kinds are the constant drip; the real threat scales with time spent away from
-home. That is the intended tension, and it is why this share must stay low.
+**전용 코어 공격형을 12 %로 낮게 두는 이유:** 헌터도 플레이어가 감지 범위 밖이면 코어로
+향한다. 따라서 코어가 받는 압박은 12 %가 아니라, **12 %의 기본 압박 + 플레이어가 자리를
+비운 동안의 나머지 전부**다. 전용 종류는 자리를 지켜도 조금씩 새는 기본값이고, 진짜 위협은
+집을 비운 시간에 비례해서 온다. 이게 의도한 긴장이며, 그래서 전용 비중은 낮아야 한다.
 
-**Why the fuses are long:** a fuse makes suicide enemies interceptable. Logic
-Bomb (25 hp) dies in ~0.52 s to the 48 dps weapon, comfortably inside its 1.2 s
-fuse, so a Core hit is preventable by reacting. Ransomware's 0.7 s fuse leaves
-room to time the 0.3 s dodge i-frames. Both numbers exist to create a reaction
-window, not to tune damage.
+**도화선을 길게 잡은 이유:** 도화선이 있어야 자폭을 요격할 수 있다. Logic Bomb(25 HP)은
+초당 48 피해인 무기로 약 0.52초면 죽으므로 1.2초 도화선 안에 여유 있게 막힌다. Ransomware의
+0.7초는 회피 무적(0.3초)을 타이밍 맞춰 쓸 여유를 준다. 두 숫자는 피해량 조절이 아니라
+**반응할 틈을 만들기 위해** 존재한다.
 
-## Damage rules
+## 피해 규칙
 
-Three rules, chosen so that each reads correctly to the player:
+세 가지 규칙이며, 각각 플레이어에게 올바르게 읽히도록 골랐다.
 
-1. **Melee damages the current target only.** A Core-bound Worm walks through
-   the player without hurting them. This makes "that one is ignoring me"
-   legible, and stops incidental brushes from being punishing.
-2. **A blast damages everything in its radius.** When a suicide enemy
-   detonates, both the player and the Core take damage if they are inside.
-   An explosion that spares a bystander standing in it reads as a bug.
-3. **A projectile hits the first valid target it touches** (ranged, later spec).
-   A shot aimed at the Core does not pass through the player.
+1. **근거리는 현재 타겟만 때린다.** 코어로 가는 Worm은 플레이어를 통과하며 아무 피해도
+   주지 않는다. "쟤는 나를 무시하고 있다"가 행동으로 드러나고, 스쳤다고 아픈 이상함이 없다.
+2. **폭발은 반경 안 전부를 때린다.** 자폭이 터지면 범위 안의 플레이어와 코어가 둘 다 맞는다.
+   범위 안에 서 있는데 안 맞으면 플레이어 눈에는 그냥 버그로 보인다.
+3. **발사체는 처음 닿는 유효 대상을 때린다** (원거리, 나중 스펙). 코어를 향해 날아가던 탄이
+   플레이어를 관통하지 않는다.
 
-Rule 2 has two intended consequences. Repairing means standing where Logic
-Bombs detonate, so repair is not a safe action. And a Ransomware chasing the
-player into the Core's vicinity splashes the Core, so camping on top of the
-Core is not strictly optimal — where to stand becomes a live decision.
+2번 규칙은 두 가지를 의도적으로 만들어낸다. 수리하려면 Logic Bomb이 터지는 자리에 서야
+하므로 **수리는 안전한 행동이 아니다.** 그리고 Ransomware가 플레이어를 쫓아 코어 근처까지
+오면 코어도 유탄을 맞으므로, **코어에 딱 붙어 농성하는 게 마냥 최선이 아니다.** 어디에 설지가
+매 순간의 선택이 된다.
 
-Blast radius is `radius * SUICIDE_BLAST_MULT` (2.5), slightly wider than the
-contact check. No extra `EnemyKind` field: a field only one attack type uses is
-the first step toward a table that no longer describes its rows.
+폭발 반경은 `radius * SUICIDE_BLAST_MULT` (2.5)로, 접촉 판정보다 조금 넓다. `EnemyKind`에
+필드를 더 만들지 않는다 — 한 공격 방식만 쓰는 필드는 테이블이 자기 행을 더 이상 설명하지
+못하게 되는 첫걸음이다.
 
-## Target policy
+## 타겟 정책
 
-`TARGET_CORE` is stateless — always the Core.
+`TARGET_CORE`는 상태가 없다. 항상 코어다.
 
-`TARGET_HUNTER` carries two per-instance fields:
+`TARGET_HUNTER`는 인스턴스마다 두 개의 상태를 든다.
 
 ```
-aggro_timer: float      # forced player-aggro remaining
-proximity_aggro: bool
+aggro_timer: float      # 피격 어그로 남은 시간
+proximity_aggro: bool   # 근접 어그로 여부
 ```
 
-Per step, in order:
+매 스텝 순서대로:
 
-1. Compute `d` = distance to the player.
-2. `d <= AGGRO_DETECT_RADIUS` (300) → `proximity_aggro = True`;
-   `d > AGGRO_RELEASE_RADIUS` (450) → `False`; between the two, **unchanged**.
+1. 플레이어와의 거리 `d`를 구한다.
+2. `d <= AGGRO_DETECT_RADIUS` (300) → `proximity_aggro = True`,
+   `d > AGGRO_RELEASE_RADIUS` (450) → `False`, 그 사이면 **직전 값 유지**.
 3. `aggro_timer = max(0, aggro_timer - dt)`.
-4. Target = player if `aggro_timer > 0 or proximity_aggro`, else the Core.
+4. **타겟 = `aggro_timer > 0` 이거나 `proximity_aggro` 이면 플레이어, 아니면 코어.**
 
-Taking damage sets `aggro_timer = AGGRO_LOCK_DURATION` (4 s), refreshed on every
-hit. This lives in `Enemy.damage()`; Core-seekers run the same code and their
-target policy ignores the field, which is harmless.
+피격당하면 `aggro_timer = AGGRO_LOCK_DURATION` (4초)로 세팅되고, 맞을 때마다 갱신된다.
+이 처리는 `Enemy.damage()` 안에 둔다. 코어 직행형도 같은 코드를 타지만 타겟 정책이 이 값을
+무시하므로 무해하다.
 
-The two radii differ on purpose. With a single radius, a player moving along the
-boundary makes the enemy flip target every frame and visibly jitter. Entering at
-300 and only releasing past 450 removes that.
+두 반경을 다르게 둔 건 의도적이다. 반경이 하나면 플레이어가 경계선을 따라 움직일 때 적이
+매 프레임 타겟을 뒤집으며 눈에 띄게 떨린다. 300에서 걸리고 450을 넘어야 풀리게 하면 사라진다.
 
-The rules compose without ambiguity: if the lock expires while the player sits
-at 400 px, `proximity_aggro` was never set (400 > 300) and never cleared
-(400 < 450), so it is still `False` and the enemy returns to the Core.
+규칙끼리 애매함 없이 맞물린다. 어그로 잠금이 끝난 시점에 플레이어가 400 px에 있다면,
+`proximity_aggro`는 애초에 켜진 적이 없고(400 > 300) 꺼진 적도 없으므로(400 < 450) 여전히
+`False`이고, 적은 코어로 돌아간다.
 
-## Attack execution
+## 공격 실행
 
-Every enemy carries `attack_timer: float`, starting at 0 and decremented every
-step **regardless of contact**. That single choice removes an abuse
-(detach/reattach to reset the swing) and, because it starts at 0, makes the
-first hit land the instant contact begins.
+모든 적은 `attack_timer: float`를 들며, 0에서 시작해 **접촉 여부와 무관하게** 매 스텝
+감소한다. 이 한 가지 선택으로 어뷰징(붙었다 떼기를 반복해 타이머를 리셋시키는 것)이
+불가능해지고, 0에서 시작하므로 **접촉하는 순간 첫 타가 바로 나간다.**
 
-**Melee** — in contact with the current target and `attack_timer <= 0`: apply
-`damage`, set `attack_timer = attack_interval`.
+**근거리** — 현재 타겟과 접촉 중이고 `attack_timer <= 0`이면, `damage`를 적용하고
+`attack_timer = attack_interval`로 세팅한다.
 
-**Suicide** — on first contact with the current target, light the fuse
-(`fuse_timer = attack_interval`); further contact does not restart it. When the
-fuse expires, damage everything within the blast radius and remove the enemy.
-Ignition cannot be cancelled, so all three counters stay live: run out of the
-blast, soak it with dodge i-frames, or kill it before it goes off. A blast with
-nothing in range is simply wasted.
+**자폭** — 현재 타겟과 처음 접촉할 때 도화선에 불이 붙는다(`fuse_timer = attack_interval`).
+이후의 접촉은 도화선을 다시 켜지 않는다. 도화선이 끝나면 폭발 반경 안 전부에 피해를 주고
+적은 사라진다. 점화는 취소되지 않으므로 대응 수단 셋이 모두 살아 있다 — **폭발 범위 밖으로
+도망치기**, **회피 무적으로 흘리기**, **터지기 전에 요격하기**. 범위 안에 아무도 없으면
+그냥 헛폭발이다.
 
-A lit fuse is independent of targeting. If a hunter re-aggros mid-fuse and turns
-around, the fuse keeps running and detonates on schedule; because a blast hits
-everything in radius (rule 2), the target it was lit against no longer matters.
+불붙은 도화선은 타겟과 무관하게 진행된다. 헌터가 도화선이 붙은 상태에서 어그로가 바뀌어
+돌아서도 도화선은 예정대로 터진다. 폭발이 어차피 반경 안 전부를 때리므로(2번 규칙) 무엇을
+향해 점화됐는지는 더 이상 중요하지 않다.
 
-## Core
+## 코어
 
-### `entities/core.py` (modified)
+### `entities/core.py` (수정)
 
-Add `hp`, `max_hp`, `damage(amount)`, `is_destroyed` (`hp <= 0`). The entity
-stays pure data plus predicates, matching its current shape.
+`hp`, `max_hp`, `damage(amount)`, `is_destroyed`(`hp <= 0`)를 추가한다. 순수 데이터와
+판별식만 갖는 현재 모양이 그대로 유지된다.
 
-`CORE_MAX_HP = 2000`. It is high because an unattended Core can face the entire
-spawn cap at once — smaller values evaporate in seconds when the player is away.
+`CORE_MAX_HP = 2000`. 값이 큰 이유는 방치된 코어가 스폰 상한 전체를 한꺼번에 상대할 수
+있기 때문이다. 플레이어가 자리를 비우면 이보다 작은 값은 몇 초 만에 녹는다.
 
-### Defeat signal
+### 패배 신호
 
-`PlayScene` checks `core.is_destroyed` each step and, on first true, sets
-`self.defeated = True` and stops updating the world. That flag is the whole of
-A's contract with spec C.
+`PlayScene`은 매 스텝 `core.is_destroyed`를 확인하고, 처음 참이 되는 순간 `self.defeated = True`로
+표시한 뒤 월드 갱신을 멈춘다. **이 플래그가 A와 C 스펙 사이의 접점 전부다.**
 
-## Repair
+## 수리
 
-Held `R` inside the Core's sync range (`core.is_in_sync_range(player.pos)`),
-matching the hold-to-act pattern already used by mining and firing.
+코어 동기화 범위 안(`core.is_in_sync_range(player.pos)`)에서 **`R` 키를 누르고 있는 동안**
+수리된다. 채굴·발사가 이미 쓰고 있는 홀드 방식이라 조작이 일관된다.
 
-Healing is continuous at `REPAIR_HP_PER_SEC` (100). Each time accumulated
-healing crosses `REPAIR_HP_PER_ITEM` (25), one item is removed from
-`/Documents` — the same shape as mining, which damages a fragment continuously
-and banks one item at depletion. Healing stops immediately when `/Documents` is
-empty or the Core is full.
+회복은 초당 `REPAIR_HP_PER_SEC`(100)로 연속해서 일어난다. 누적 회복량이
+`REPAIR_HP_PER_ITEM`(25)를 넘을 때마다 `/Documents`에서 자원 1개가 빠진다. 채굴이 파편 HP를
+연속으로 깎다가 고갈 시점에 1개를 넣는 것과 같은 모양이다. `/Documents`가 비거나 코어가
+가득 차면 그 자리에서 회복이 멈춘다.
 
-Healing a Core back from near-zero costs 80 items against a 500 MB (100 item)
-store, so one bad breach eats most of the boss-summon fund. That weight is the
-point, and it is also **the least confident number in this spec** — first thing
-to retune after playing.
+코어를 거의 0에서 되살리려면 자원 80개가 드는데 저장고 용량이 500 MB(100개)이므로, **한 번
+크게 뚫리면 보스 소환 자금이 대부분 날아간다.** 그 무게감이 노린 바이지만, 동시에 **이 스펙에서
+가장 자신 없는 숫자**이기도 하다. 플레이해보고 제일 먼저 조정할 항목이다.
 
-**Repair and sync coexist.** Sync is automatic (range-based, no input) and
-repair is a held key; neither blocks the other, and `Folder.add`/`remove` are
-both bounded, so draining and filling `/Documents` in the same step is safe.
-Within a step the order is fixed: **sync, then repair**, so items that arrive
-this frame are immediately spendable and the order is deterministic.
+**수리와 동기화는 동시에 된다.** 동기화는 자동(범위 기반, 입력 없음)이고 수리는 홀드 키라
+서로 막지 않는다. `Folder.add`/`remove` 둘 다 경계가 잡혀 있어 같은 스텝에 저장고로 들어오고
+나가도 안전하다. 한 스텝 안의 순서는 **동기화 → 수리**로 고정한다. 그래야 이번 프레임에 막
+들어온 자원을 바로 쓸 수 있고 순서가 결정적이다.
 
-## The world runs while the player is dead
+## 죽어있는 동안에도 세계는 돈다
 
-`PlayScene.update` currently early-returns during the respawn wait, freezing
-enemies, spawners and projectiles. That must change: only the player goes
-inactive, the world keeps simulating.
+지금 `PlayScene.update`는 부활 대기 중 조기 반환해서 적·스포너·투사체가 전부 멈춘다.
+이걸 바꿔야 한다. 플레이어만 비활성이 되고 월드는 계속 돌아야 한다.
 
-`Player` gains `is_dead`. Hunters treat a dead player as absent — proximity and
-lock aggro are both skipped, so every hunter converges on the Core.
+`Player`에 `is_dead`를 추가한다. 헌터는 플레이어가 죽어있으면 없는 것으로 취급해서 근접
+어그로와 피격 어그로를 모두 건너뛰므로, 결과적으로 모든 헌터가 코어로 몰린다.
 
-This turns death's real cost from "half a backpack" into "the Core is
-undefended for `RESPAWN_DELAY` seconds", which is the cheapest meaningful
-tension this spec adds.
+이로써 죽음의 진짜 대가가 "백팩 절반"에서 **"`RESPAWN_DELAY`초 동안 코어가 무방비"**로
+바뀐다. 이 스펙이 추가하는 긴장 중 가장 값이 싸다.
 
-## Presentation
+## 표시
 
-### Screen-edge pulse
+### 화면 가장자리 맥동
 
-`PlayScene` holds `_core_hit_timer`, reset to `CORE_HIT_FLASH_TIME` (0.6 s)
-on any frame the Core takes damage. While it is alive the screen edge pulses
-red.
+`PlayScene`이 `_core_hit_timer`를 들고, 코어가 피해를 받은 프레임마다
+`CORE_HIT_FLASH_TIME`(0.6초)으로 리셋한다. 타이머가 살아있는 동안 화면 가장자리가 붉게
+맥동한다.
 
-The pulse phase accumulates in `update(dt)`, never from a wall clock, so the
-project's determinism rule holds and the value is testable. `draw` only reads it.
+맥동 위상은 `update(dt)`에서 누적하며 벽시계를 절대 읽지 않는다. 프로젝트의 결정성 규칙이
+지켜지고 값도 테스트 가능해진다. `draw`는 그 값을 읽기만 한다.
 
-The border is a per-alpha `SRCALPHA` surface built **once in `__init__`**: a few
-nested rects with decreasing alpha to fade inward. Per frame only `set_alpha`
-changes before the blit. The shape is fixed, so recomputing a gradient every
-frame would be pure waste.
+테두리는 `__init__`에서 **한 번만** `SRCALPHA` 서피스로 만들어 캐시한다. 알파를 단계적으로
+낮춘 rect를 몇 겹 겹쳐 안쪽으로 페이드시킨다. 매 프레임 바뀌는 건 blit 전의 `set_alpha`
+하나뿐이다. 모양이 고정이므로 프레임마다 그라데이션을 다시 계산하는 건 순수한 낭비다.
 
-### Core HP bar
+### 코어 HP 바
 
-Drawn under the Core, horizontally centred, **only when the Core's screen
-position is on-screen and `hp < max_hp`**. A healthy Core draws nothing, so the
-view stays clean and the bar's presence is itself information.
+코어 아래에 가로 중앙 정렬로, **코어의 화면 좌표가 화면 안에 있고 `hp < max_hp`일 때만**
+그린다. 멀쩡한 코어는 아무것도 그리지 않으므로 화면이 깨끗하고, **바가 떠 있다는 사실
+자체가 정보**가 된다.
 
-Away from the Core the player still gets only the edge pulse — deliberately no
-numbers. Reading the Core's condition requires being able to see it.
+코어에서 멀면 여전히 가장자리 맥동뿐이고 숫자는 일부러 주지 않는다. 코어의 상태를 읽으려면
+코어가 보이는 곳에 있어야 한다.
 
-`_draw_bar` is currently anchored to `_BAR_X` / `_BAR_W`. Generalise it to take
-`x` and `width`; the three HUD gauges pass the existing constants. One helper
-then covers both HUD and world-space bars.
+`_draw_bar`는 지금 `_BAR_X` / `_BAR_W`에 고정돼 있다. `x`와 `width`도 인자로 받도록
+일반화하고, HUD 게이지 세 개는 기존 상수를 넘긴다. 헬퍼 하나가 HUD 바와 월드 좌표 바를
+모두 커버하게 된다.
 
-## File layout
+## 파일 배치
 
-| File | Change |
+| 파일 | 변경 |
 |---|---|
-| `entities/enemy_kinds.py` | **new** — `EnemyKind` + the 4-kind catalogue |
-| `entities/enemy.py` | `Virus` → `Enemy` referencing a `kind`, plus aggro/attack timers |
+| `entities/enemy_kinds.py` | **신규** — `EnemyKind` + 4종 카탈로그 |
+| `entities/enemy.py` | `Virus` → `kind`를 참조하는 `Enemy`, 어그로/공격 타이머 추가 |
 | `entities/core.py` | `hp`, `max_hp`, `damage()`, `is_destroyed` |
 | `entities/player.py` | `is_dead` |
-| `systems/enemy_ai.py` | **new** — target resolution, attack execution, blasts |
-| `systems/combat.py` | `update_enemies` moves to `enemy_ai` |
-| `systems/enemy_spawner.py` | weighted kind selection |
-| `scenes/play.py` | repair input, pulse, Core bar, world runs while dead |
-| `config.py` | Core HP, aggro radii, lock duration, blast multiplier, repair numbers |
+| `systems/enemy_ai.py` | **신규** — 타겟 결정, 공격 실행, 폭발 처리 |
+| `systems/combat.py` | `update_enemies`를 `enemy_ai`로 이관 |
+| `systems/enemy_spawner.py` | 가중치 기반 종류 선택 |
+| `scenes/play.py` | 수리 입력, 맥동, 코어 바, 사망 중 월드 진행 |
+| `config.py` | 코어 HP, 어그로 반경, 잠금 시간, 폭발 배수, 수리 수치 |
 
-**Why the catalogue is not in `config.py`:** `config.py` is a flat list of
-name-to-value constants; the catalogue is a table that grows by rows. Flattening
-4 kinds × 8 fields into 32 loose constants scatters exactly the numbers that
-need to be compared side by side. System-wide scalars stay in `config.py` as the
-project rule requires.
+**카탈로그를 `config.py`에 두지 않는 이유:** `config.py`는 "이름 하나에 값 하나"인 상수
+목록이고, 카탈로그는 **행이 늘어나는 테이블**이라 성격이 다르다. 4종 × 8필드를 상수 32개로
+풀어놓으면 나란히 놓고 비교해야 할 숫자들이 오히려 흩어진다. 시스템 전역 스칼라값은 프로젝트
+규칙대로 `config.py`에 남긴다.
 
-## Ripples through existing code
+## 기존 코드에 생기는 파장
 
-- Every `Virus` reference changes: `play.py` (Trojan hatch), `combat.py`,
-  `enemy_spawner.py`, and four test files.
-- `update_enemies`' "damage on contact with the player" generalises to
-  "damage on contact with the current target".
-- The respawn early-return in `PlayScene.update` is removed.
-- `_draw_bar` gains `x` and `width` parameters.
+- `Virus`를 참조하는 곳 전부가 바뀐다 — `play.py`(트로이 부화), `combat.py`,
+  `enemy_spawner.py`, 그리고 테스트 4개 파일.
+- `update_enemies`의 "플레이어에 닿으면 피해"가 "**현재 타겟**에 닿으면 피해"로 일반화된다.
+- `PlayScene.update`의 부활 대기 조기 반환이 제거된다.
+- `_draw_bar`에 `x`와 `width` 인자가 추가된다.
 
-## Testing
+## 테스트
 
-TDD as usual: pure logic first, headless. The cases that matter:
+늘 하던 대로 TDD로 간다. 순수 로직을 먼저 만들고 헤드리스로 검증한다. 중요한 경우들:
 
-**Aggro** — acquires inside 300; does not release until past 450; holds its
-previous state in between (hysteresis); a hit locks for 4 s regardless of
-distance; after the lock expires at 400 px the enemy returns to the Core.
+**어그로** — 300 안에서 걸린다 / 450을 넘어야 풀린다 / 그 사이에서는 직전 상태를
+유지한다(히스테리시스) / 피격당하면 거리와 무관하게 4초간 묶인다 / 잠금이 끝난 시점에
+400 px에 있으면 코어로 돌아간다.
 
-**Attacks** — melee hits exactly once per interval; detaching and reattaching
-does not reset the swing timer; a suicide enemy detonates after its fuse; a
-target that left the blast radius takes nothing; melee does not damage
-non-targets.
+**공격** — 근거리는 간격마다 정확히 한 번 때린다 / 붙었다 떼기를 반복해도 타이머가
+리셋되지 않는다 / 자폭은 도화선이 끝난 뒤 터진다 / 도화선 중 폭발 반경을 벗어난 대상은
+피해를 받지 않는다 / 근거리는 타겟이 아닌 대상을 때리지 않는다.
 
-**Blast** — a detonation damages both the player and the Core when both are in
-radius.
+**폭발** — 폭발 시 반경 안에 있는 플레이어와 코어가 둘 다 피해를 받는다.
 
-**Core** — `is_destroyed` at 0 hp; repair consumes exactly one item per 25 hp;
-healing stops when `/Documents` empties; a full Core consumes nothing.
+**코어** — HP 0에서 `is_destroyed`가 참이 된다 / 수리가 25 HP당 정확히 자원 1개를 먹는다 /
+`/Documents`가 비면 회복이 멈춘다 / 가득 찬 코어는 자원을 먹지 않는다.
 
-**While dead** — hunters all target the Core; spawners and enemies keep
-updating.
+**사망 중** — 헌터가 전부 코어를 노린다 / 스포너와 적이 계속 갱신된다.
 
-**Spawning** — weighted kind selection is deterministic under an injected
-`random.Random`, like the existing spawner tests.
+**스폰** — 주입된 `random.Random` 아래에서 가중치 종류 선택이 결정적이다. 기존 스포너
+테스트와 같은 방식.
 
-Rendering (pulse, Core bar) is verified only as "draws without raising", the
-same level as the existing `test_draw_runs_without_error`.
+렌더링(맥동, 코어 바)은 픽셀을 검증하지 않고 "예외 없이 그려진다"까지만 본다. 기존
+`test_draw_runs_without_error`와 같은 수준이다.
 
-## Balance numbers are first guesses
+## 밸런스 숫자는 전부 첫 값이다
 
-Every number in this spec is a starting value. None of them has been played.
-`CORE_MAX_HP`, the repair cost, and the spawn interval are the three most
-likely to be wrong, and the catalogue exists precisely so that retuning happens
-in one table rather than across six files.
+이 문서의 모든 숫자는 시작값이며, 아직 아무것도 실제로 플레이해보지 않았다. `CORE_MAX_HP`,
+수리 비용, 스폰 간격 셋이 틀렸을 가능성이 가장 높다. 카탈로그를 한 테이블로 모아둔 이유가
+바로 이것이다 — 조정이 여섯 파일이 아니라 한 곳에서 끝나야 한다.
