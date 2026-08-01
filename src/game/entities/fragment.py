@@ -9,13 +9,14 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
+from game.items.item_kinds import FRAGMENT, ItemKind
 
 
 @dataclass
 class Fragment:
     pos: pygame.Vector2
     hp: float = config.FRAGMENT_HP
-    mb_value: int = config.FRAGMENT_MB
+    kind: ItemKind = FRAGMENT  # what mining it out yields
     on_depleted: Callable[[Fragment], None] | None = None
 
     @property

@@ -16,7 +16,8 @@ from game.entities.fragment import Fragment
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.hotbar import Hotbar
-from game.inventory.storage import Folder, transfer
+from game.inventory.storage import Folder
+from game.items.item_kinds import FRAGMENT
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining
 from game.systems.camera import LOCKED, Camera
@@ -165,7 +166,8 @@ class PlayScene(Scene):
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
         if sync and self.core.is_in_sync_range(self.player.pos):
-            transfer(self.backpack, self.documents)
+            moved = self.documents.add(FRAGMENT, self.backpack.count(FRAGMENT))
+            self.backpack.remove(FRAGMENT, moved)
 
         if self.player.hp <= 0:
             combat.apply_death_penalty(self.backpack)

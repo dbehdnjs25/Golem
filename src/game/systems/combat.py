@@ -92,5 +92,10 @@ def update_enemies(
 
 
 def apply_death_penalty(backpack: Folder) -> None:
-    """Drop half the backpack, keeping the rounded-up half. Documents are untouched."""
-    backpack.remove(backpack.count // 2)
+    """Drop half of every row, keeping the rounded-up half. Documents are untouched.
+
+    Per-row rather than per-total so no kind can be sheltered by dropping another.
+    ``rows()`` returns a fresh list, so mutating during the loop is safe.
+    """
+    for kind, n in backpack.rows():
+        backpack.remove(kind, n // 2)

@@ -47,10 +47,10 @@ def update_mining(
     target = _pick_target(aim_world, player_pos, fragments, active_tool.range)
     if target is None:
         return OUT_OF_RANGE
-    if backpack.is_full:
+    if backpack.fits(target.kind, 1) == 0:
         return FULL  # block before damaging -> fragment preserved
     if target.damage(active_tool.dps * dt):
-        backpack.add(1)
+        backpack.add(target.kind, 1)
         fragments.remove(target)
         return COLLECTED
     return MINING
