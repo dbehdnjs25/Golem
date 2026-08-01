@@ -60,6 +60,12 @@ def test_rows_follow_catalogue_order_and_skip_empties():
     assert f.rows() == [(FRAGMENT, 5)]  # count changed, position did not
     f.remove(FRAGMENT, 5)
     assert f.rows() == []  # an emptied row leaves the list
+    # HEAVY is stored (add/count/used_mb all work on it) but is not in CATALOGUE,
+    # so it must never surface in rows() -- this is what actually exercises the
+    # "absent from CATALOGUE is invisible here" filtering, not just row ordering.
+    f.add(FRAGMENT, 1)
+    f.add(HEAVY, 1)
+    assert f.rows() == [(FRAGMENT, 1)]
 
 
 def test_reserved_space_cannot_be_taken_by_anything_else():

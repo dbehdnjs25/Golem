@@ -6,9 +6,13 @@ from game.entities.enemy import Virus
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Folder
-from game.items.item_kinds import FRAGMENT
+from game.items.item_kinds import FRAGMENT, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
+
+# A second kind, used only to prove apply_death_penalty halves per row rather
+# than per total (see test_death_penalty_cannot_shelter_one_kind_by_dropping_another).
+HEAVY = ItemKind(key="heavy", name="큰 파일", mb=10, color=(1, 2, 3))
 
 
 def _fire(steps, dt, *, held=True, weapon=None):
@@ -113,3 +117,26 @@ def test_death_penalty_halves_round_up(start, expected):
     backpack.add(FRAGMENT, start)
     combat.apply_death_penalty(backpack)
     assert backpack.count(FRAGMENT) == expected
+
+
+def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
+    # rows() only surfaces kinds listed in CATALOGUE, which normally holds just
+    # FRAGMENT. To exercise the per-row-vs-per-total distinction we need a
+    # second visible kind, so we patch the name storage.py bound at import time
+    # (`from game.items.item_kinds import CATALOGUE`) rather than the catalogue
+    # module itself. Do not delete this patch as "unnecessary" -- without it
+    # HEAVY's row is invisible to apply_death_penalty and the test degrades
+    # back into test_death_penalty_halves_round_up.
+    monkeypatch.setattr("game.inventory.storage.CATALOGUE", (FRAGMENT, HEAVY))
+
+    backpack = Folder(cap_mb=1000)
+    backpack.add(FRAGMENT, 5)
+    backpack.add(HEAVY, 1)
+    combat.apply_death_penalty(backpack)
+
+    # Per-row: each kind keeps its own rounded-up half (5 -> 3, 1 -> 1).
+    # A per-total implementation would instead halve the combined count
+    # (6 -> 3 kept) and could zero out the smaller HEAVY row entirely to get
+    # there, which is exactly the "sheltering" the per-row rewrite prevents.
+    assert backpack.count(FRAGMENT) == 3
+    assert backpack.count(HEAVY) == 1
