@@ -18,9 +18,8 @@ def test_damage_returns_true_when_it_depletes():
     assert f.is_depleted
 
 
-def test_depletion_hook_called_once():
-    calls = []
-    f = Fragment(pos=pygame.Vector2(0, 0), hp=10, on_depleted=calls.append)
-    f.damage(10)
-    f.damage(10)  # already depleted, must not fire again
-    assert calls == [f]
+def test_the_trojan_hook_is_gone():
+    import dataclasses
+
+    fields = {field.name for field in dataclasses.fields(Fragment)}
+    assert "on_depleted" not in fields

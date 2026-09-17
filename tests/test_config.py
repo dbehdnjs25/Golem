@@ -28,6 +28,9 @@ def test_combat_constants_are_sane():
     assert config.PLAYER_MAX_HP > 0
     assert config.WEAPON_FIRE_RATE > 0
     assert config.PROJECTILE_SPEED > 0
-    assert 0.0 <= config.TROJAN_CHANCE <= 1.0
     assert config.DODGE_IFRAMES >= config.DODGE_DURATION
     assert len(config.GOLEM_COLOR) == 3
+
+
+def test_the_trojan_constant_is_gone():
+    assert not hasattr(config, "TROJAN_CHANCE")

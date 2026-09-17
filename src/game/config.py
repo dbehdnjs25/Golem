@@ -95,9 +95,6 @@ PROJECTILE_SPEED: Final[float] = 520.0  # px/s
 PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
 PROJECTILE_RADIUS: Final[float] = 4.0
 
-# --- Combat: trojan -----------------------------------------------------------
-TROJAN_CHANCE: Final[float] = 0.15  # chance a spawned fragment is a trap
-
 # --- Combat: colours (RGB) ----------------------------------------------------
 GOLEM_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
 PROJECTILE_COLOR: Final[tuple[int, int, int]] = (255, 240, 150)

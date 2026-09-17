@@ -160,9 +160,7 @@ class PlayScene(Scene):
         combat.update_projectiles(dt, self.projectiles, self.enemies, config.WORLD_SIZE)
         combat.update_enemies(dt, self.enemies, self.player, config.WORLD_SIZE)
 
-        new_fragment = self.spawner.update(dt, self.fragments, self.core, self.rng)
-        if new_fragment is not None and self.rng.random() < config.TROJAN_CHANCE:
-            new_fragment.on_depleted = self._hatch_golem
+        self.spawner.update(dt, self.fragments, self.core, self.rng)
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
         if sync and self.core.is_in_sync_range(self.player.pos):
@@ -172,10 +170,6 @@ class PlayScene(Scene):
         if self.player.hp <= 0:
             combat.apply_death_penalty(self.backpack)
             self._respawn_timer = config.RESPAWN_DELAY
-
-    def _hatch_golem(self, fragment: Fragment) -> None:
-        """Trojan payload: mining this fragment out releases a golem in its place."""
-        self.enemies.append(Golem(pos=pygame.Vector2(fragment.pos)))
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
