@@ -42,17 +42,17 @@ class Biome:
     color: tuple[int, int, int]  # flat fill until real tiles exist
 
 
-GRASSLAND = Biome("grassland", "초원", None, None, (74, 110, 68))
+GRASSLAND = Biome("grassland", "초원", None, None, (90, 130, 72))
 
 # Ring order is difficulty order. Volcano first because lava is a visible,
 # stationary hazard -- the easiest kind to read. Bog fourth because its stamina
 # drain is unfair before cooking and potions exist. Wasteland last because raids
 # come in crowds and chaining is the answer to the final gauntlet.
-VOLCANO = Biome("volcano", "화산지대", FIRE, OBSIDIAN, (110, 52, 44))
+VOLCANO = Biome("volcano", "화산지대", FIRE, OBSIDIAN, (126, 54, 44))
 SNOWFIELD = Biome("snowfield", "설원", ICE, FROST_CRYSTAL, (206, 219, 230))
-WIND_PLATEAU = Biome("wind_plateau", "바람 고원", WIND, WEATHERED_STONE, (150, 145, 120))
-BOG = Biome("bog", "늪지", POISON, BOG_MOSS, (72, 86, 58))
-WASTELAND = Biome("wasteland", "황무지", LIGHTNING, THUNDER_STONE, (140, 120, 92))
+WIND_PLATEAU = Biome("wind_plateau", "바람 고원", WIND, WEATHERED_STONE, (150, 152, 140))
+BOG = Biome("bog", "늪지", POISON, BOG_MOSS, (55, 62, 42))
+WASTELAND = Biome("wasteland", "황무지", LIGHTNING, THUNDER_STONE, (152, 122, 80))
 
 RING_BIOMES: tuple[Biome, ...] = (VOLCANO, SNOWFIELD, WIND_PLATEAU, BOG, WASTELAND)
 BIOMES: tuple[Biome, ...] = (GRASSLAND, *RING_BIOMES)

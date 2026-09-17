@@ -77,3 +77,14 @@ def test_biomes_are_frozen_and_hashable():
 def test_biome_is_a_dataclass_row():
     assert isinstance(GRASSLAND, Biome)
     assert all(len(b.color) == 3 for b in BIOMES)
+
+
+def test_no_two_biomes_look_alike():
+    # The flat colours are the only way to read the map until tile art lands,
+    # and two neighbouring greens make the grassland's rim invisible. Crude RGB
+    # distance, not a perceptual model -- it only has to catch "these are the
+    # same colour", which is the mistake that actually happens.
+    for i, a in enumerate(BIOMES):
+        for b in BIOMES[i + 1 :]:
+            gap = sum((x - y) ** 2 for x, y in zip(a.color, b.color, strict=True)) ** 0.5
+            assert gap > 55, f"{a.name} and {b.name} are too close: {gap:.0f}"
