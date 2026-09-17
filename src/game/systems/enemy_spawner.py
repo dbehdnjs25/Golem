@@ -1,5 +1,5 @@
-"""Time-based virus spawner. Spawn spots avoid the core's sync zone and a radius
-around the player, so viruses never appear on top of either; the cadence, the
+"""Time-based golem spawner. Spawn spots avoid the core's sync zone and a radius
+around the player, so golems never appear on top of either; the cadence, the
 retry cap and the random point rule are shared with the fragment spawner."""
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import pygame
 
 from game import config
 from game.entities.core import Core
-from game.entities.enemy import Virus
+from game.entities.enemy import Golem
 from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, random_point
 
 _MIN_PLAYER_DIST = 300.0
@@ -19,17 +19,17 @@ _MIN_PLAYER_DIST = 300.0
 
 @dataclass
 class EnemySpawner(TimedSpawner):
-    interval: float = config.VIRUS_SPAWN_INTERVAL
-    max_enemies: int = config.VIRUS_SPAWN_MAX
+    interval: float = config.GOLEM_SPAWN_INTERVAL
+    max_enemies: int = config.GOLEM_SPAWN_MAX
 
     def update(
         self,
         dt: float,
-        enemies: list[Virus],
+        enemies: list[Golem],
         player_pos: pygame.Vector2,
         core: Core,
         rng: random.Random,
-    ) -> Virus | None:
+    ) -> Golem | None:
         if not self.is_due(dt):
             return None
         if len(enemies) >= self.max_enemies:
@@ -37,9 +37,9 @@ class EnemySpawner(TimedSpawner):
         spot = self._find_spot(player_pos, core, rng)
         if spot is None:
             return None
-        virus = Virus(pos=spot)
-        enemies.append(virus)
-        return virus
+        golem = Golem(pos=spot)
+        enemies.append(golem)
+        return golem
 
     def _find_spot(
         self,
@@ -49,7 +49,7 @@ class EnemySpawner(TimedSpawner):
     ) -> pygame.Vector2 | None:
         for _ in range(SPAWN_ATTEMPTS):
             point = random_point(rng)
-            if core.pos.distance_to(point) < core.sync_radius + config.VIRUS_RADIUS:
+            if core.pos.distance_to(point) < core.sync_radius + config.GOLEM_RADIUS:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:
                 continue

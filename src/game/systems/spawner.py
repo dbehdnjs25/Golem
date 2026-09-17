@@ -1,6 +1,6 @@
 """Time-based fragment spawner. Spawn spots avoid the core's sync zone and
 existing fragments; the cadence, the retry cap and the random point rule come
-from ``spawn_common`` and are shared with the virus spawner."""
+from ``spawn_common`` and are shared with the golem spawner."""
 
 from __future__ import annotations
 

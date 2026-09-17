@@ -1,4 +1,4 @@
-"""A virus enemy. Logic-only: chases a target point each step, so it is
+"""A golem enemy. Logic-only: chases a target point each step, so it is
 unit-testable headlessly. Contact damage is applied by systems/combat, not here."""
 
 from __future__ import annotations
@@ -12,11 +12,11 @@ from game.systems.physics import clamp_to_bounds
 
 
 @dataclass
-class Virus:
+class Golem:
     pos: pygame.Vector2
-    hp: float = config.VIRUS_HP
-    speed: float = config.VIRUS_SPEED
-    radius: float = config.VIRUS_RADIUS
+    hp: float = config.GOLEM_HP
+    speed: float = config.GOLEM_SPEED
+    radius: float = config.GOLEM_RADIUS
 
     @property
     def is_dead(self) -> bool:

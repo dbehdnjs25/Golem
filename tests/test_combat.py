@@ -2,7 +2,7 @@ import pygame
 import pytest
 
 from game import config
-from game.entities.enemy import Virus
+from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Folder
@@ -64,7 +64,7 @@ def test_no_fire_on_degenerate_aim():
 
 
 def test_projectile_hits_and_kills_enemy():
-    enemy = Virus(pos=pygame.Vector2(100, 100), hp=5)
+    enemy = Golem(pos=pygame.Vector2(100, 100), hp=5)
     shot = Projectile(pos=pygame.Vector2(100, 100), vel=pygame.Vector2(0, 0), damage=5)
     projectiles = [shot]
     enemies = [enemy]
@@ -74,7 +74,7 @@ def test_projectile_hits_and_kills_enemy():
 
 
 def test_projectile_misses_and_survives():
-    enemy = Virus(pos=pygame.Vector2(1000, 1000), hp=5)
+    enemy = Golem(pos=pygame.Vector2(1000, 1000), hp=5)
     shot = Projectile(pos=pygame.Vector2(0, 0), vel=pygame.Vector2(10, 0), damage=5, ttl=1.0)
     projectiles = [shot]
     enemies = [enemy]
@@ -92,21 +92,21 @@ def test_expired_projectile_removed():
 
 def test_enemy_contact_damages_player():
     player = Player(pos=pygame.Vector2(500, 500))
-    enemy = Virus(pos=pygame.Vector2(500, 500))
+    enemy = Golem(pos=pygame.Vector2(500, 500))
     combat.update_enemies(0.5, [enemy], player, (2400, 1600))
-    assert player.hp == config.PLAYER_MAX_HP - config.VIRUS_CONTACT_DPS * 0.5
+    assert player.hp == config.PLAYER_MAX_HP - config.GOLEM_CONTACT_DPS * 0.5
 
 
 def test_invulnerable_player_takes_no_contact_damage():
     player = Player(pos=pygame.Vector2(500, 500), iframe_timer=1.0)
-    enemy = Virus(pos=pygame.Vector2(500, 500))
+    enemy = Golem(pos=pygame.Vector2(500, 500))
     combat.update_enemies(0.5, [enemy], player, (2400, 1600))
     assert player.hp == config.PLAYER_MAX_HP
 
 
 def test_distant_enemy_deals_no_damage():
     player = Player(pos=pygame.Vector2(0, 0))
-    enemy = Virus(pos=pygame.Vector2(2000, 1500))
+    enemy = Golem(pos=pygame.Vector2(2000, 1500))
     combat.update_enemies(0.5, [enemy], player, (2400, 1600))
     assert player.hp == config.PLAYER_MAX_HP
 

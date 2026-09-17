@@ -1,7 +1,7 @@
 import pygame
 
 from game import config
-from game.entities.enemy import Virus
+from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
 from game.items.item_kinds import FRAGMENT
 from game.items.tools import WeaponTool
@@ -127,7 +127,7 @@ def test_respawn_returns_player_to_core():
 
 def test_draw_runs_with_enemies_and_projectiles(surface):
     scene = PlayScene()
-    scene.enemies.append(Virus(pos=pygame.Vector2(scene.player.pos)))
+    scene.enemies.append(Golem(pos=pygame.Vector2(scene.player.pos)))
     scene.projectiles.append(
         Projectile(pos=pygame.Vector2(scene.player.pos), vel=pygame.Vector2(1, 0), damage=1)
     )

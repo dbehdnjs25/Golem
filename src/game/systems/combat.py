@@ -7,7 +7,7 @@ from __future__ import annotations
 import pygame
 
 from game import config
-from game.entities.enemy import Virus
+from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Folder
@@ -47,7 +47,7 @@ def _in_bounds(pos: pygame.Vector2, bounds: tuple[int, int]) -> bool:
     return 0 <= pos.x <= width and 0 <= pos.y <= height
 
 
-def _first_hit(shot: Projectile, enemies: list[Virus]) -> Virus | None:
+def _first_hit(shot: Projectile, enemies: list[Golem]) -> Golem | None:
     for enemy in enemies:
         if not enemy.is_dead and shot.pos.distance_to(enemy.pos) <= shot.radius + enemy.radius:
             return enemy
@@ -57,7 +57,7 @@ def _first_hit(shot: Projectile, enemies: list[Virus]) -> Virus | None:
 def update_projectiles(
     dt: float,
     projectiles: list[Projectile],
-    enemies: list[Virus],
+    enemies: list[Golem],
     bounds: tuple[int, int],
 ) -> None:
     surviving: list[Projectile] = []
@@ -79,7 +79,7 @@ def update_projectiles(
 
 def update_enemies(
     dt: float,
-    enemies: list[Virus],
+    enemies: list[Golem],
     player: Player,
     bounds: tuple[int, int],
 ) -> None:
@@ -88,7 +88,7 @@ def update_enemies(
         if player.invulnerable:
             continue
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
-            player.hp -= config.VIRUS_CONTACT_DPS * dt
+            player.hp -= config.GOLEM_CONTACT_DPS * dt
 
 
 def apply_death_penalty(backpack: Folder) -> None:

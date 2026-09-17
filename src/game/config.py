@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Final
 
 # --- Window -----------------------------------------------------------------
-TITLE: Final[str] = "Defrag"
+TITLE: Final[str] = "Golem"
 SCREEN_WIDTH: Final[int] = 960
 SCREEN_HEIGHT: Final[int] = 540
 SCREEN_SIZE: Final[tuple[int, int]] = (SCREEN_WIDTH, SCREEN_HEIGHT)
@@ -80,13 +80,13 @@ DODGE_COOLDOWN: Final[float] = 0.80  # seconds before dodging again
 RESPAWN_DELAY: Final[float] = 2.0  # seconds dead before respawn
 RESPAWN_IFRAMES: Final[float] = 1.5  # invulnerability granted on respawn
 
-# --- Combat: virus enemy ------------------------------------------------------
-VIRUS_HP: Final[float] = 30.0
-VIRUS_SPEED: Final[float] = 140.0  # px/s toward the player
-VIRUS_RADIUS: Final[float] = 11.0
-VIRUS_CONTACT_DPS: Final[float] = 20.0  # hp/s while touching the player
-VIRUS_SPAWN_INTERVAL: Final[float] = 3.0
-VIRUS_SPAWN_MAX: Final[int] = 15
+# --- Combat: golem enemy ------------------------------------------------------
+GOLEM_HP: Final[float] = 30.0
+GOLEM_SPEED: Final[float] = 140.0  # px/s toward the player
+GOLEM_RADIUS: Final[float] = 11.0
+GOLEM_CONTACT_DPS: Final[float] = 20.0  # hp/s while touching the player
+GOLEM_SPAWN_INTERVAL: Final[float] = 3.0
+GOLEM_SPAWN_MAX: Final[int] = 15
 
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0
@@ -99,6 +99,6 @@ PROJECTILE_RADIUS: Final[float] = 4.0
 TROJAN_CHANCE: Final[float] = 0.15  # chance a spawned fragment is a trap
 
 # --- Combat: colours (RGB) ----------------------------------------------------
-VIRUS_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
+GOLEM_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
 PROJECTILE_COLOR: Final[tuple[int, int, int]] = (255, 240, 150)
 HP_COLOR: Final[tuple[int, int, int]] = (220, 70, 80)

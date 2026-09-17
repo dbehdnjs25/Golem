@@ -1,5 +1,5 @@
 """Machinery shared by the time-based spawners. Keeping the interval accumulator
-and the "random spawnable point" rule in one place means the fragment and virus
+and the "random spawnable point" rule in one place means the fragment and golem
 spawners cannot drift apart on cadence or on which part of the world is usable.
 Randomness stays injected (``random.Random``) so spawns remain deterministic."""
 

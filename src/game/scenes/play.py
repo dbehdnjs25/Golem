@@ -11,7 +11,7 @@ import pygame
 from game import config
 from game.core.scene import Scene
 from game.entities.core import Core
-from game.entities.enemy import Virus
+from game.entities.enemy import Golem
 from game.entities.fragment import Fragment
 from game.entities.player import Player
 from game.entities.projectile import Projectile
@@ -67,7 +67,7 @@ class PlayScene(Scene):
         self.spawner = Spawner()
         self.rng = random.Random(1234)
 
-        self.enemies: list[Virus] = []
+        self.enemies: list[Golem] = []
         self.projectiles: list[Projectile] = []
         self.enemy_spawner = EnemySpawner()
         self._fire_timer = 0.0
@@ -162,7 +162,7 @@ class PlayScene(Scene):
 
         new_fragment = self.spawner.update(dt, self.fragments, self.core, self.rng)
         if new_fragment is not None and self.rng.random() < config.TROJAN_CHANCE:
-            new_fragment.on_depleted = self._hatch_virus
+            new_fragment.on_depleted = self._hatch_golem
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
         if sync and self.core.is_in_sync_range(self.player.pos):
@@ -173,9 +173,9 @@ class PlayScene(Scene):
             combat.apply_death_penalty(self.backpack)
             self._respawn_timer = config.RESPAWN_DELAY
 
-    def _hatch_virus(self, fragment: Fragment) -> None:
-        """Trojan payload: mining this fragment out releases a virus in its place."""
-        self.enemies.append(Virus(pos=pygame.Vector2(fragment.pos)))
+    def _hatch_golem(self, fragment: Fragment) -> None:
+        """Trojan payload: mining this fragment out releases a golem in its place."""
+        self.enemies.append(Golem(pos=pygame.Vector2(fragment.pos)))
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
@@ -191,7 +191,7 @@ class PlayScene(Scene):
         for enemy in self.enemies:
             pygame.draw.circle(
                 surface,
-                config.VIRUS_COLOR,
+                config.GOLEM_COLOR,
                 self.camera.world_to_screen(enemy.pos),
                 enemy.radius,
             )
