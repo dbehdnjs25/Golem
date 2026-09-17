@@ -22,10 +22,13 @@ def test_the_centre_sits_at_the_middle_of_the_world_square():
     assert config.WORLD_SIZE == (2 * config.MAP_RADIUS, 2 * config.MAP_RADIUS)
 
 
-def test_the_grassland_is_about_a_third_of_the_map():
+def test_the_grassland_is_a_quarter_of_the_map():
+    # The grassland's radius and the ring's width are both a three-minute walk,
+    # so the ring gets three quarters of the ground despite being half the
+    # radius -- a far-out band holds far more area than a near one.
     world = WorldMap()
-    ratio = (world.grassland_radius / world.radius) ** 2
-    assert 0.28 < ratio < 0.40
+    assert world.ring_width == world.grassland_radius
+    assert (world.grassland_radius / world.radius) ** 2 == 0.25
 
 
 def test_contains_is_the_circle_not_the_square():

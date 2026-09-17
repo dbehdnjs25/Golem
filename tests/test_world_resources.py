@@ -27,16 +27,18 @@ def test_the_inner_grassland_is_mostly_stone_and_copper():
 
 
 def test_gold_does_not_appear_in_the_grassland():
-    for fraction in (0.1, 0.3, 0.5):
+    # 0.5 is exactly the grassland's rim, which counts as the ring -- the bands
+    # are half-open, so probe just inside it.
+    for fraction in (0.1, 0.3, 0.49):
         assert GOLD_ORE not in _draw(fraction)
 
 
 def test_zinc_appears_only_in_the_outer_grassland():
     # Zinc is smelting-only and deliberately awkward: brass costs the trip out
     # to the grassland's rim, not a deeper mine.
-    assert ZINC_ORE not in _draw(0.1)
-    assert ZINC_ORE in _draw(0.5)
-    assert ZINC_ORE not in _draw(0.9)
+    assert ZINC_ORE not in _draw(0.1)  # the inner grassland
+    assert ZINC_ORE in _draw(0.4)  # its outer half
+    assert ZINC_ORE not in _draw(0.9)  # out in the ring
 
 
 def test_the_outer_ring_favours_the_high_tiers():

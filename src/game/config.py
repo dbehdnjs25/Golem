@@ -40,11 +40,13 @@ VOID_COLOR: Final[tuple[int, int, int]] = (18, 18, 26)  # outside the map circle
 # the camera clamps against; the circle is what the player can stand on, so the
 # box corners are void. A central grassland fills about a third of the circle
 # and the remaining ring is split into BIOME_COUNT equal sectors.
-# The grassland's rim is a three-minute walk from the core at PLAYER_SPEED.
-# That single number sets the map's scale; the outer radius then follows from
-# keeping the grassland at a third of the total area.
+# Two three-minute walks at PLAYER_SPEED: one from the core to the grassland's
+# rim, another from there to the map's edge. That makes the grassland a quarter
+# of the total area -- the ring is thin in radius but wide in ground, since a
+# far-out band holds far more of it than a near one.
 GRASSLAND_RADIUS: Final[float] = 36_000.0  # 180s * 200px/s
-MAP_RADIUS: Final[float] = 62_400.0  # (36000/62400)^2 = 1/3 of the area
+RING_WIDTH: Final[float] = 36_000.0  # another 180s to cross the biomes
+MAP_RADIUS: Final[float] = GRASSLAND_RADIUS + RING_WIDTH
 BIOME_COUNT: Final[int] = 5
 
 WORLD_WIDTH: Final[int] = int(2 * MAP_RADIUS)

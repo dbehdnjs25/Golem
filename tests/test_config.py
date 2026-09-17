@@ -39,8 +39,12 @@ def test_the_map_is_sized_for_a_three_minute_walk_to_the_biomes():
     assert config.GRASSLAND_RADIUS / config.PLAYER_SPEED == 180.0
 
 
-def test_the_grassland_is_a_third_of_the_map():
-    assert 0.30 < (config.GRASSLAND_RADIUS / config.MAP_RADIUS) ** 2 < 0.36
+def test_the_grassland_and_the_ring_are_each_a_three_minute_walk():
+    # Equal widths, not equal areas: the ring is the outer half of the radius,
+    # so it holds three quarters of the ground.
+    assert config.RING_WIDTH == config.GRASSLAND_RADIUS
+    assert config.MAP_RADIUS == config.GRASSLAND_RADIUS + config.RING_WIDTH
+    assert (config.GRASSLAND_RADIUS / config.MAP_RADIUS) ** 2 == 0.25
 
 
 def test_the_temple_band_is_a_fraction_of_the_ring_not_an_absolute_radius():
