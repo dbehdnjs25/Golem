@@ -92,10 +92,12 @@ def update_enemies(
 
 
 def apply_death_penalty(backpack: Container) -> None:
-    """Drop half of every row, keeping the rounded-up half. Documents are untouched.
+    """Drop the rounded-up half of every row. The store at the core is untouched.
 
     Per-row rather than per-total so no kind can be sheltered by dropping another.
-    ``rows()`` returns a fresh list, so mutating during the loop is safe.
+    Rounding up on the dropped side means a count of 1 drops -- rare singles are
+    not protected, which is what gives the hotbar its job. ``rows()`` returns a
+    fresh list, so mutating during the loop is safe.
     """
     for kind, n in backpack.rows():
-        backpack.remove(kind, n // 2)
+        backpack.remove(kind, (n + 1) // 2)

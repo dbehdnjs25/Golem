@@ -111,7 +111,7 @@ def test_death_applies_penalty_and_starts_respawn():
     scene.backpack.add(CORE_SHARD, 5)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 3  # halved, round up
+    assert scene.backpack.count(CORE_SHARD) == 2  # drops the rounded-up half
     assert scene._respawn_timer > 0
 
 

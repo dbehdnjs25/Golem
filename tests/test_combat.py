@@ -111,12 +111,17 @@ def test_distant_enemy_deals_no_damage():
     assert player.hp == config.PLAYER_MAX_HP
 
 
-@pytest.mark.parametrize("start,expected", [(5, 3), (4, 2), (1, 1), (0, 0)])
-def test_death_penalty_halves_round_up(start, expected):
+@pytest.mark.parametrize(
+    "start,kept",
+    [(32, 16), (7, 3), (5, 2), (2, 1), (1, 0), (0, 0)],
+)
+def test_death_penalty_drops_the_rounded_up_half(start, kept):
+    # Rounding up on the DROPPED amount means a lone rare item is lost, which is
+    # what makes the five hotbar slots a real decision every trip.
     backpack = Container(slots=100)
     backpack.add(CORE_SHARD, start)
     combat.apply_death_penalty(backpack)
-    assert backpack.count(CORE_SHARD) == expected
+    assert backpack.count(CORE_SHARD) == kept
 
 
 def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
@@ -134,9 +139,9 @@ def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     backpack.add(HEAVY, 1)
     combat.apply_death_penalty(backpack)
 
-    # Per-row: each kind keeps its own rounded-up half (5 -> 3, 1 -> 1).
-    # A per-total implementation would instead halve the combined count
-    # (6 -> 3 kept) and could zero out the smaller HEAVY row entirely to get
-    # there, which is exactly the "sheltering" the per-row rewrite prevents.
-    assert backpack.count(CORE_SHARD) == 3
-    assert backpack.count(HEAVY) == 1
+    # Per-row: each kind drops its own rounded-up half (5 -> 3 dropped, 2 kept;
+    # 1 -> 1 dropped, 0 kept). A per-total implementation would instead halve the
+    # combined count and could spare the smaller HEAVY row entirely to get there,
+    # which is exactly the "sheltering" the per-row rule prevents.
+    assert backpack.count(CORE_SHARD) == 2
+    assert backpack.count(HEAVY) == 0
