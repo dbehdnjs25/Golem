@@ -64,6 +64,9 @@ exclude_lines = [
 line-length = 100
 target-version = "py310"
 src = ["src", "tests"]
+# Art pipeline scratch scripts, not game source. They are run by hand, ship
+# nothing, and are not worth holding to the game's style rules.
+extend-exclude = ["assets"]
 
 [tool.ruff.lint]
 select = [
