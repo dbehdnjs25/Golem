@@ -54,6 +54,8 @@ class EnemySpawner(TimedSpawner):
             point = near_player(player_pos, rng, world)
             if point is None:
                 continue
+            if core.is_in_ward(point):
+                continue  # the ward is what the core buys
             if core.pos.distance_to(point) < core.sync_radius + config.GOLEM_RADIUS:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:

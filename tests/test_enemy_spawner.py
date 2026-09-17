@@ -53,3 +53,17 @@ def test_spawn_avoids_core_sync_zone_and_player():
     assert v is not None
     assert core.pos.distance_to(v.pos) >= core.sync_radius
     assert player_pos.distance_to(v.pos) >= 300
+
+
+def test_golems_do_not_spawn_inside_the_ward():
+    core = _core()
+    core.ignite()
+    player_pos = core.pos + pygame.Vector2(1_500, 0)  # inside the spawn radius
+    for seed in range(30):
+        enemies: list[Golem] = []
+        spawner = EnemySpawner()
+        golem = spawner.update(
+            config.GOLEM_SPAWN_INTERVAL, enemies, player_pos, core, random.Random(seed), WORLD
+        )
+        if golem is not None:
+            assert not core.is_in_ward(golem.pos)

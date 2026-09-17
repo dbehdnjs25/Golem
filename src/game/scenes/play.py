@@ -163,7 +163,7 @@ class PlayScene(Scene):
         )
         self.projectiles.extend(shots)
         combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
-        combat.update_enemies(dt, self.enemies, self.player, self.world)
+        combat.update_enemies(dt, self.enemies, self.player, self.world, self.core)
 
         self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
         self.enemy_spawner.update(

@@ -2,6 +2,7 @@ import pygame
 import pytest
 
 from game import config
+from game.entities.core import Core
 from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
@@ -17,6 +18,8 @@ HEAVY = ItemKind(key="heavy", name="벌크", stack_max=10, color=(1, 2, 3))
 
 WORLD = WorldMap()
 CENTRE = WORLD.center
+# Most combat tests predate the ward; an unlit core shelters nothing.
+UNLIT = Core(pos=pygame.Vector2(CENTRE))
 
 
 def _fire(steps, dt, *, held=True, weapon=None):
@@ -97,21 +100,21 @@ def test_expired_projectile_removed():
 def test_enemy_contact_damages_player():
     player = Player(pos=pygame.Vector2(CENTRE))
     enemy = Golem(pos=pygame.Vector2(CENTRE))
-    combat.update_enemies(0.5, [enemy], player, WORLD)
+    combat.update_enemies(0.5, [enemy], player, WORLD, UNLIT)
     assert player.hp == config.PLAYER_MAX_HP - config.GOLEM_CONTACT_DPS * 0.5
 
 
 def test_invulnerable_player_takes_no_contact_damage():
     player = Player(pos=pygame.Vector2(CENTRE), iframe_timer=1.0)
     enemy = Golem(pos=pygame.Vector2(CENTRE))
-    combat.update_enemies(0.5, [enemy], player, WORLD)
+    combat.update_enemies(0.5, [enemy], player, WORLD, UNLIT)
     assert player.hp == config.PLAYER_MAX_HP
 
 
 def test_distant_enemy_deals_no_damage():
     player = Player(pos=pygame.Vector2(CENTRE))
     enemy = Golem(pos=CENTRE + pygame.Vector2(1800, 0))
-    combat.update_enemies(0.5, [enemy], player, WORLD)
+    combat.update_enemies(0.5, [enemy], player, WORLD, UNLIT)
     assert player.hp == config.PLAYER_MAX_HP
 
 
@@ -149,3 +152,22 @@ def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     # which is exactly the "sheltering" the per-row rule prevents.
     assert backpack.count(CORE_SHARD) == 2
     assert backpack.count(HEAVY) == 0
+
+
+def test_golems_cannot_enter_the_ward():
+    core = Core(pos=pygame.Vector2(CENTRE))
+    core.ignite()
+    player = Player(pos=pygame.Vector2(CENTRE))  # standing at the core
+    golem = Golem(pos=CENTRE + pygame.Vector2(core.ward_radius + 5, 0))
+    for _ in range(200):
+        combat.update_enemies(config.FIXED_DT, [golem], player, WORLD, core)
+    # It chases the player, but the ward holds it on the rim.
+    assert CENTRE.distance_to(golem.pos) >= core.ward_radius - 1e-6
+
+
+def test_an_unlit_core_shelters_nothing():
+    core = Core(pos=pygame.Vector2(CENTRE))  # never ignited
+    player = Player(pos=pygame.Vector2(CENTRE))
+    golem = Golem(pos=CENTRE + pygame.Vector2(200, 0))
+    combat.update_enemies(1.0, [golem], player, WORLD, core)
+    assert CENTRE.distance_to(golem.pos) < 200  # walked straight in

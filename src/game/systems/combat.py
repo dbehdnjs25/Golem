@@ -7,6 +7,7 @@ from __future__ import annotations
 import pygame
 
 from game import config
+from game.entities.core import Core
 from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
@@ -78,13 +79,31 @@ def update_enemies(
     enemies: list[Golem],
     player: Player,
     world: WorldMap,
+    core: Core,
 ) -> None:
     for enemy in enemies:
         enemy.update(dt, player.pos, world)
+        _hold_outside_ward(enemy, core)
         if player.invulnerable:
             continue
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
             player.hp -= config.GOLEM_CONTACT_DPS * dt
+
+
+def _hold_outside_ward(enemy: Golem, core: Core) -> None:
+    """Push a golem back to the ward's rim. The ward is what the core buys.
+
+    On raid nights this will be lifted -- that is the whole point of a raid --
+    but the exception belongs with the raid scheduler, not here.
+    """
+    if not core.is_in_ward(enemy.pos):
+        return
+    offset = enemy.pos - core.pos
+    distance = offset.length()
+    if distance == 0:
+        offset = pygame.Vector2(1, 0)
+        distance = 1.0
+    enemy.pos.update(core.pos + offset * (core.ward_radius / distance))
 
 
 def apply_death_penalty(backpack: Container) -> None:
