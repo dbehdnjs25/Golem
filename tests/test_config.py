@@ -6,10 +6,11 @@ def test_world_is_larger_than_screen():
     assert config.WORLD_HEIGHT > config.SCREEN_HEIGHT
 
 
-def test_capacities_are_positive_multiples_of_fragment_mb():
-    assert config.FRAGMENT_MB > 0
-    assert config.BACKPACK_CAP_MB >= config.FRAGMENT_MB
-    assert config.DOCUMENTS_CAP_MB > config.BACKPACK_CAP_MB
+def test_slot_counts_are_sane():
+    assert config.INVENTORY_SLOTS > 0
+    assert config.BACKPACK_SLOTS > 0
+    assert config.CORE_STORE_SLOTS > config.INVENTORY_SLOTS
+    assert config.STACK_MAX_DEFAULT > 0
 
 
 def test_sync_radius_exceeds_core_radius():

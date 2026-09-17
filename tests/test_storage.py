@@ -1,105 +1,127 @@
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.item_kinds import FRAGMENT, ItemKind
 
-# Deliberately NOT in the catalogue: a folder must handle any kind it is handed,
-# so used_mb cannot depend on a catalogue lookup.
-HEAVY = ItemKind(key="heavy", name="큰 파일", mb=10, color=(1, 2, 3))
+# Deliberately NOT in the catalogue: a container must handle any kind it is
+# handed, so slots_used cannot depend on a catalogue lookup.
+BULK = ItemKind(key="bulk", name="벌크", stack_max=10, color=(1, 2, 3))
 
 
-def test_add_counts_per_kind_and_bills_megabytes():
-    f = Folder(cap_mb=30)  # 10 fragments
-    assert f.add(FRAGMENT, 3) == 3
-    assert f.count(FRAGMENT) == 3
-    assert f.used_mb == 9
-    assert f.free_mb == 21
+def test_add_counts_per_kind_and_bills_slots():
+    c = Container(slots=4)
+    assert c.add(BULK, 3) == 3
+    assert c.count(BULK) == 3
+    assert c.slots_used == 1  # a partial stack still occupies a slot
+    assert c.free_slots == 3
 
 
-def test_add_caps_at_capacity_and_reports_actual():
-    f = Folder(cap_mb=30)
-    assert f.add(FRAGMENT, 100) == 10
-    assert f.add(FRAGMENT, 1) == 0
-    assert f.free_mb == 0
+def test_a_full_stack_rolls_over_into_the_next_slot():
+    c = Container(slots=4)
+    c.add(BULK, 10)
+    assert c.slots_used == 1
+    c.add(BULK, 1)
+    assert c.slots_used == 2
+
+
+def test_topping_up_an_open_stack_takes_no_new_slot():
+    c = Container(slots=1)
+    c.add(BULK, 4)
+    assert c.free_slots == 0  # the only slot is taken
+    assert c.add(BULK, 6) == 6  # but the open stack still has room
+    assert c.count(BULK) == 10
+    assert c.add(BULK, 1) == 0  # now it is genuinely full
+
+
+def test_add_caps_at_slot_capacity_and_reports_actual():
+    c = Container(slots=2)
+    assert c.add(BULK, 100) == 20
+    assert c.add(BULK, 1) == 0
+    assert c.free_slots == 0
 
 
 def test_remove_is_bounded_by_what_is_stored():
-    f = Folder(cap_mb=30)
-    f.add(FRAGMENT, 4)
-    assert f.remove(FRAGMENT, 3) == 3
-    assert f.count(FRAGMENT) == 1
-    assert f.remove(FRAGMENT, 99) == 1
-    assert f.count(FRAGMENT) == 0
+    c = Container(slots=4)
+    c.add(BULK, 4)
+    assert c.remove(BULK, 3) == 3
+    assert c.count(BULK) == 1
+    assert c.remove(BULK, 99) == 1
+    assert c.count(BULK) == 0
+    assert c.slots_used == 0  # an emptied row frees its slot
 
 
 def test_removing_an_absent_kind_reports_zero():
-    f = Folder(cap_mb=30)
-    assert f.remove(HEAVY, 5) == 0
+    c = Container(slots=4)
+    assert c.remove(BULK, 5) == 0
 
 
-def test_kinds_are_counted_separately_and_share_the_cap():
-    f = Folder(cap_mb=30)
-    f.add(HEAVY, 2)  # 20 MB
-    assert f.count(HEAVY) == 2
-    assert f.count(FRAGMENT) == 0
-    assert f.add(FRAGMENT, 5) == 3  # only 10 MB left -> 3 fragments
+def test_kinds_are_counted_separately_and_share_the_slots():
+    c = Container(slots=2)
+    c.add(BULK, 10)  # one full slot
+    assert c.count(BULK) == 10
+    assert c.count(FRAGMENT) == 0
+    assert c.add(FRAGMENT, 999) == FRAGMENT.stack_max  # one slot left
 
 
 def test_fits_reports_what_would_actually_go_in():
-    f = Folder(cap_mb=30)
-    assert f.fits(FRAGMENT, 4) == 4
-    assert f.fits(FRAGMENT, 50) == 10
-    f.add(FRAGMENT, 9)
-    assert f.fits(FRAGMENT, 5) == 1
+    c = Container(slots=2)
+    assert c.fits(BULK, 4) == 4
+    assert c.fits(BULK, 50) == 20
+    c.add(BULK, 15)  # one full stack + a partial holding 5
+    assert c.fits(BULK, 50) == 5  # only the open stack's room is left
 
 
 def test_rows_follow_catalogue_order_and_skip_empties():
-    f = Folder(cap_mb=100)
-    assert f.rows() == []
-    f.add(FRAGMENT, 2)
-    assert f.rows() == [(FRAGMENT, 2)]
-    f.add(FRAGMENT, 3)
-    assert f.rows() == [(FRAGMENT, 5)]  # count changed, position did not
-    f.remove(FRAGMENT, 5)
-    assert f.rows() == []  # an emptied row leaves the list
-    # HEAVY is stored (add/count/used_mb all work on it) but is not in CATALOGUE,
-    # so it must never surface in rows() -- this is what actually exercises the
-    # "absent from CATALOGUE is invisible here" filtering, not just row ordering.
-    f.add(FRAGMENT, 1)
-    f.add(HEAVY, 1)
-    assert f.rows() == [(FRAGMENT, 1)]
+    c = Container(slots=10)
+    assert c.rows() == []
+    c.add(FRAGMENT, 2)
+    assert c.rows() == [(FRAGMENT, 2)]
+    c.add(FRAGMENT, 3)
+    assert c.rows() == [(FRAGMENT, 5)]  # count changed, position did not
+    c.remove(FRAGMENT, 5)
+    assert c.rows() == []  # an emptied row leaves the list
+    # BULK is stored (add/count/slots_used all work on it) but is not in
+    # CATALOGUE, so it must never surface in rows() -- this is what actually
+    # exercises the "absent from CATALOGUE is invisible here" filtering, not
+    # just row ordering.
+    c.add(FRAGMENT, 1)
+    c.add(BULK, 1)
+    assert c.rows() == [(FRAGMENT, 1)]
 
 
-def test_reserved_space_cannot_be_taken_by_anything_else():
-    f = Folder(cap_mb=30)
-    f.reserve(21)
-    assert f.free_mb == 9
-    assert f.fits(FRAGMENT, 10) == 3
-    assert f.add(FRAGMENT, 10) == 3
+def test_reserved_slots_cannot_be_taken_by_anything_else():
+    c = Container(slots=4)
+    c.reserve(3)
+    assert c.free_slots == 1
+    assert c.fits(BULK, 100) == 10
+    assert c.add(BULK, 100) == 10
 
 
-def test_release_gives_the_space_back():
-    f = Folder(cap_mb=30)
-    f.reserve(30)
-    assert f.fits(FRAGMENT, 1) == 0
-    f.release(30)
-    assert f.fits(FRAGMENT, 10) == 10
+def test_release_gives_the_slots_back():
+    c = Container(slots=4)
+    c.reserve(4)
+    assert c.fits(BULK, 1) == 0
+    c.release(4)
+    assert c.fits(BULK, 100) == 40
 
 
 def test_release_cannot_drive_the_reservation_negative():
-    f = Folder(cap_mb=30)
-    f.reserve(3)
-    f.release(99)
-    assert f.reserved_mb == 0
-    assert f.free_mb == 30
+    c = Container(slots=4)
+    c.reserve(1)
+    c.release(99)
+    assert c.reserved_slots == 0
+    assert c.free_slots == 4
 
 
-def test_two_folders_do_not_share_the_default_dict():
-    a, b = Folder(cap_mb=30), Folder(cap_mb=30)
+def test_two_containers_do_not_share_the_default_dict():
+    a, b = Container(slots=4), Container(slots=4)
     a.add(FRAGMENT, 1)
     assert b.count(FRAGMENT) == 0
 
 
-def test_the_old_int_api_is_gone():
+def test_the_old_megabyte_api_is_gone():
     import game.inventory.storage as storage
 
-    assert not hasattr(storage, "transfer")
-    assert not hasattr(Folder(cap_mb=30), "is_full")
+    assert not hasattr(storage, "Folder")
+    c = Container(slots=4)
+    assert not hasattr(c, "used_mb")
+    assert not hasattr(c, "free_mb")
+    assert not hasattr(c, "cap_mb")

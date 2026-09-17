@@ -5,14 +5,14 @@ from game import config
 from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.item_kinds import FRAGMENT, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
 
 # A second kind, used only to prove apply_death_penalty halves per row rather
 # than per total (see test_death_penalty_cannot_shelter_one_kind_by_dropping_another).
-HEAVY = ItemKind(key="heavy", name="큰 파일", mb=10, color=(1, 2, 3))
+HEAVY = ItemKind(key="heavy", name="벌크", stack_max=10, color=(1, 2, 3))
 
 
 def _fire(steps, dt, *, held=True, weapon=None):
@@ -113,7 +113,7 @@ def test_distant_enemy_deals_no_damage():
 
 @pytest.mark.parametrize("start,expected", [(5, 3), (4, 2), (1, 1), (0, 0)])
 def test_death_penalty_halves_round_up(start, expected):
-    backpack = Folder(cap_mb=1000)
+    backpack = Container(slots=100)
     backpack.add(FRAGMENT, start)
     combat.apply_death_penalty(backpack)
     assert backpack.count(FRAGMENT) == expected
@@ -129,7 +129,7 @@ def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     # back into test_death_penalty_halves_round_up.
     monkeypatch.setattr("game.inventory.storage.CATALOGUE", (FRAGMENT, HEAVY))
 
-    backpack = Folder(cap_mb=1000)
+    backpack = Container(slots=100)
     backpack.add(FRAGMENT, 5)
     backpack.add(HEAVY, 1)
     combat.apply_death_penalty(backpack)

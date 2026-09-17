@@ -8,7 +8,7 @@ from __future__ import annotations
 import pygame
 
 from game.entities.fragment import Fragment
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.tools import MiningTool
 
 IDLE = "idle"
@@ -40,7 +40,7 @@ def update_mining(
     aim_world: pygame.Vector2,
     player_pos: pygame.Vector2,
     fragments: list[Fragment],
-    backpack: Folder,
+    backpack: Container,
 ) -> str:
     if not held or not isinstance(active_tool, MiningTool):
         return IDLE

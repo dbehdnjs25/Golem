@@ -40,11 +40,14 @@ FRAGMENT_HP: Final[float] = 60.0
 FRAGMENT_RADIUS: Final[float] = 10.0
 MINING_DPS: Final[float] = 40.0  # hp per second while channelling
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
-FRAGMENT_MB: Final[int] = 3  # storage size of one fragment
 
 # --- Storage ----------------------------------------------------------------
-BACKPACK_CAP_MB: Final[int] = 100  # small field carry -> forces return trips (33 fragments)
-DOCUMENTS_CAP_MB: Final[int] = 750  # drive store, the "warehouse" (250 fragments)
+# Slots, not weight. One slot holds up to a kind's stack_max of that kind, so
+# the limit is how many DIFFERENT things you can carry, not how heavy they are.
+STACK_MAX_DEFAULT: Final[int] = 64
+INVENTORY_SLOTS: Final[int] = 10  # carried by default
+BACKPACK_SLOTS: Final[int] = 10  # added by wearing a backpack -> doubles the carry
+CORE_STORE_SLOTS: Final[int] = 40  # the store at the core, never carried
 
 # --- Camera -----------------------------------------------------------------
 CAMERA_PAN_SPEED: Final[float] = 400.0  # px/s free-pan speed

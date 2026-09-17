@@ -16,7 +16,7 @@ from game.entities.fragment import Fragment
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.hotbar import Hotbar
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.item_kinds import FRAGMENT
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining
@@ -57,8 +57,8 @@ class PlayScene(Scene):
             mode=LOCKED,
         )
         self.camera.center_on(self.player.pos)
-        self.backpack = Folder(cap_mb=config.BACKPACK_CAP_MB)
-        self.documents = Folder(cap_mb=config.DOCUMENTS_CAP_MB)
+        self.backpack = Container(slots=config.INVENTORY_SLOTS)
+        self.store = Container(slots=config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
         self.hotbar.slots[0] = MiningTool()
@@ -164,7 +164,7 @@ class PlayScene(Scene):
         self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
 
         if sync and self.core.is_in_sync_range(self.player.pos):
-            moved = self.documents.add(FRAGMENT, self.backpack.count(FRAGMENT))
+            moved = self.store.add(FRAGMENT, self.backpack.count(FRAGMENT))
             self.backpack.remove(FRAGMENT, moved)
 
         if self.player.hp <= 0:
@@ -220,8 +220,8 @@ class PlayScene(Scene):
                 )
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
-        # backpack fill gauge
-        frac = self.backpack.used_mb / self.backpack.cap_mb if self.backpack.cap_mb else 0.0
+        # inventory fill gauge
+        frac = self.backpack.slots_used / self.backpack.slots if self.backpack.slots else 0.0
         _draw_bar(surface, 10, 14, frac, (90, 200, 120))
         # hp bar
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0

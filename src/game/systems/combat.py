@@ -10,7 +10,7 @@ from game import config
 from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.tools import WeaponTool
 
 
@@ -91,7 +91,7 @@ def update_enemies(
             player.hp -= config.GOLEM_CONTACT_DPS * dt
 
 
-def apply_death_penalty(backpack: Folder) -> None:
+def apply_death_penalty(backpack: Container) -> None:
     """Drop half of every row, keeping the rounded-up half. Documents are untouched.
 
     Per-row rather than per-total so no kind can be sheltered by dropping another.

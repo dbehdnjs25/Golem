@@ -8,7 +8,7 @@ from game.items.item_kinds import CATALOGUE, FRAGMENT, ITEM_KINDS, ItemKind
 
 def test_fragment_row_matches_config():
     assert FRAGMENT.key == "fragment"
-    assert FRAGMENT.mb == config.FRAGMENT_MB
+    assert FRAGMENT.stack_max == config.STACK_MAX_DEFAULT
     assert len(FRAGMENT.color) == 3
 
 
@@ -23,12 +23,12 @@ def test_lookup_maps_every_catalogue_key():
 
 def test_kinds_are_frozen_and_hashable():
     with pytest.raises(dataclasses.FrozenInstanceError):
-        FRAGMENT.mb = 99  # type: ignore[misc]
+        FRAGMENT.stack_max = 99  # type: ignore[misc]
     assert {FRAGMENT: 1}[FRAGMENT] == 1  # usable as a dict key
 
 
-def test_every_kind_has_a_positive_size():
-    assert all(k.mb > 0 for k in CATALOGUE)
+def test_every_kind_has_a_positive_stack():
+    assert all(k.stack_max > 0 for k in CATALOGUE)
 
 
 def test_keys_are_unique():

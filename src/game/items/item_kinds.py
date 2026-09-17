@@ -18,15 +18,15 @@ from game import config
 @dataclass(frozen=True)
 class ItemKind:
     key: str  # stable id, used for storage and comparison
-    name: str  # shown in the inventory list
-    mb: int  # storage size of one unit
-    color: tuple[int, int, int]  # list icon colour
+    name: str  # shown in the inventory grid
+    stack_max: int  # how many fit in one slot
+    color: tuple[int, int, int]  # icon colour
 
 
 FRAGMENT = ItemKind(
     key="fragment",
     name="데이터 조각",
-    mb=config.FRAGMENT_MB,
+    stack_max=config.STACK_MAX_DEFAULT,
     color=config.FRAGMENT_COLOR,
 )
 

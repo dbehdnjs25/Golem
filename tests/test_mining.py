@@ -2,7 +2,7 @@ import pygame
 
 from game import config
 from game.entities.fragment import Fragment
-from game.inventory.storage import Folder
+from game.inventory.storage import Container
 from game.items.item_kinds import FRAGMENT
 from game.items.tools import MiningTool
 from game.systems import mining
@@ -10,8 +10,8 @@ from game.systems import mining
 PLAYER = pygame.Vector2(1000, 1000)
 
 
-def _backpack() -> Folder:
-    return Folder(cap_mb=config.BACKPACK_CAP_MB)
+def _backpack() -> Container:
+    return Container(slots=config.INVENTORY_SLOTS)
 
 
 def test_idle_when_not_held() -> None:
@@ -81,8 +81,8 @@ def test_out_of_range_does_no_damage() -> None:
 def test_full_backpack_blocks_and_preserves_fragment() -> None:
     frag = Fragment(pos=pygame.Vector2(1010, 1000))
     frags = [frag]
-    bp = Folder(cap_mb=config.FRAGMENT_MB)  # holds exactly 1
-    bp.add(FRAGMENT, 1)  # now full
+    bp = Container(slots=1)  # one slot
+    bp.add(FRAGMENT, FRAGMENT.stack_max)  # now full
     status = mining.update_mining(
         1.0,
         active_tool=MiningTool(),
