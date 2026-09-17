@@ -101,11 +101,11 @@ CORE_LEVEL_CAPS: Final[tuple[int, ...]] = (10, 20, 30, 40, 50)
 # The ward grows by a constant RATIO per level, not a constant amount: absolute
 # growth makes an early level invisible and a late one enormous. At full level it
 # covers a tenth of the grassland's area, hence the sqrt(10).
-# 400 so the level-1 ward fits on screen (the view's half-diagonal is ~551):
-# the boundary is the whole mechanic, and it has to be visible before it grows
-# past what a screen can show, which happens around level six.
-WARD_RADIUS_BASE: Final[float] = 400.0
 WARD_RADIUS_MAX: Final[float] = GRASSLAND_RADIUS / math.sqrt(10.0)
+# Half the full radius from the start, so the base is a place rather than a
+# circle you can see the far side of. The trade is that fifty levels only
+# double the radius, which makes any single upgrade a small change.
+WARD_RADIUS_BASE: Final[float] = WARD_RADIUS_MAX / 2.0
 WARD_GROWTH: Final[float] = (WARD_RADIUS_MAX / WARD_RADIUS_BASE) ** (1 / (CORE_MAX_LEVEL - 1))
 
 # --- Survival ----------------------------------------------------------------
