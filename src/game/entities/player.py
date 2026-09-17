@@ -22,6 +22,7 @@ class Player:
     dodge_timer: float = 0.0  # dash movement remaining
     iframe_timer: float = 0.0  # invulnerability remaining
     dodge_cooldown_timer: float = 0.0  # time until dodge is available again
+    ward_time: float = 0.0  # seconds spent inside the ward; resets on leaving
 
     @property
     def invulnerable(self) -> bool:
