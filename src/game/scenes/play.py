@@ -1,5 +1,5 @@
-"""Core-loop gameplay scene: mine fragments, fill the backpack, return to the
-core and press E to sync into /Documents. Wires the entities and systems
+"""Core-loop gameplay scene: mine shards, fill the inventory, return to the core
+and press E to move them into its store. Wires the entities and systems
 together; accumulates input from events (no polling) and owns all rendering."""
 
 from __future__ import annotations
