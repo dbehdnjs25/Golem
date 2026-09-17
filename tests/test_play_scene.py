@@ -3,7 +3,7 @@ import pygame
 from game import config
 from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
-from game.items.item_kinds import FRAGMENT
+from game.items.item_kinds import CORE_SHARD
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
 
@@ -40,42 +40,42 @@ def test_movement_key_moves_player():
 def test_standing_on_core_does_not_sync_by_itself():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)  # stand on the core
-    scene.backpack.add(FRAGMENT, 3)
+    scene.backpack.add(CORE_SHARD, 3)
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(FRAGMENT) == 3  # sync is manual now
-    assert scene.store.count(FRAGMENT) == 0
+    assert scene.backpack.count(CORE_SHARD) == 3  # sync is manual now
+    assert scene.store.count(CORE_SHARD) == 0
 
 
 def test_sync_key_transfers_backpack_at_core():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(FRAGMENT, 3)
+    scene.backpack.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(FRAGMENT) == 0
-    assert scene.store.count(FRAGMENT) == 3
+    assert scene.backpack.count(CORE_SHARD) == 0
+    assert scene.store.count(CORE_SHARD) == 3
 
 
 def test_sync_key_does_nothing_out_of_range():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(1000, 1000)  # outside the core's sync zone
-    scene.backpack.add(FRAGMENT, 3)
+    scene.backpack.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(FRAGMENT) == 3
-    assert scene.store.count(FRAGMENT) == 0
+    assert scene.backpack.count(CORE_SHARD) == 3
+    assert scene.store.count(CORE_SHARD) == 0
 
 
 def test_sync_key_is_consumed_after_one_step():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(FRAGMENT, 3)
+    scene.backpack.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    scene.backpack.add(FRAGMENT, 2)  # mined more without pressing again
+    scene.backpack.add(CORE_SHARD, 2)  # mined more without pressing again
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(FRAGMENT) == 2  # one press, one transfer
-    assert scene.store.count(FRAGMENT) == 3
+    assert scene.backpack.count(CORE_SHARD) == 2  # one press, one transfer
+    assert scene.store.count(CORE_SHARD) == 3
 
 
 def test_draw_runs_without_error(surface):
@@ -108,10 +108,10 @@ def test_space_triggers_dodge():
 def test_death_applies_penalty_and_starts_respawn():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(500, 500)  # away from the core's sync zone
-    scene.backpack.add(FRAGMENT, 5)
+    scene.backpack.add(CORE_SHARD, 5)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(FRAGMENT) == 3  # halved, round up
+    assert scene.backpack.count(CORE_SHARD) == 3  # halved, round up
     assert scene._respawn_timer > 0
 
 

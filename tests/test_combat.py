@@ -6,7 +6,7 @@ from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
-from game.items.item_kinds import FRAGMENT, ItemKind
+from game.items.item_kinds import CORE_SHARD, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
 
@@ -114,23 +114,23 @@ def test_distant_enemy_deals_no_damage():
 @pytest.mark.parametrize("start,expected", [(5, 3), (4, 2), (1, 1), (0, 0)])
 def test_death_penalty_halves_round_up(start, expected):
     backpack = Container(slots=100)
-    backpack.add(FRAGMENT, start)
+    backpack.add(CORE_SHARD, start)
     combat.apply_death_penalty(backpack)
-    assert backpack.count(FRAGMENT) == expected
+    assert backpack.count(CORE_SHARD) == expected
 
 
 def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     # rows() only surfaces kinds listed in CATALOGUE, which normally holds just
-    # FRAGMENT. To exercise the per-row-vs-per-total distinction we need a
+    # CORE_SHARD. To exercise the per-row-vs-per-total distinction we need a
     # second visible kind, so we patch the name storage.py bound at import time
     # (`from game.items.item_kinds import CATALOGUE`) rather than the catalogue
     # module itself. Do not delete this patch as "unnecessary" -- without it
     # HEAVY's row is invisible to apply_death_penalty and the test degrades
     # back into test_death_penalty_halves_round_up.
-    monkeypatch.setattr("game.inventory.storage.CATALOGUE", (FRAGMENT, HEAVY))
+    monkeypatch.setattr("game.inventory.storage.CATALOGUE", (CORE_SHARD, HEAVY))
 
     backpack = Container(slots=100)
-    backpack.add(FRAGMENT, 5)
+    backpack.add(CORE_SHARD, 5)
     backpack.add(HEAVY, 1)
     combat.apply_death_penalty(backpack)
 
@@ -138,5 +138,5 @@ def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     # A per-total implementation would instead halve the combined count
     # (6 -> 3 kept) and could zero out the smaller HEAVY row entirely to get
     # there, which is exactly the "sheltering" the per-row rewrite prevents.
-    assert backpack.count(FRAGMENT) == 3
+    assert backpack.count(CORE_SHARD) == 3
     assert backpack.count(HEAVY) == 1

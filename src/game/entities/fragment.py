@@ -7,14 +7,14 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
-from game.items.item_kinds import FRAGMENT, ItemKind
+from game.items.item_kinds import CORE_SHARD, ItemKind
 
 
 @dataclass
 class Fragment:
     pos: pygame.Vector2
     hp: float = config.FRAGMENT_HP
-    kind: ItemKind = FRAGMENT  # what mining it out yields
+    kind: ItemKind = CORE_SHARD  # what mining it out yields
 
     @property
     def is_depleted(self) -> bool:

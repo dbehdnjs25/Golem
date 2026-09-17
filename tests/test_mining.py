@@ -3,7 +3,7 @@ import pygame
 from game import config
 from game.entities.fragment import Fragment
 from game.inventory.storage import Container
-from game.items.item_kinds import FRAGMENT
+from game.items.item_kinds import CORE_SHARD
 from game.items.tools import MiningTool
 from game.systems import mining
 
@@ -59,7 +59,7 @@ def test_depletion_collects_into_backpack() -> None:
     )
     assert status == mining.COLLECTED
     assert frags == []
-    assert bp.count(FRAGMENT) == 1
+    assert bp.count(CORE_SHARD) == 1
 
 
 def test_out_of_range_does_no_damage() -> None:
@@ -82,7 +82,7 @@ def test_full_backpack_blocks_and_preserves_fragment() -> None:
     frag = Fragment(pos=pygame.Vector2(1010, 1000))
     frags = [frag]
     bp = Container(slots=1)  # one slot
-    bp.add(FRAGMENT, FRAGMENT.stack_max)  # now full
+    bp.add(CORE_SHARD, CORE_SHARD.stack_max)  # now full
     status = mining.update_mining(
         1.0,
         active_tool=MiningTool(),

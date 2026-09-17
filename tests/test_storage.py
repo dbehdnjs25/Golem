@@ -1,5 +1,5 @@
 from game.inventory.storage import Container
-from game.items.item_kinds import FRAGMENT, ItemKind
+from game.items.item_kinds import CORE_SHARD, ItemKind
 
 # Deliberately NOT in the catalogue: a container must handle any kind it is
 # handed, so slots_used cannot depend on a catalogue lookup.
@@ -57,8 +57,8 @@ def test_kinds_are_counted_separately_and_share_the_slots():
     c = Container(slots=2)
     c.add(BULK, 10)  # one full slot
     assert c.count(BULK) == 10
-    assert c.count(FRAGMENT) == 0
-    assert c.add(FRAGMENT, 999) == FRAGMENT.stack_max  # one slot left
+    assert c.count(CORE_SHARD) == 0
+    assert c.add(CORE_SHARD, 999) == CORE_SHARD.stack_max  # one slot left
 
 
 def test_fits_reports_what_would_actually_go_in():
@@ -72,19 +72,19 @@ def test_fits_reports_what_would_actually_go_in():
 def test_rows_follow_catalogue_order_and_skip_empties():
     c = Container(slots=10)
     assert c.rows() == []
-    c.add(FRAGMENT, 2)
-    assert c.rows() == [(FRAGMENT, 2)]
-    c.add(FRAGMENT, 3)
-    assert c.rows() == [(FRAGMENT, 5)]  # count changed, position did not
-    c.remove(FRAGMENT, 5)
+    c.add(CORE_SHARD, 2)
+    assert c.rows() == [(CORE_SHARD, 2)]
+    c.add(CORE_SHARD, 3)
+    assert c.rows() == [(CORE_SHARD, 5)]  # count changed, position did not
+    c.remove(CORE_SHARD, 5)
     assert c.rows() == []  # an emptied row leaves the list
     # BULK is stored (add/count/slots_used all work on it) but is not in
     # CATALOGUE, so it must never surface in rows() -- this is what actually
     # exercises the "absent from CATALOGUE is invisible here" filtering, not
     # just row ordering.
-    c.add(FRAGMENT, 1)
+    c.add(CORE_SHARD, 1)
     c.add(BULK, 1)
-    assert c.rows() == [(FRAGMENT, 1)]
+    assert c.rows() == [(CORE_SHARD, 1)]
 
 
 def test_reserved_slots_cannot_be_taken_by_anything_else():
@@ -113,8 +113,8 @@ def test_release_cannot_drive_the_reservation_negative():
 
 def test_two_containers_do_not_share_the_default_dict():
     a, b = Container(slots=4), Container(slots=4)
-    a.add(FRAGMENT, 1)
-    assert b.count(FRAGMENT) == 0
+    a.add(CORE_SHARD, 1)
+    assert b.count(CORE_SHARD) == 0
 
 
 def test_the_old_megabyte_api_is_gone():
