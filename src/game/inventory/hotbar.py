@@ -1,5 +1,5 @@
-"""The CPU-cache hotbar: a fixed number of slots, only some unlocked. The
-selected slot's item is the active tool driving the left mouse button."""
+"""The five-slot hotbar. The selected slot's item is the active tool driving the
+left mouse button. Everything in it survives death; the inventory does not."""
 
 from __future__ import annotations
 
@@ -11,15 +11,14 @@ from game import config
 @dataclass
 class Hotbar:
     slots: list[object | None]
-    unlocked: int = config.HOTBAR_START_UNLOCKED
     selected: int = 0
 
     @classmethod
     def create(cls) -> Hotbar:
-        return cls(slots=[None] * config.HOTBAR_MAX_SLOTS)
+        return cls(slots=[None] * config.HOTBAR_SLOTS)
 
     def select(self, index: int) -> None:
-        if 0 <= index < self.unlocked:
+        if 0 <= index < len(self.slots):
             self.selected = index
 
     @property

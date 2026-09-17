@@ -59,8 +59,9 @@ CORE_RADIUS: Final[float] = 40.0
 CORE_SYNC_RADIUS: Final[float] = 120.0  # auto-transfer when player within this
 
 # --- Hotbar -----------------------------------------------------------------
-HOTBAR_MAX_SLOTS: Final[int] = 7
-HOTBAR_START_UNLOCKED: Final[int] = 2
+# Fixed at five. Dying keeps the hotbar and drops half of everything else, so
+# "is this worth a hotbar slot?" is the protection decision every trip.
+HOTBAR_SLOTS: Final[int] = 5
 
 # --- Additional colours (RGB) -----------------------------------------------
 FLOOR_A: Final[tuple[int, int, int]] = (26, 26, 40)

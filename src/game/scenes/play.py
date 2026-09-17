@@ -229,8 +229,8 @@ class PlayScene(Scene):
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
         _draw_bar(surface, 48, 5, ready, (120, 160, 220), bg=(40, 40, 55))
-        # hotbar (bottom-left), only unlocked slots
-        for i in range(self.hotbar.unlocked):
+        # hotbar (bottom-left)
+        for i in range(len(self.hotbar.slots)):
             x = 10 + i * 44
             color = config.WHITE if i == self.hotbar.selected else (120, 120, 140)
             pygame.draw.rect(surface, color, pygame.Rect(x, surface.get_height() - 50, 40, 40), 2)

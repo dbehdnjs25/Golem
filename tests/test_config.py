@@ -16,10 +16,6 @@ def test_sync_radius_exceeds_core_radius():
     assert config.CORE_SYNC_RADIUS > config.CORE_RADIUS
 
 
-def test_hotbar_start_within_max():
-    assert 0 < config.HOTBAR_START_UNLOCKED <= config.HOTBAR_MAX_SLOTS
-
-
 def test_title_is_the_new_concept():
     assert config.TITLE == "Golem"
 
