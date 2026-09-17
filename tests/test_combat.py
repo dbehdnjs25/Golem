@@ -161,8 +161,10 @@ def test_golems_cannot_enter_the_ward():
     golem = Golem(pos=CENTRE + pygame.Vector2(core.ward_radius + 5, 0))
     for _ in range(200):
         combat.update_enemies(config.FIXED_DT, [golem], player, WORLD, core)
-    # It chases the player, but the ward holds it on the rim.
-    assert CENTRE.distance_to(golem.pos) >= core.ward_radius - 1e-6
+    # It chases the player, but the ward holds it just outside the rim -- and
+    # "outside" has to read as outside, since is_in_ward's boundary is inclusive.
+    assert CENTRE.distance_to(golem.pos) > core.ward_radius
+    assert core.is_in_ward(golem.pos) is False
 
 
 def test_an_unlit_core_shelters_nothing():

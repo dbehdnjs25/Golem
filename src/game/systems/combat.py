@@ -90,6 +90,9 @@ def update_enemies(
             player.hp -= config.GOLEM_CONTACT_DPS * dt
 
 
+_WARD_MARGIN = 0.5  # px clear of the rim; invisible, but keeps the check honest
+
+
 def _hold_outside_ward(enemy: Golem, core: Core) -> None:
     """Push a golem back to the ward's rim. The ward is what the core buys.
 
@@ -103,7 +106,10 @@ def _hold_outside_ward(enemy: Golem, core: Core) -> None:
     if distance == 0:
         offset = pygame.Vector2(1, 0)
         distance = 1.0
-    enemy.pos.update(core.pos + offset * (core.ward_radius / distance))
+    # Just outside, not exactly on, the rim: is_in_ward is inclusive, so landing
+    # them on it would leave "no golem is inside the ward" reading as false.
+    reach = core.ward_radius + _WARD_MARGIN
+    enemy.pos.update(core.pos + offset * (reach / distance))
 
 
 def apply_death_penalty(backpack: Container) -> None:

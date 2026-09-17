@@ -122,6 +122,9 @@ HOTBAR_SLOTS: Final[int] = 5
 FRAGMENT_COLOR: Final[tuple[int, int, int]] = (90, 200, 255)
 CORE_COLOR: Final[tuple[int, int, int]] = (120, 255, 180)
 PLAYER_COLOR: Final[tuple[int, int, int]] = (240, 240, 255)
+WARD_COLOR: Final[tuple[int, int, int]] = (120, 220, 255)
+PEDESTAL_COLOR: Final[tuple[int, int, int]] = (150, 150, 165)
+NIGHT_DARKNESS: Final[int] = 150  # alpha of the night overlay, 0-255
 
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0

@@ -20,9 +20,11 @@ from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items.item_kinds import CORE_SHARD
 from game.items.tools import MiningTool, WeaponTool
-from game.systems import combat, mining
+from game.systems import combat, mining, survival
 from game.systems.camera import LOCKED, Camera
+from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
+from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
 from game.world import biomes
 from game.world.map import WorldMap
@@ -55,6 +57,7 @@ class PlayScene(Scene):
         self.temple_sites = self.world.temple_sites(self.rng)
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
+        self.clock = DayNight()
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -71,6 +74,7 @@ class PlayScene(Scene):
         self.hotbar.slots[1] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()
+        self._scatter_starting_shards()
 
         self.enemies: list[Golem] = []
         self.projectiles: list[Projectile] = []
@@ -83,6 +87,18 @@ class PlayScene(Scene):
         self._held_keys: set[int] = set()
         self._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2)
         self._mouse_held = False
+
+    def _scatter_starting_shards(self) -> None:
+        """Seed the pedestal's surroundings with the shards that light the core.
+
+        They sit within reach of the spawn on purpose: the opening should be a
+        short errand, not a search. Placing the core is what starts day one, and
+        the player chooses when.
+        """
+        for _ in range(config.CORE_SHARDS_TO_IGNITE + 2):  # two spare
+            spot = near_player(self.player.pos, self.rng, self.world)
+            if spot is not None:
+                self.fragments.append(Fragment(pos=spot, kind=CORE_SHARD))
 
     # --- input (event-driven, no polling) --------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -131,6 +147,8 @@ class PlayScene(Scene):
         self._dodge_pressed = False
         self._sync_pressed = False
 
+        self.clock.update(dt)
+
         if self._respawn_timer > 0:
             self._respawn_timer -= dt
             if self._respawn_timer <= 0:
@@ -164,6 +182,7 @@ class PlayScene(Scene):
         self.projectiles.extend(shots)
         combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
         combat.update_enemies(dt, self.enemies, self.player, self.world, self.core)
+        survival.update_regen(dt, self.player, self.core)
 
         self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
         self.enemy_spawner.update(
@@ -171,8 +190,12 @@ class PlayScene(Scene):
         )
 
         if sync and self.core.is_in_sync_range(self.player.pos):
-            moved = self.store.add(CORE_SHARD, self.backpack.count(CORE_SHARD))
-            self.backpack.remove(CORE_SHARD, moved)
+            if self.core.ignited:
+                moved = self.store.add(CORE_SHARD, self.backpack.count(CORE_SHARD))
+                self.backpack.remove(CORE_SHARD, moved)
+            elif self.backpack.count(CORE_SHARD) >= config.CORE_SHARDS_TO_IGNITE:
+                self.backpack.remove(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
+                self.core.ignite()
 
         if self.player.hp <= 0:
             combat.apply_death_penalty(self.backpack)
@@ -181,6 +204,7 @@ class PlayScene(Scene):
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_world(surface)
+        self._draw_ward(surface)
         self._draw_temples(surface)
         for fragment in self.fragments:
             pygame.draw.circle(
@@ -212,6 +236,7 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
+        self._draw_night(surface)
         self._draw_hud(surface)
 
     def _draw_world(self, surface: pygame.Surface) -> None:
@@ -236,6 +261,33 @@ class PlayScene(Scene):
             pygame.draw.polygon(surface, biome.color, points)
         pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
 
+    def _draw_ward(self, surface: pygame.Surface) -> None:
+        """The ward's rim, or the bare pedestal before the core is lit."""
+        center = self.camera.world_to_screen(self.core.pos)
+        if not self.core.ignited:
+            pygame.draw.circle(surface, config.PEDESTAL_COLOR, center, self.core.radius, 3)
+            return
+        pygame.draw.circle(surface, config.WARD_COLOR, center, self.core.ward_radius, 2)
+
+    def _draw_night(self, surface: pygame.Surface) -> None:
+        """Darken everything outside the ward once night falls.
+
+        Drawn before the HUD so the gauges stay readable, and punched through
+        inside the ward so the safe ground reads as safe at a glance.
+        """
+        if not self.clock.is_night:
+            return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 20, config.NIGHT_DARKNESS))
+        if self.core.ignited:
+            pygame.draw.circle(
+                overlay,
+                (0, 0, 0, 0),
+                self.camera.world_to_screen(self.core.pos),
+                self.core.ward_radius,
+            )
+        surface.blit(overlay, (0, 0))
+
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """Placeholder markers so the five sites are visible before temples exist."""
         for site in self.temple_sites:
@@ -251,6 +303,9 @@ class PlayScene(Scene):
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
         _draw_bar(surface, 48, 5, ready, (120, 160, 220), bg=(40, 40, 55))
+        # day/night progress: warm across the day, cold across the night
+        phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
+        _draw_bar(surface, 62, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
         # hotbar (bottom-left)
         for i in range(len(self.hotbar.slots)):
             x = 10 + i * 44
