@@ -31,8 +31,11 @@ VOID_COLOR: Final[tuple[int, int, int]] = (18, 18, 26)  # outside the map circle
 # the camera clamps against; the circle is what the player can stand on, so the
 # box corners are void. A central grassland fills about a third of the circle
 # and the remaining ring is split into BIOME_COUNT equal sectors.
-MAP_RADIUS: Final[float] = 2400.0
-GRASSLAND_RADIUS: Final[float] = 1400.0  # (1400/2400)^2 = 0.34 of the area
+# The grassland's rim is a three-minute walk from the core at PLAYER_SPEED.
+# That single number sets the map's scale; the outer radius then follows from
+# keeping the grassland at a third of the total area.
+GRASSLAND_RADIUS: Final[float] = 36_000.0  # 180s * 200px/s
+MAP_RADIUS: Final[float] = 62_400.0  # (36000/62400)^2 = 1/3 of the area
 BIOME_COUNT: Final[int] = 5
 
 WORLD_WIDTH: Final[int] = int(2 * MAP_RADIUS)
@@ -40,15 +43,16 @@ WORLD_HEIGHT: Final[int] = int(2 * MAP_RADIUS)
 WORLD_SIZE: Final[tuple[int, int]] = (WORLD_WIDTH, WORLD_HEIGHT)
 TILE_SIZE: Final[int] = 32  # the size biome tile art is authored for; not a data grid
 
-# Where a boss temple may stand inside its sector. The radial band keeps it off
-# both edges of the ring; the angular inset keeps it off the seams, where it
-# would read as belonging to the neighbouring biome.
-TEMPLE_BAND_INNER: Final[float] = 1600.0
-TEMPLE_BAND_OUTER: Final[float] = 2200.0
+# Where a boss temple may stand inside its sector, as a FRACTION of the ring's
+# width -- an absolute radius silently lands in the wrong place the moment the
+# map is rescaled. The angular inset keeps it off the seams, where it would read
+# as belonging to the neighbouring biome.
+TEMPLE_BAND_INNER_FRAC: Final[float] = 0.20
+TEMPLE_BAND_OUTER_FRAC: Final[float] = 0.80
 TEMPLE_ANGLE_INSET: Final[float] = 12.0  # degrees trimmed from each sector edge
 
 # --- Player -----------------------------------------------------------------
-PLAYER_SPEED: Final[float] = 220.0  # px/s
+PLAYER_SPEED: Final[float] = 200.0  # px/s
 PLAYER_RADIUS: Final[float] = 14.0
 
 # --- Mining / fragments -----------------------------------------------------
@@ -72,6 +76,7 @@ CAMERA_EDGE_MARGIN: Final[int] = 40  # px band at screen edge that pans
 # --- Spawner ----------------------------------------------------------------
 SPAWN_INTERVAL: Final[float] = 2.0  # seconds between spawn attempts
 SPAWN_MAX: Final[int] = 30  # max simultaneous fragments
+SPAWN_RADIUS: Final[float] = 2_000.0  # spawns follow the player, not the whole map
 
 # --- Core -------------------------------------------------------------------
 CORE_RADIUS: Final[float] = 40.0

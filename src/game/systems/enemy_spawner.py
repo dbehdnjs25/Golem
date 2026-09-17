@@ -12,10 +12,10 @@ import pygame
 from game import config
 from game.entities.core import Core
 from game.entities.enemy import Golem
-from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner
+from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, near_player
 from game.world.map import WorldMap
 
-_MIN_PLAYER_DIST = 300.0
+_MIN_PLAYER_DIST = 600.0  # never on top of the player, inside SPAWN_RADIUS
 
 
 @dataclass
@@ -51,7 +51,9 @@ class EnemySpawner(TimedSpawner):
         world: WorldMap,
     ) -> pygame.Vector2 | None:
         for _ in range(SPAWN_ATTEMPTS):
-            point = world.random_point(rng)
+            point = near_player(player_pos, rng, world)
+            if point is None:
+                continue
             if core.pos.distance_to(point) < core.sync_radius + config.GOLEM_RADIUS:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:

@@ -43,6 +43,10 @@ class WorldMap:
         return pygame.Vector2(self.radius, self.radius)
 
     @property
+    def ring_width(self) -> float:
+        return self.radius - self.grassland_radius
+
+    @property
     def sector_degrees(self) -> float:
         return 360.0 / config.BIOME_COUNT
 
@@ -71,27 +75,15 @@ class WorldMap:
         """Pull ``pos`` in place so a body of ``radius`` stays on the map."""
         clamp_to_circle(pos, radius, self.center, self.radius)
 
-    def random_point(self, rng: random.Random, outward: bool = False) -> pygame.Vector2:
-        """A random point inside the map circle.
-
-        The radius is NOT sampled uniformly: that would crowd the centre, since
-        a thin ring far out holds far more area than one near the middle. The
-        square root spreads points evenly by area instead.
-
-        ``outward`` swaps the square root for a cube root, which makes density
-        grow with distance -- resources are meant to thicken away from the core.
-        """
-        angle = rng.uniform(0.0, 2 * math.pi)
-        spread = rng.random() ** (1 / 3 if outward else 1 / 2)
-        distance = self.radius * spread
-        return self._point_at(angle, distance)
-
     def temple_sites(self, rng: random.Random) -> tuple[pygame.Vector2, ...]:
         """One boss temple per ring biome, in ``RING_BIOMES`` order.
 
         Placed randomly inside its own sector but kept off all four edges: the
         radial band leaves margin at the ring's inner and outer rims, and the
         angular inset leaves margin at the seams with the neighbouring biomes.
+
+        The band is a fraction of the ring's width, not an absolute radius: an
+        absolute one lands in the wrong place the moment the map is rescaled.
         """
         sites: list[pygame.Vector2] = []
         for index in range(len(RING_BIOMES)):
@@ -100,7 +92,9 @@ class WorldMap:
                 start + config.TEMPLE_ANGLE_INSET,
                 start + self.sector_degrees - config.TEMPLE_ANGLE_INSET,
             )
-            distance = rng.uniform(config.TEMPLE_BAND_INNER, config.TEMPLE_BAND_OUTER)
+            distance = self.grassland_radius + self.ring_width * rng.uniform(
+                config.TEMPLE_BAND_INNER_FRAC, config.TEMPLE_BAND_OUTER_FRAC
+            )
             sites.append(self._point_at(math.radians(degrees), distance))
         return tuple(sites)
 
