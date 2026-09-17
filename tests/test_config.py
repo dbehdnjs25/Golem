@@ -48,3 +48,10 @@ def test_the_temple_band_is_a_fraction_of_the_ring_not_an_absolute_radius():
     assert not hasattr(config, "TEMPLE_BAND_INNER")
     assert not hasattr(config, "TEMPLE_BAND_OUTER")
     assert 0.0 < config.TEMPLE_BAND_INNER_FRAC < config.TEMPLE_BAND_OUTER_FRAC < 1.0
+
+
+def test_the_level_caps_match_the_boss_count():
+    # One boss opens one cap, and the fifth opens the final upgrade -- that is
+    # what ties the core ladder to the five temples.
+    assert config.CORE_LEVEL_CAPS == (10, 20, 30, 40, 50)
+    assert config.CORE_LEVEL_CAPS[-1] == config.CORE_MAX_LEVEL

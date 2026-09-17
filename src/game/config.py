@@ -6,6 +6,7 @@ display. Colours are plain RGB tuples for the same reason.
 
 from __future__ import annotations
 
+import math
 from typing import Final
 
 # --- Window -----------------------------------------------------------------
@@ -89,6 +90,28 @@ SPAWN_RADIUS: Final[float] = 2_000.0  # spawns follow the player, not the whole 
 # --- Core -------------------------------------------------------------------
 CORE_RADIUS: Final[float] = 40.0
 CORE_SYNC_RADIUS: Final[float] = 120.0  # auto-transfer when player within this
+CORE_SHARDS_TO_IGNITE: Final[int] = 5
+
+# Level 0 is an unlit core with no ward. Each cap is opened by one boss's drop,
+# so the five temples are what actually gate the ladder; clearing the fifth
+# unlocks the final upgrade rather than another cap.
+CORE_MAX_LEVEL: Final[int] = 50
+CORE_LEVEL_CAPS: Final[tuple[int, ...]] = (10, 20, 30, 40, 50)
+
+# The ward grows by a constant RATIO per level, not a constant amount: absolute
+# growth makes an early level invisible and a late one enormous. At full level it
+# covers a tenth of the grassland's area, hence the sqrt(10).
+WARD_RADIUS_BASE: Final[float] = 1_000.0
+WARD_RADIUS_MAX: Final[float] = GRASSLAND_RADIUS / math.sqrt(10.0)
+WARD_GROWTH: Final[float] = (WARD_RADIUS_MAX / WARD_RADIUS_BASE) ** (1 / (CORE_MAX_LEVEL - 1))
+
+# --- Survival ----------------------------------------------------------------
+# Regen ramps up the longer the player stays inside the ward and resets the
+# moment they leave, so tagging the edge between fights banks nothing. Free but
+# slow to start, which leaves potions their job: healing RIGHT NOW.
+WARD_REGEN_BASE: Final[float] = 1.0  # hp/s on arrival
+WARD_REGEN_RAMP: Final[float] = 0.5  # hp/s added per second spent inside
+WARD_REGEN_MAX: Final[float] = 8.0  # hp/s ceiling, reached after 14s
 
 # --- Hotbar -----------------------------------------------------------------
 # Fixed at five. Dying keeps the hotbar and drops half of everything else, so
