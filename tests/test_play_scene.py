@@ -6,6 +6,7 @@ from game.entities.projectile import Projectile
 from game.items.item_kinds import CORE_SHARD
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
+from game.systems.camera import FREE
 
 
 def _key_event(key):
@@ -132,3 +133,40 @@ def test_draw_runs_with_enemies_and_projectiles(surface):
         Projectile(pos=pygame.Vector2(scene.player.pos), vel=pygame.Vector2(1, 0), damage=1)
     )
     scene.draw(surface)  # must not raise
+
+
+def test_the_scene_owns_a_map_and_five_temple_sites():
+    scene = PlayScene()
+    assert scene.world.contains(scene.player.pos)
+    assert len(scene.temple_sites) == 5
+    assert all(scene.world.contains(site) for site in scene.temple_sites)
+
+
+def test_the_core_stands_at_the_centre_of_the_map():
+    scene = PlayScene()
+    assert scene.core.pos == scene.world.center
+
+
+def test_the_centre_of_the_view_is_painted_grassland():
+    from game.world import biomes
+
+    scene = PlayScene()
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.camera.center_on(scene.world.center)
+    scene.draw(surface)
+    # The camera is centred on the core, so the middle of the screen is the
+    # middle of the grassland. Sample to the side of the core, which is drawn
+    # on top of it.
+    probe = (config.SCREEN_WIDTH // 2 + int(config.CORE_RADIUS) + 20, config.SCREEN_HEIGHT // 2)
+    assert surface.get_at(probe)[:3] == biomes.GRASSLAND.color
+
+
+def test_outside_the_map_is_painted_void():
+    scene = PlayScene()
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    # Park the camera on the world box's top-left corner, which is outside the
+    # inscribed circle.
+    scene.camera.mode = FREE
+    scene.camera.offset = pygame.Vector2(0, 0)
+    scene.draw(surface)
+    assert surface.get_at((2, 2))[:3] == config.VOID_COLOR

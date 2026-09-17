@@ -58,6 +58,7 @@ Run: `pytest` (coverage on by default). Prefer testing `entities/`, `systems/`,
 | A game state (menu, play, pause) | `game/scenes/*.py` |
 | Player/enemy/bullet logic | `game/entities/*.py` |
 | Cross-entity systems (physics, collision, spawning) | `game/systems/*.py` (add when needed) |
+| Terrain: biomes, the map circle, resource distribution | `game/world/*.py` |
 | Assets | `assets/{images,sounds,fonts}/` |
 
 The `Ball` entity + `PlayScene` are **example scaffolding** demonstrating the

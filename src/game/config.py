@@ -38,7 +38,7 @@ BIOME_COUNT: Final[int] = 5
 WORLD_WIDTH: Final[int] = int(2 * MAP_RADIUS)
 WORLD_HEIGHT: Final[int] = int(2 * MAP_RADIUS)
 WORLD_SIZE: Final[tuple[int, int]] = (WORLD_WIDTH, WORLD_HEIGHT)
-TILE_SIZE: Final[int] = 32  # visual floor rendering only, not a data grid
+TILE_SIZE: Final[int] = 32  # the size biome tile art is authored for; not a data grid
 
 # Where a boss temple may stand inside its sector. The radial band keeps it off
 # both edges of the ring; the angular inset keeps it off the seams, where it
@@ -83,8 +83,6 @@ CORE_SYNC_RADIUS: Final[float] = 120.0  # auto-transfer when player within this
 HOTBAR_SLOTS: Final[int] = 5
 
 # --- Additional colours (RGB) -----------------------------------------------
-FLOOR_A: Final[tuple[int, int, int]] = (26, 26, 40)
-FLOOR_B: Final[tuple[int, int, int]] = (32, 32, 48)
 FRAGMENT_COLOR: Final[tuple[int, int, int]] = (90, 200, 255)
 CORE_COLOR: Final[tuple[int, int, int]] = (120, 255, 180)
 PLAYER_COLOR: Final[tuple[int, int, int]] = (240, 240, 255)

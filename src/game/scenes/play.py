@@ -4,6 +4,7 @@ together; accumulates input from events (no polling) and owns all rendering."""
 
 from __future__ import annotations
 
+import math
 import random
 
 import pygame
@@ -23,6 +24,7 @@ from game.systems import combat, mining
 from game.systems.camera import LOCKED, Camera
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.spawner import Spawner
+from game.world import biomes
 from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
@@ -50,6 +52,7 @@ class PlayScene(Scene):
     def __init__(self) -> None:
         self.rng = random.Random(1234)
         self.world = WorldMap.create(self.rng)
+        self.temple_sites = self.world.temple_sites(self.rng)
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.player = Player(pos=pygame.Vector2(center))
@@ -177,8 +180,8 @@ class PlayScene(Scene):
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
-        surface.fill(config.BACKGROUND)
-        self._draw_floor(surface)
+        self._draw_world(surface)
+        self._draw_temples(surface)
         for fragment in self.fragments:
             pygame.draw.circle(
                 surface,
@@ -211,17 +214,32 @@ class PlayScene(Scene):
         )
         self._draw_hud(surface)
 
-    def _draw_floor(self, surface: pygame.Surface) -> None:
-        view_w, view_h = surface.get_size()
-        tile = config.TILE_SIZE
-        off_x, off_y = int(self.camera.offset.x), int(self.camera.offset.y)
-        first_col, first_row = off_x // tile, off_y // tile
-        for row in range(first_row, (off_y + view_h) // tile + 1):
-            for col in range(first_col, (off_x + view_w) // tile + 1):
-                color = config.FLOOR_A if (row + col) % 2 == 0 else config.FLOOR_B
-                pygame.draw.rect(
-                    surface, color, pygame.Rect(col * tile - off_x, row * tile - off_y, tile, tile)
+    def _draw_world(self, surface: pygame.Surface) -> None:
+        """Paint the map: void, then one wedge per ring biome, then the grassland.
+
+        Flat colours until real tiles exist. Wedges rather than tiles because the
+        biomes ARE angular sectors -- five polygons draw them exactly, in seven
+        calls a frame instead of the five hundred a tile grid costs, with no
+        stair-stepping and no per-tile biome lookup.
+        """
+        surface.fill(config.VOID_COLOR)
+        center = self.camera.world_to_screen(self.world.center)
+        steps = 24  # arc samples per wedge; the chord error is under a pixel
+        for index, biome in enumerate(biomes.RING_BIOMES):
+            start = self.world.rotation + index * self.world.sector_degrees
+            points = [center]
+            for step in range(steps + 1):
+                angle = math.radians(start + self.world.sector_degrees * step / steps)
+                points.append(
+                    center + pygame.Vector2(math.cos(angle), math.sin(angle)) * self.world.radius
                 )
+            pygame.draw.polygon(surface, biome.color, points)
+        pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
+
+    def _draw_temples(self, surface: pygame.Surface) -> None:
+        """Placeholder markers so the five sites are visible before temples exist."""
+        for site in self.temple_sites:
+            pygame.draw.circle(surface, config.WHITE, self.camera.world_to_screen(site), 9, 3)
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
         # inventory fill gauge
