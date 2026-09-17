@@ -1,0 +1,187 @@
+{
+  "image": "grassland-32.webp",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "columns": 4,
+  "tilecount": 16,
+  "margin": 0,
+  "spacing": 0,
+  "tiles": [
+    {
+      "id": 0,
+      "name": "기본 잔디",
+      "file": "grass_00.webp",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 1,
+      "name": "작은 풀",
+      "file": "grass_01.webp",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 2,
+      "name": "풀 무리",
+      "file": "grass_02.webp",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 3,
+      "name": "하얀 꽃",
+      "file": "grass_03.webp",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 4,
+      "name": "노란 꽃",
+      "file": "grass_04.webp",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 5,
+      "name": "분홍 꽃",
+      "file": "grass_05.webp",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 6,
+      "name": "파란 꽃",
+      "file": "grass_06.webp",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 7,
+      "name": "보라 꽃",
+      "file": "grass_07.webp",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 8,
+      "name": "작은 조약돌",
+      "file": "grass_08.webp",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 9,
+      "name": "조약돌 두 개",
+      "file": "grass_09.webp",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 10,
+      "name": "작은 돌무리",
+      "file": "grass_10.webp",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 11,
+      "name": "클로버",
+      "file": "grass_11.webp",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 12,
+      "name": "하얀 꽃 무리",
+      "file": "grass_12.webp",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 13,
+      "name": "노란 꽃 무리",
+      "file": "grass_13.webp",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 14,
+      "name": "혼합 들꽃",
+      "file": "grass_14.webp",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ]
+    },
+    {
+      "id": 15,
+      "name": "꽃과 조약돌",
+      "file": "grass_15.webp",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ]
+    }
+  ]
+}

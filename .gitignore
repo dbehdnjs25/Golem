@@ -26,3 +26,8 @@ coverage.xml
 *.swp
 .DS_Store
 Thumbs.db
+
+# Generated art previews. build_preview.py / build_tiles32.py rebuild this from
+# grassland-atlas.png and the template; it is 2 MB of base64 duplicating a PNG
+# that is already tracked, and git would keep every version of it forever.
+assets/grassland/preview.html

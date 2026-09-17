@@ -1,0 +1,260 @@
+{
+  "image": "grassland-atlas.png",
+  "columns": 6,
+  "rows": 6,
+  "assets": [
+    {
+      "id": "meadow_01",
+      "name": "밝은 잔디",
+      "category": "잔디",
+      "column": 0,
+      "row": 0
+    },
+    {
+      "id": "meadow_02",
+      "name": "짙은 잔디",
+      "category": "잔디",
+      "column": 1,
+      "row": 0
+    },
+    {
+      "id": "meadow_03",
+      "name": "성긴 잔디",
+      "category": "잔디",
+      "column": 2,
+      "row": 0
+    },
+    {
+      "id": "meadow_04",
+      "name": "클로버 잔디",
+      "category": "잔디",
+      "column": 3,
+      "row": 0
+    },
+    {
+      "id": "meadow_05",
+      "name": "꽃 잔디",
+      "category": "잔디",
+      "column": 4,
+      "row": 0
+    },
+    {
+      "id": "meadow_06",
+      "name": "마른 잔디",
+      "category": "잔디",
+      "column": 5,
+      "row": 0
+    },
+    {
+      "id": "meadow_07",
+      "name": "가로 흙길",
+      "category": "길",
+      "column": 0,
+      "row": 1
+    },
+    {
+      "id": "meadow_08",
+      "name": "세로 흙길",
+      "category": "길",
+      "column": 1,
+      "row": 1
+    },
+    {
+      "id": "meadow_09",
+      "name": "우하단 굽이",
+      "category": "길",
+      "column": 2,
+      "row": 1
+    },
+    {
+      "id": "meadow_10",
+      "name": "좌하단 굽이",
+      "category": "길",
+      "column": 3,
+      "row": 1
+    },
+    {
+      "id": "meadow_11",
+      "name": "우상단 굽이",
+      "category": "길",
+      "column": 4,
+      "row": 1
+    },
+    {
+      "id": "meadow_12",
+      "name": "좌상단 굽이",
+      "category": "길",
+      "column": 5,
+      "row": 1
+    },
+    {
+      "id": "meadow_13",
+      "name": "데이지",
+      "category": "꽃과 풀",
+      "column": 0,
+      "row": 2
+    },
+    {
+      "id": "meadow_14",
+      "name": "노란 들꽃",
+      "category": "꽃과 풀",
+      "column": 1,
+      "row": 2
+    },
+    {
+      "id": "meadow_15",
+      "name": "파란 들꽃",
+      "category": "꽃과 풀",
+      "column": 2,
+      "row": 2
+    },
+    {
+      "id": "meadow_16",
+      "name": "분홍 들꽃",
+      "category": "꽃과 풀",
+      "column": 3,
+      "row": 2
+    },
+    {
+      "id": "meadow_17",
+      "name": "키 큰 풀",
+      "category": "꽃과 풀",
+      "column": 4,
+      "row": 2
+    },
+    {
+      "id": "meadow_18",
+      "name": "고사리",
+      "category": "꽃과 풀",
+      "column": 5,
+      "row": 2
+    },
+    {
+      "id": "meadow_19",
+      "name": "작은 돌",
+      "category": "바위와 버섯",
+      "column": 0,
+      "row": 3
+    },
+    {
+      "id": "meadow_20",
+      "name": "큰 바위",
+      "category": "바위와 버섯",
+      "column": 1,
+      "row": 3
+    },
+    {
+      "id": "meadow_21",
+      "name": "이끼 바위",
+      "category": "바위와 버섯",
+      "column": 2,
+      "row": 3
+    },
+    {
+      "id": "meadow_22",
+      "name": "조약돌 무리",
+      "category": "바위와 버섯",
+      "column": 3,
+      "row": 3
+    },
+    {
+      "id": "meadow_23",
+      "name": "빨간 버섯",
+      "category": "바위와 버섯",
+      "column": 4,
+      "row": 3
+    },
+    {
+      "id": "meadow_24",
+      "name": "갈색 버섯",
+      "category": "바위와 버섯",
+      "column": 5,
+      "row": 3
+    },
+    {
+      "id": "meadow_25",
+      "name": "둥근 덤불",
+      "category": "나무와 덤불",
+      "column": 0,
+      "row": 4
+    },
+    {
+      "id": "meadow_26",
+      "name": "열매 덤불",
+      "category": "나무와 덤불",
+      "column": 1,
+      "row": 4
+    },
+    {
+      "id": "meadow_27",
+      "name": "어린 나무",
+      "category": "나무와 덤불",
+      "column": 2,
+      "row": 4
+    },
+    {
+      "id": "meadow_28",
+      "name": "둥근 활엽수",
+      "category": "나무와 덤불",
+      "column": 3,
+      "row": 4
+    },
+    {
+      "id": "meadow_29",
+      "name": "길쭉한 활엽수",
+      "category": "나무와 덤불",
+      "column": 4,
+      "row": 4
+    },
+    {
+      "id": "meadow_30",
+      "name": "침엽수",
+      "category": "나무와 덤불",
+      "column": 5,
+      "row": 4
+    },
+    {
+      "id": "meadow_31",
+      "name": "작은 연못",
+      "category": "물과 목재",
+      "column": 0,
+      "row": 5
+    },
+    {
+      "id": "meadow_32",
+      "name": "부들",
+      "category": "물과 목재",
+      "column": 1,
+      "row": 5
+    },
+    {
+      "id": "meadow_33",
+      "name": "쓰러진 통나무",
+      "category": "물과 목재",
+      "column": 2,
+      "row": 5
+    },
+    {
+      "id": "meadow_34",
+      "name": "그루터기",
+      "category": "물과 목재",
+      "column": 3,
+      "row": 5
+    },
+    {
+      "id": "meadow_35",
+      "name": "넓은 울타리",
+      "category": "물과 목재",
+      "column": 4,
+      "row": 5
+    },
+    {
+      "id": "meadow_36",
+      "name": "좁은 울타리",
+      "category": "물과 목재",
+      "column": 5,
+      "row": 5
+    }
+  ],
+  "note": "Source atlas cells are proportional; generated terrain is not guaranteed seamless. Game tile size is 32px; rescale after selecting assets."
+}
