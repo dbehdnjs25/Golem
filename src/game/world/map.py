@@ -86,6 +86,24 @@ class WorldMap:
         distance = self.radius * spread
         return self._point_at(angle, distance)
 
+    def temple_sites(self, rng: random.Random) -> tuple[pygame.Vector2, ...]:
+        """One boss temple per ring biome, in ``RING_BIOMES`` order.
+
+        Placed randomly inside its own sector but kept off all four edges: the
+        radial band leaves margin at the ring's inner and outer rims, and the
+        angular inset leaves margin at the seams with the neighbouring biomes.
+        """
+        sites: list[pygame.Vector2] = []
+        for index in range(len(RING_BIOMES)):
+            start = self.rotation + index * self.sector_degrees
+            degrees = rng.uniform(
+                start + config.TEMPLE_ANGLE_INSET,
+                start + self.sector_degrees - config.TEMPLE_ANGLE_INSET,
+            )
+            distance = rng.uniform(config.TEMPLE_BAND_INNER, config.TEMPLE_BAND_OUTER)
+            sites.append(self._point_at(math.radians(degrees), distance))
+        return tuple(sites)
+
     def _point_at(self, radians: float, distance: float) -> pygame.Vector2:
         offset = pygame.Vector2(math.cos(radians) * distance, math.sin(radians) * distance)
         return pygame.Vector2(self.center + offset)

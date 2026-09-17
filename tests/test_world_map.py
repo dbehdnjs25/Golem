@@ -144,3 +144,45 @@ def test_outward_sampling_pushes_points_towards_the_edge():
     radii = [world.center.distance_to(world.random_point(rng, outward=True)) for _ in range(4000)]
     mean = sum(radii) / len(radii)
     assert abs(mean / world.radius - 3 / 4) < 0.03
+
+
+def test_there_is_one_temple_per_biome_in_ring_order():
+    world = WorldMap(rotation=41.0)
+    sites = world.temple_sites(random.Random(2))
+    assert len(sites) == len(biomes.RING_BIOMES)
+    for site, biome in zip(sites, biomes.RING_BIOMES, strict=True):
+        assert world.biome_at(site) is biome
+
+
+def test_temples_avoid_the_inner_and_outer_edges_of_the_ring():
+    # The spec asks for margin at both ends so a temple never looks like it is
+    # falling off the map or leaking into the grassland.
+    world = WorldMap()
+    for seed in range(20):
+        for site in world.temple_sites(random.Random(seed)):
+            distance = world.center.distance_to(site)
+            assert config.TEMPLE_BAND_INNER <= distance <= config.TEMPLE_BAND_OUTER
+            assert world.grassland_radius < distance < world.radius
+
+
+def test_temples_are_reproducible_from_a_seed():
+    world = WorldMap(rotation=41.0)
+    assert world.temple_sites(random.Random(9)) == world.temple_sites(random.Random(9))
+
+
+def test_different_seeds_move_the_temples():
+    world = WorldMap(rotation=41.0)
+    assert world.temple_sites(random.Random(1)) != world.temple_sites(random.Random(2))
+
+
+def test_temples_stay_clear_of_the_sector_seams():
+    # A temple sitting on a boundary reads as belonging to the neighbour, so it
+    # is inset from both edges of its own sector.
+    world = WorldMap(rotation=0.0)
+    inset = config.TEMPLE_ANGLE_INSET
+    for seed in range(20):
+        for i, site in enumerate(world.temple_sites(random.Random(seed))):
+            offset = site - world.center
+            degrees = math.degrees(math.atan2(offset.y, offset.x)) % 360.0
+            within = (degrees - i * world.sector_degrees) % 360.0
+            assert inset <= within <= world.sector_degrees - inset

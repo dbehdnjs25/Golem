@@ -40,6 +40,13 @@ WORLD_HEIGHT: Final[int] = int(2 * MAP_RADIUS)
 WORLD_SIZE: Final[tuple[int, int]] = (WORLD_WIDTH, WORLD_HEIGHT)
 TILE_SIZE: Final[int] = 32  # visual floor rendering only, not a data grid
 
+# Where a boss temple may stand inside its sector. The radial band keeps it off
+# both edges of the ring; the angular inset keeps it off the seams, where it
+# would read as belonging to the neighbouring biome.
+TEMPLE_BAND_INNER: Final[float] = 1600.0
+TEMPLE_BAND_OUTER: Final[float] = 2200.0
+TEMPLE_ANGLE_INSET: Final[float] = 12.0  # degrees trimmed from each sector edge
+
 # --- Player -----------------------------------------------------------------
 PLAYER_SPEED: Final[float] = 220.0  # px/s
 PLAYER_RADIUS: Final[float] = 14.0
