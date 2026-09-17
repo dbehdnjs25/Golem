@@ -50,3 +50,16 @@ def test_spawn_avoids_core_sync_zone():
         frag = sp.update(config.SPAWN_INTERVAL, frags, CORE, random.Random(seed), WORLD)
         if frag is not None:
             assert CORE.pos.distance_to(frag.pos) >= CORE.sync_radius
+
+
+def test_spawned_nodes_carry_an_ore_kind_that_varies():
+    # The ore table decides what a node yields, so nodes are no longer all the
+    # same thing -- and the outward spawn bias means they span several bands.
+    fragments = []
+    spawner = Spawner()
+    rng = random.Random(21)
+    for _ in range(40):
+        spawner.update(config.SPAWN_INTERVAL, fragments, CORE, rng, WORLD)
+    assert fragments, "the spawner should have produced something in 40 attempts"
+    assert all(f.kind is not None for f in fragments)
+    assert len({f.kind for f in fragments}) > 1

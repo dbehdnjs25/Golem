@@ -14,6 +14,7 @@ from game.entities.core import Core
 from game.entities.fragment import Fragment
 from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner
 from game.world.map import WorldMap
+from game.world.resources import ore_at
 
 
 @dataclass
@@ -36,7 +37,7 @@ class Spawner(TimedSpawner):
         spot = self._find_spot(fragments, core, rng, world)
         if spot is None:
             return None
-        fragment = Fragment(pos=spot)
+        fragment = Fragment(pos=spot, kind=ore_at(world.distance_fraction(spot), rng))
         fragments.append(fragment)
         return fragment
 
