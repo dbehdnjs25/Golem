@@ -24,10 +24,19 @@ MAX_FRAME_TIME: Final[float] = 0.25  # clamp to avoid the "spiral of death"
 BLACK: Final[tuple[int, int, int]] = (0, 0, 0)
 WHITE: Final[tuple[int, int, int]] = (255, 255, 255)
 BACKGROUND: Final[tuple[int, int, int]] = (30, 30, 46)
+VOID_COLOR: Final[tuple[int, int, int]] = (18, 18, 26)  # outside the map circle
 
 # --- World ------------------------------------------------------------------
-WORLD_WIDTH: Final[int] = 2400
-WORLD_HEIGHT: Final[int] = 1600
+# The playable map is a CIRCLE inscribed in a square world box. The box is what
+# the camera clamps against; the circle is what the player can stand on, so the
+# box corners are void. A central grassland fills about a third of the circle
+# and the remaining ring is split into BIOME_COUNT equal sectors.
+MAP_RADIUS: Final[float] = 2400.0
+GRASSLAND_RADIUS: Final[float] = 1400.0  # (1400/2400)^2 = 0.34 of the area
+BIOME_COUNT: Final[int] = 5
+
+WORLD_WIDTH: Final[int] = int(2 * MAP_RADIUS)
+WORLD_HEIGHT: Final[int] = int(2 * MAP_RADIUS)
 WORLD_SIZE: Final[tuple[int, int]] = (WORLD_WIDTH, WORLD_HEIGHT)
 TILE_SIZE: Final[int] = 32  # visual floor rendering only, not a data grid
 
