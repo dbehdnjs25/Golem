@@ -9,10 +9,14 @@ from game.inventory.storage import Container
 from game.items.item_kinds import CORE_SHARD, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
+from game.world.map import WorldMap
 
 # A second kind, used only to prove apply_death_penalty halves per row rather
 # than per total (see test_death_penalty_cannot_shelter_one_kind_by_dropping_another).
 HEAVY = ItemKind(key="heavy", name="벌크", stack_max=10, color=(1, 2, 3))
+
+WORLD = WorldMap()
+CENTRE = WORLD.center
 
 
 def _fire(steps, dt, *, held=True, weapon=None):
@@ -64,50 +68,50 @@ def test_no_fire_on_degenerate_aim():
 
 
 def test_projectile_hits_and_kills_enemy():
-    enemy = Golem(pos=pygame.Vector2(100, 100), hp=5)
-    shot = Projectile(pos=pygame.Vector2(100, 100), vel=pygame.Vector2(0, 0), damage=5)
+    enemy = Golem(pos=pygame.Vector2(CENTRE), hp=5)
+    shot = Projectile(pos=pygame.Vector2(CENTRE), vel=pygame.Vector2(0, 0), damage=5)
     projectiles = [shot]
     enemies = [enemy]
-    combat.update_projectiles(0.016, projectiles, enemies, (2400, 1600))
+    combat.update_projectiles(0.016, projectiles, enemies, WORLD)
     assert projectiles == []  # consumed on hit
     assert enemies == []  # died at 0 hp
 
 
 def test_projectile_misses_and_survives():
-    enemy = Golem(pos=pygame.Vector2(1000, 1000), hp=5)
-    shot = Projectile(pos=pygame.Vector2(0, 0), vel=pygame.Vector2(10, 0), damage=5, ttl=1.0)
+    enemy = Golem(pos=CENTRE + pygame.Vector2(900, 900), hp=5)
+    shot = Projectile(pos=pygame.Vector2(CENTRE), vel=pygame.Vector2(10, 0), damage=5, ttl=1.0)
     projectiles = [shot]
     enemies = [enemy]
-    combat.update_projectiles(0.016, projectiles, enemies, (2400, 1600))
+    combat.update_projectiles(0.016, projectiles, enemies, WORLD)
     assert len(projectiles) == 1
     assert len(enemies) == 1
 
 
 def test_expired_projectile_removed():
-    shot = Projectile(pos=pygame.Vector2(0, 0), vel=pygame.Vector2(0, 0), damage=5, ttl=0.01)
+    shot = Projectile(pos=pygame.Vector2(CENTRE), vel=pygame.Vector2(0, 0), damage=5, ttl=0.01)
     projectiles = [shot]
-    combat.update_projectiles(0.02, projectiles, [], (2400, 1600))
+    combat.update_projectiles(0.02, projectiles, [], WORLD)
     assert projectiles == []
 
 
 def test_enemy_contact_damages_player():
-    player = Player(pos=pygame.Vector2(500, 500))
-    enemy = Golem(pos=pygame.Vector2(500, 500))
-    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    player = Player(pos=pygame.Vector2(CENTRE))
+    enemy = Golem(pos=pygame.Vector2(CENTRE))
+    combat.update_enemies(0.5, [enemy], player, WORLD)
     assert player.hp == config.PLAYER_MAX_HP - config.GOLEM_CONTACT_DPS * 0.5
 
 
 def test_invulnerable_player_takes_no_contact_damage():
-    player = Player(pos=pygame.Vector2(500, 500), iframe_timer=1.0)
-    enemy = Golem(pos=pygame.Vector2(500, 500))
-    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    player = Player(pos=pygame.Vector2(CENTRE), iframe_timer=1.0)
+    enemy = Golem(pos=pygame.Vector2(CENTRE))
+    combat.update_enemies(0.5, [enemy], player, WORLD)
     assert player.hp == config.PLAYER_MAX_HP
 
 
 def test_distant_enemy_deals_no_damage():
-    player = Player(pos=pygame.Vector2(0, 0))
-    enemy = Golem(pos=pygame.Vector2(2000, 1500))
-    combat.update_enemies(0.5, [enemy], player, (2400, 1600))
+    player = Player(pos=pygame.Vector2(CENTRE))
+    enemy = Golem(pos=CENTRE + pygame.Vector2(1800, 0))
+    combat.update_enemies(0.5, [enemy], player, WORLD)
     assert player.hp == config.PLAYER_MAX_HP
 
 

@@ -99,3 +99,48 @@ def test_distance_fraction_runs_zero_at_the_core_to_one_at_the_edge():
 def test_the_map_is_frozen():
     with pytest.raises(dataclasses.FrozenInstanceError):
         WorldMap().rotation = 1.0  # type: ignore[misc]
+
+
+def test_clamp_keeps_a_body_inside_the_circle():
+    world = WorldMap()
+    p = _at(world, 30, world.radius * 2)
+    world.clamp(p, 14)
+    assert world.contains(p)
+    assert world.center.distance_to(p) == pytest.approx(world.radius - 14)
+
+
+def test_random_points_all_land_inside_the_map():
+    world = WorldMap()
+    rng = random.Random(3)
+    points = [world.random_point(rng) for _ in range(500)]
+    assert all(world.contains(p) for p in points)
+    assert all(world.biome_at(p) is not None for p in points)
+
+
+def test_random_points_are_reproducible_from_a_seed():
+    world = WorldMap()
+    a = [world.random_point(random.Random(11)) for _ in range(3)]
+    b = [world.random_point(random.Random(11)) for _ in range(3)]
+    assert a == b
+
+
+def test_uniform_random_points_do_not_bunch_at_the_centre():
+    # Sampling radius uniformly would put half the points inside 0.5R, which is
+    # only a quarter of the area. Area-uniform sampling gives a mean radius of
+    # 2R/3, and that is what this pins down.
+    world = WorldMap()
+    rng = random.Random(5)
+    radii = [world.center.distance_to(world.random_point(rng)) for _ in range(4000)]
+    mean = sum(radii) / len(radii)
+    assert abs(mean / world.radius - 2 / 3) < 0.03
+
+
+def test_outward_sampling_pushes_points_towards_the_edge():
+    # Resources get denser away from the core, so the spawner needs a sampler
+    # that is biased outward. Density proportional to radius gives a mean of
+    # 3R/4, measurably further out than the flat 2R/3.
+    world = WorldMap()
+    rng = random.Random(5)
+    radii = [world.center.distance_to(world.random_point(rng, outward=True)) for _ in range(4000)]
+    mean = sum(radii) / len(radii)
+    assert abs(mean / world.radius - 3 / 4) < 0.03

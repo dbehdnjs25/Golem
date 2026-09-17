@@ -12,7 +12,8 @@ import pygame
 from game import config
 from game.entities.core import Core
 from game.entities.fragment import Fragment
-from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, random_point
+from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner
+from game.world.map import WorldMap
 
 
 @dataclass
@@ -26,12 +27,13 @@ class Spawner(TimedSpawner):
         fragments: list[Fragment],
         core: Core,
         rng: random.Random,
+        world: WorldMap,
     ) -> Fragment | None:
         if not self.is_due(dt):
             return None
         if len(fragments) >= self.max_fragments:
             return None
-        spot = self._find_spot(fragments, core, rng)
+        spot = self._find_spot(fragments, core, rng, world)
         if spot is None:
             return None
         fragment = Fragment(pos=spot)
@@ -43,9 +45,10 @@ class Spawner(TimedSpawner):
         fragments: list[Fragment],
         core: Core,
         rng: random.Random,
+        world: WorldMap,
     ) -> pygame.Vector2 | None:
         for _ in range(SPAWN_ATTEMPTS):
-            point = random_point(rng)
+            point = world.random_point(rng, outward=True)
             if core.pos.distance_to(point) < core.sync_radius + config.FRAGMENT_RADIUS:
                 continue
             too_close = any(

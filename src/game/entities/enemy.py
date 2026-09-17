@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
-from game.systems.physics import clamp_to_bounds
+from game.world.map import WorldMap
 
 
 @dataclass
@@ -25,8 +25,8 @@ class Golem:
     def damage(self, amount: float) -> None:
         self.hp -= amount
 
-    def update(self, dt: float, target: pygame.Vector2, bounds: tuple[int, int]) -> None:
+    def update(self, dt: float, target: pygame.Vector2, world: WorldMap) -> None:
         to_target = target - self.pos
         if to_target.length_squared() > 0:
             self.pos += to_target.normalize() * self.speed * dt
-        clamp_to_bounds(self.pos, self.radius, bounds)
+        world.clamp(self.pos, self.radius)

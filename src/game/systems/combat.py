@@ -12,6 +12,7 @@ from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
 from game.items.tools import WeaponTool
+from game.world.map import WorldMap
 
 
 def fire_weapon(
@@ -42,11 +43,6 @@ def fire_weapon(
     return 1.0 / weapon.fire_rate, [shot]
 
 
-def _in_bounds(pos: pygame.Vector2, bounds: tuple[int, int]) -> bool:
-    width, height = bounds
-    return 0 <= pos.x <= width and 0 <= pos.y <= height
-
-
 def _first_hit(shot: Projectile, enemies: list[Golem]) -> Golem | None:
     for enemy in enemies:
         if not enemy.is_dead and shot.pos.distance_to(enemy.pos) <= shot.radius + enemy.radius:
@@ -58,13 +54,13 @@ def update_projectiles(
     dt: float,
     projectiles: list[Projectile],
     enemies: list[Golem],
-    bounds: tuple[int, int],
+    world: WorldMap,
 ) -> None:
     surviving: list[Projectile] = []
     any_killed = False
     for shot in projectiles:
         shot.update(dt)
-        if shot.is_expired or not _in_bounds(shot.pos, bounds):
+        if shot.is_expired or not world.contains(shot.pos):
             continue
         hit = _first_hit(shot, enemies)
         if hit is not None:
@@ -81,10 +77,10 @@ def update_enemies(
     dt: float,
     enemies: list[Golem],
     player: Player,
-    bounds: tuple[int, int],
+    world: WorldMap,
 ) -> None:
     for enemy in enemies:
-        enemy.update(dt, player.pos, bounds)
+        enemy.update(dt, player.pos, world)
         if player.invulnerable:
             continue
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:

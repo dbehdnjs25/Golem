@@ -22,6 +22,7 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
+from game.systems.physics import clamp_to_circle
 from game.world.biomes import GRASSLAND, RING_BIOMES, Biome
 
 
@@ -65,3 +66,26 @@ class WorldMap:
         # A point landing exactly on 360.0 would index past the end after the
         # modulo's rounding; clamping costs nothing and cannot surprise anyone.
         return RING_BIOMES[min(index, len(RING_BIOMES) - 1)]
+
+    def clamp(self, pos: pygame.Vector2, radius: float = 0.0) -> None:
+        """Pull ``pos`` in place so a body of ``radius`` stays on the map."""
+        clamp_to_circle(pos, radius, self.center, self.radius)
+
+    def random_point(self, rng: random.Random, outward: bool = False) -> pygame.Vector2:
+        """A random point inside the map circle.
+
+        The radius is NOT sampled uniformly: that would crowd the centre, since
+        a thin ring far out holds far more area than one near the middle. The
+        square root spreads points evenly by area instead.
+
+        ``outward`` swaps the square root for a cube root, which makes density
+        grow with distance -- resources are meant to thicken away from the core.
+        """
+        angle = rng.uniform(0.0, 2 * math.pi)
+        spread = rng.random() ** (1 / 3 if outward else 1 / 2)
+        distance = self.radius * spread
+        return self._point_at(angle, distance)
+
+    def _point_at(self, radians: float, distance: float) -> pygame.Vector2:
+        offset = pygame.Vector2(math.cos(radians) * distance, math.sin(radians) * distance)
+        return pygame.Vector2(self.center + offset)

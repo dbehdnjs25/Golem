@@ -12,7 +12,8 @@ import pygame
 from game import config
 from game.entities.core import Core
 from game.entities.enemy import Golem
-from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, random_point
+from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner
+from game.world.map import WorldMap
 
 _MIN_PLAYER_DIST = 300.0
 
@@ -29,12 +30,13 @@ class EnemySpawner(TimedSpawner):
         player_pos: pygame.Vector2,
         core: Core,
         rng: random.Random,
+        world: WorldMap,
     ) -> Golem | None:
         if not self.is_due(dt):
             return None
         if len(enemies) >= self.max_enemies:
             return None
-        spot = self._find_spot(player_pos, core, rng)
+        spot = self._find_spot(player_pos, core, rng, world)
         if spot is None:
             return None
         golem = Golem(pos=spot)
@@ -46,9 +48,10 @@ class EnemySpawner(TimedSpawner):
         player_pos: pygame.Vector2,
         core: Core,
         rng: random.Random,
+        world: WorldMap,
     ) -> pygame.Vector2 | None:
         for _ in range(SPAWN_ATTEMPTS):
-            point = random_point(rng)
+            point = world.random_point(rng)
             if core.pos.distance_to(point) < core.sync_radius + config.GOLEM_RADIUS:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:

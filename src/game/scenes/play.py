@@ -23,6 +23,7 @@ from game.systems import combat, mining
 from game.systems.camera import LOCKED, Camera
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.spawner import Spawner
+from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
 
@@ -47,7 +48,9 @@ def _draw_bar(
 
 class PlayScene(Scene):
     def __init__(self) -> None:
-        center = pygame.Vector2(config.WORLD_WIDTH / 2, config.WORLD_HEIGHT / 2)
+        self.rng = random.Random(1234)
+        self.world = WorldMap.create(self.rng)
+        center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
@@ -65,7 +68,6 @@ class PlayScene(Scene):
         self.hotbar.slots[1] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()
-        self.rng = random.Random(1234)
 
         self.enemies: list[Golem] = []
         self.projectiles: list[Projectile] = []
@@ -134,7 +136,7 @@ class PlayScene(Scene):
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
             return
 
-        self.player.update(dt, self._move_dir(), config.WORLD_SIZE, dodge)
+        self.player.update(dt, self._move_dir(), self.world, dodge)
         self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
@@ -157,11 +159,13 @@ class PlayScene(Scene):
             fire_timer=self._fire_timer,
         )
         self.projectiles.extend(shots)
-        combat.update_projectiles(dt, self.projectiles, self.enemies, config.WORLD_SIZE)
-        combat.update_enemies(dt, self.enemies, self.player, config.WORLD_SIZE)
+        combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
+        combat.update_enemies(dt, self.enemies, self.player, self.world)
 
-        self.spawner.update(dt, self.fragments, self.core, self.rng)
-        self.enemy_spawner.update(dt, self.enemies, self.player.pos, self.core, self.rng)
+        self.spawner.update(dt, self.fragments, self.core, self.rng, self.world)
+        self.enemy_spawner.update(
+            dt, self.enemies, self.player.pos, self.core, self.rng, self.world
+        )
 
         if sync and self.core.is_in_sync_range(self.player.pos):
             moved = self.store.add(CORE_SHARD, self.backpack.count(CORE_SHARD))
