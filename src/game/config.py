@@ -20,6 +20,14 @@ FPS: Final[int] = 60
 FIXED_DT: Final[float] = 1.0 / FPS  # seconds per logic step
 MAX_FRAME_TIME: Final[float] = 0.25  # clamp to avoid the "spiral of death"
 
+# --- Day / night --------------------------------------------------------------
+# A day is long enough to reach the biomes and back only just; the night is long
+# enough to matter but not to dominate, since the raid cadence shortens to every
+# two days late on and the player would otherwise only ever see darkness.
+DAY_LENGTH: Final[float] = 300.0  # seconds of daylight
+NIGHT_LENGTH: Final[float] = 180.0  # seconds of night
+DAY_TOTAL: Final[float] = DAY_LENGTH + NIGHT_LENGTH
+
 # --- Colours (RGB) ----------------------------------------------------------
 BLACK: Final[tuple[int, int, int]] = (0, 0, 0)
 WHITE: Final[tuple[int, int, int]] = (255, 255, 255)
