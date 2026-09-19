@@ -116,3 +116,22 @@ def test_the_ward_is_a_circle_around_the_core():
     r = core.ward_radius
     assert core.is_in_ward(pygame.Vector2(r - 1, 0)) is True
     assert core.is_in_ward(pygame.Vector2(r + 1, 0)) is False
+
+
+def test_the_ward_stops_growing_at_its_own_cap():
+    core = _core()
+    core.bosses_killed = len(config.CORE_LEVEL_CAPS)
+    core.ignite()
+    while core.level < config.WARD_MAX_LEVEL:
+        core.upgrade()
+    full = core.ward_radius
+    assert math.isclose(full, config.WARD_RADIUS_MAX, rel_tol=1e-9)
+    # Every level past it is the same ward. Core levels keep going -- what they
+    # buy beyond this point is not radius.
+    while core.upgrade():
+        assert core.ward_radius == full
+    assert core.level == config.CORE_MAX_LEVEL
+
+
+def test_the_ward_cap_sits_below_the_level_cap():
+    assert 1 < config.WARD_MAX_LEVEL < config.CORE_MAX_LEVEL

@@ -100,12 +100,14 @@ CORE_MAX_LEVEL: Final[int] = 50
 CORE_LEVEL_CAPS: Final[tuple[int, ...]] = (10, 20, 30, 40, 50)
 
 # The ward grows by a constant RATIO per level, not a constant amount: absolute
-# growth makes an early level invisible and a late one enormous. Starting at a
-# third of the full radius leaves room for fifty levels to treble it, which is
-# enough for an upgrade to be worth making without the opening feeling cramped.
+# growth makes an early level invisible and a late one enormous. It starts at a
+# third of the full radius and finishes growing at WARD_MAX_LEVEL, well short of
+# the level cap -- the last stretch of the core ladder buys something other than
+# ground.
 WARD_RADIUS_MAX: Final[float] = 12_000.0  # a ninth of the grassland's area
 WARD_RADIUS_BASE: Final[float] = WARD_RADIUS_MAX / 3.0
-WARD_GROWTH: Final[float] = (WARD_RADIUS_MAX / WARD_RADIUS_BASE) ** (1 / (CORE_MAX_LEVEL - 1))
+WARD_MAX_LEVEL: Final[int] = 35  # the ward is full here and never grows again
+WARD_GROWTH: Final[float] = (WARD_RADIUS_MAX / WARD_RADIUS_BASE) ** (1 / (WARD_MAX_LEVEL - 1))
 
 # --- Survival ----------------------------------------------------------------
 # Regen ramps up the longer the player stays inside the ward and resets the

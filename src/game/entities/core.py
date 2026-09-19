@@ -58,9 +58,15 @@ class Core:
     # --- the ward ---------------------------------------------------------
     @property
     def ward_radius(self) -> float:
+        """How far the ward reaches. Full at ``WARD_MAX_LEVEL`` and flat after.
+
+        The ward finishes growing before the level cap does on purpose: the
+        last stretch of the ladder has to buy something other than ground.
+        """
         if not self.ignited:
             return 0.0
-        return float(config.WARD_RADIUS_BASE * config.WARD_GROWTH ** (self.level - 1))
+        steps = min(self.level, config.WARD_MAX_LEVEL) - 1
+        return float(config.WARD_RADIUS_BASE * config.WARD_GROWTH**steps)
 
     def is_in_ward(self, point: pygame.Vector2) -> bool:
         return self.ignited and self.pos.distance_to(point) <= self.ward_radius
