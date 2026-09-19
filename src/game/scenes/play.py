@@ -17,8 +17,10 @@ from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
-from game.inventory import packs
+from game.inventory import grid, packs
+from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
+from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
 from game.items.tools import MiningTool, WeaponTool
@@ -72,6 +74,8 @@ class PlayScene(Scene):
         self.backpack: Container | None = None
         self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
         self.loot: list[LootPile] = []  # several may be outstanding at once
+        self.grid = Grid()
+        self.grid_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
@@ -174,6 +178,8 @@ class PlayScene(Scene):
                 self._dodge_pressed = True
             elif event.key == pygame.K_e:
                 self._sync_pressed = True
+            elif event.key == pygame.K_i:
+                self._toggle_grid()
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -181,6 +187,9 @@ class PlayScene(Scene):
         elif event.type == pygame.MOUSEMOTION:
             self._mouse_screen = pygame.Vector2(event.pos)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.grid_open:
+                self._click_grid(pygame.Vector2(event.pos))
+                return
             self._mouse_held = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._mouse_held = False
@@ -216,6 +225,9 @@ class PlayScene(Scene):
                 self.player.hp = self.player.max_hp
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
             return
+
+        if self.grid_open:
+            return  # the world waits while the belongings are open
 
         self.player.update(dt, self._move_dir(), self.world, dodge)
         self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
@@ -309,6 +321,96 @@ class PlayScene(Scene):
         )
         self._draw_night(surface)
         self._draw_hud(surface)
+        self._draw_grid(surface)
+
+    # --- the belongings screen -------------------------------------------
+    def _toggle_grid(self) -> None:
+        self.grid_open = not self.grid_open
+        if not self.grid_open:
+            self.grid.close(self.backpack, self.hotbar)
+
+    def _grid_origin(self) -> tuple[int, int]:
+        """Top-left of the pack grid. The hotbar row sits one gap below it."""
+        step = config.GRID_CELL + config.GRID_GAP
+        rows = self._pack_rows()
+        width = config.GRID_COLS * step - config.GRID_GAP
+        height = (rows + 1) * step + config.GRID_GAP  # +1 for the hotbar row
+        return (config.SCREEN_WIDTH - width) // 2, (config.SCREEN_HEIGHT - height) // 2
+
+    def _pack_rows(self) -> int:
+        size = self.backpack.size if self.backpack is not None else 0
+        return -(-size // config.GRID_COLS)  # ceiling division
+
+    def _cell_rect(self, row: int, col: int) -> pygame.Rect:
+        step = config.GRID_CELL + config.GRID_GAP
+        x, y = self._grid_origin()
+        return pygame.Rect(x + col * step, y + row * step, config.GRID_CELL, config.GRID_CELL)
+
+    def _click_grid(self, where: pygame.Vector2) -> None:
+        """Turn a screen point into a slot and hand it to the pure Grid."""
+        rows = self._pack_rows()
+        for row in range(rows):
+            for col in range(config.GRID_COLS):
+                index = row * config.GRID_COLS + col
+                if self.backpack is not None and index >= self.backpack.size:
+                    break
+                if self._cell_rect(row, col).collidepoint(where):
+                    self.grid.click(grid.PACK, index, self.backpack, self.hotbar)
+                    return
+        for col in range(len(self.hotbar.slots)):
+            if self._cell_rect(rows + 1, col).collidepoint(where):  # +1 leaves a gap
+                self.grid.click(grid.HOTBAR, col, self.backpack, self.hotbar)
+                return
+
+    def _draw_grid(self, surface: pygame.Surface) -> None:
+        """The pack above, the hotbar below, and whatever is in hand on top."""
+        if not self.grid_open:
+            return
+        rows = self._pack_rows()
+        panel = pygame.Rect(0, 0, *config.SCREEN_SIZE).inflate(-80, -80)
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 140))
+        surface.blit(overlay, (0, 0))
+        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
+
+        for row in range(rows):
+            for col in range(config.GRID_COLS):
+                index = row * config.GRID_COLS + col
+                if self.backpack is None or index >= self.backpack.size:
+                    break
+                self._draw_cell(surface, self._cell_rect(row, col), self.backpack.slots[index])
+        for col, slot in enumerate(self.hotbar.slots):
+            rect = self._cell_rect(rows + 1, col)
+            self._draw_cell(surface, rect, slot)
+            if col == self.hotbar.selected:
+                pygame.draw.rect(surface, config.WHITE, rect.inflate(6, 6), 2)
+
+        held = self.grid.held
+        if held is not None:
+            at = pygame.Rect(0, 0, config.GRID_CELL - 10, config.GRID_CELL - 10)
+            at.center = (int(self._mouse_screen.x), int(self._mouse_screen.y))
+            self._draw_contents(surface, at, held)
+
+    def _draw_cell(self, surface: pygame.Surface, rect: pygame.Rect, slot: object) -> None:
+        pygame.draw.rect(surface, (58, 58, 74), rect, border_radius=3)
+        pygame.draw.rect(surface, (90, 90, 110), rect, 1, border_radius=3)
+        if slot is not None:
+            self._draw_contents(surface, rect.inflate(-10, -10), slot)
+
+    def _draw_contents(self, surface: pygame.Surface, rect: pygame.Rect, slot: object) -> None:
+        """A coloured block stands in for an icon until there is art.
+
+        A stack shows its kind's colour; a tool shows a neutral one, since tools
+        are not catalogue rows and have no colour of their own.
+        """
+        if isinstance(slot, Stack):
+            pygame.draw.rect(surface, slot.kind.color, rect, border_radius=2)
+            filled = max(1, int(rect.width * slot.count / slot.kind.stack_max))
+            pygame.draw.rect(
+                surface, config.WHITE, pygame.Rect(rect.left, rect.bottom - 3, filled, 3)
+            )
+        else:
+            pygame.draw.rect(surface, (200, 200, 215), rect, border_radius=2)
 
     def _draw_world(self, surface: pygame.Surface) -> None:
         """Paint the map: void, then one wedge per ring biome, then the grassland.
@@ -393,7 +495,10 @@ class PlayScene(Scene):
         # day/night progress: warm across the day, cold across the night
         phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
         _draw_bar(surface, 62, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
-        # hotbar (bottom-left)
+        # hotbar (bottom-left). Hidden while the belongings screen is open,
+        # which draws its own -- two hotbars on screen reads as two hotbars.
+        if self.grid_open:
+            return
         for i in range(len(self.hotbar.slots)):
             x = 10 + i * 44
             color = config.WHITE if i == self.hotbar.selected else (120, 120, 140)

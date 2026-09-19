@@ -136,6 +136,12 @@ LOOT_PICKUP_RADIUS: Final[float] = 60.0  # walk onto it to take it back
 # the day it happened; long enough to cross most of the grassland and back.
 LOOT_LIFETIME: Final[float] = 300.0
 
+# --- Belongings screen --------------------------------------------------------
+GRID_COLS: Final[int] = 5  # the hotbar's width, so the two grids line up
+GRID_CELL: Final[int] = 44
+GRID_GAP: Final[int] = 4
+GRID_PANEL: Final[tuple[int, int, int]] = (26, 26, 36)
+
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0
 

@@ -4,6 +4,7 @@ import pytest
 from game import config
 from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
+from game.inventory import grid
 from game.inventory.storage import Container
 from game.items.item_kinds import CORE_SHARD, WORN_PACK
 from game.items.tools import WeaponTool
@@ -344,3 +345,47 @@ def test_a_pile_decays_while_the_player_waits_to_respawn():
     before = scene.loot[0].ttl
     scene.update(1.0)
     assert scene.loot[0].ttl < before
+
+
+def _press_i(scene):
+    scene.handle_event(_key_event(pygame.K_i))
+
+
+def test_i_opens_and_closes_the_belongings_screen():
+    scene = PlayScene()
+    assert scene.grid_open is False
+    _press_i(scene)
+    assert scene.grid_open is True
+    _press_i(scene)
+    assert scene.grid_open is False
+
+
+def test_the_world_waits_while_the_screen_is_open():
+    scene = PlayScene()
+    scene.core.ignite()
+    _press_i(scene)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    where = pygame.Vector2(scene.player.pos)
+    scene.update(config.FIXED_DT)
+    assert scene.player.pos == where  # movement is held
+
+
+def test_the_clock_keeps_running_while_the_screen_is_open():
+    # Pausing the world is a convenience; pausing the day would be an exploit.
+    scene = PlayScene()
+    _press_i(scene)
+    before = scene.clock.elapsed
+    scene.update(config.FIXED_DT)
+    assert scene.clock.elapsed > before
+
+
+def test_closing_the_screen_returns_what_was_in_hand():
+    scene = PlayScene()
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
+    scene.backpack.add(CORE_SHARD, 4)
+    _press_i(scene)
+    scene.grid.click(grid.PACK, 0, scene.backpack, scene.hotbar)
+    assert scene.grid.held is not None
+    _press_i(scene)
+    assert scene.grid.held is None
+    assert scene._carried(CORE_SHARD) == 4
