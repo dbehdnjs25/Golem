@@ -132,6 +132,9 @@ NIGHT_DARKNESS: Final[int] = 150  # alpha of the night overlay, 0-255
 LOOT_COLOR: Final[tuple[int, int, int]] = (245, 200, 90)
 LOOT_RADIUS: Final[float] = 16.0
 LOOT_PICKUP_RADIUS: Final[float] = 60.0  # walk onto it to take it back
+# A pile waits five minutes. Short of a full day, so the deadline bites inside
+# the day it happened; long enough to cross most of the grassland and back.
+LOOT_LIFETIME: Final[float] = 300.0
 
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0

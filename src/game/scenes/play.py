@@ -71,7 +71,7 @@ class PlayScene(Scene):
         # No base inventory: without a pack the hotbar is all there is.
         self.backpack: Container | None = None
         self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
-        self.loot: LootPile | None = None  # one at a time, by design
+        self.loot: list[LootPile] = []  # several may be outstanding at once
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
@@ -122,13 +122,24 @@ class PlayScene(Scene):
             self.backpack = Container.empty(packs.slots_of(kind))
             self.worn_pack = kind
 
-    def _recover_loot(self) -> None:
-        """Walk onto the pile to take the pack and its contents back."""
-        pile = self.loot
-        if pile is None:
-            return
-        if self.player.pos.distance_to(pile.pos) > config.LOOT_PICKUP_RADIUS:
-            return
+    def _tick_loot(self, dt: float) -> None:
+        """Run every pile's clock down and clear the ones that ran out.
+
+        Called before the respawn wait returns, because a deadline that pauses
+        while the player is dead is not a deadline.
+        """
+        for pile in self.loot:
+            pile.update(dt)
+        self.loot = [pile for pile in self.loot if not pile.is_gone]
+
+    def _recover_underfoot(self) -> None:
+        """Pick up any pile the player is standing on."""
+        for pile in list(self.loot):
+            if self.player.pos.distance_to(pile.pos) <= config.LOOT_PICKUP_RADIUS:
+                self._recover(pile)
+
+    def _recover(self, pile: LootPile) -> None:
+        """Take back what a death left, if it will fit."""
         if self.backpack is None:
             self.backpack, self.worn_pack = pile.contents, pile.pack
         else:
@@ -136,7 +147,7 @@ class PlayScene(Scene):
                 pile.contents.remove(kind, self.backpack.add(kind, n))
             if pile.contents.used:
                 return  # a smaller pack cannot hold it all -- leave the rest
-        self.loot = None
+        self.loot.remove(pile)
 
     def _carried(self, kind: ItemKind) -> int:
         """How many of ``kind`` the player has on them, wherever it sits."""
@@ -196,6 +207,7 @@ class PlayScene(Scene):
         self._sync_pressed = False
 
         self.clock.update(dt)
+        self._tick_loot(dt)
 
         if self._respawn_timer > 0:
             self._respawn_timer -= dt
@@ -247,13 +259,14 @@ class PlayScene(Scene):
                 self._spend(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
                 self.core.ignite()
 
-        self._recover_loot()
+        self._recover_underfoot()
 
         if self.player.hp <= 0:
-            # A new pile replaces the old one. Dying again before walking back
-            # costs the first one outright -- pressure without a timer, and
-            # exactly one mistake forgiven.
-            self.loot = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
+            # Piles accumulate; each runs out on its own clock rather than
+            # being erased by the next death. The deadline is the pressure.
+            dropped = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
+            if dropped is not None:
+                self.loot.append(dropped)
             self.backpack = None
             self.worn_pack = None
             self._respawn_timer = config.RESPAWN_DELAY
@@ -347,15 +360,19 @@ class PlayScene(Scene):
         surface.blit(overlay, (0, 0))
 
     def _draw_loot(self, surface: pygame.Surface) -> None:
-        """Everything a death took, sitting where it happened."""
-        if self.loot is None:
-            return
-        pygame.draw.circle(
-            surface,
-            config.LOOT_COLOR,
-            self.camera.world_to_screen(self.loot.pos),
-            config.LOOT_RADIUS,
-        )
+        """Everything a death took, sitting where it happened.
+
+        A pile shrinks as its clock runs down, so how long is left is readable
+        from across the field rather than only from a number somewhere.
+        """
+        for pile in self.loot:
+            left = pile.ttl / config.LOOT_LIFETIME
+            pygame.draw.circle(
+                surface,
+                config.LOOT_COLOR,
+                self.camera.world_to_screen(pile.pos),
+                max(4.0, config.LOOT_RADIUS * left),
+            )
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """Placeholder markers so the five sites are visible before temples exist."""

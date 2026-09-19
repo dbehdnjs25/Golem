@@ -132,15 +132,15 @@ def _packed(scene, count=5):
     return scene
 
 
-def test_death_leaves_the_whole_pack_in_one_pile():
+def test_death_leaves_the_whole_pack_in_a_pile():
     scene = _packed(PlayScene())
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
     assert scene.backpack is None  # every slot is gone, not half the goods
     assert scene.worn_pack is None
-    assert scene.loot is not None
-    assert scene.loot.contents.count(CORE_SHARD) == 5
-    assert scene.loot.pack is WORN_PACK
+    assert len(scene.loot) == 1
+    assert scene.loot[0].contents.count(CORE_SHARD) == 5
+    assert scene.loot[0].pack is WORN_PACK
 
 
 def test_walking_onto_the_pile_takes_it_all_back():
@@ -152,7 +152,7 @@ def test_walking_onto_the_pile_takes_it_all_back():
     scene.player.hp = scene.player.max_hp
     scene.player.pos = where
     scene.update(config.FIXED_DT)
-    assert scene.loot is None
+    assert scene.loot == []
     assert scene.backpack is not None
     assert scene.backpack.count(CORE_SHARD) == 5
     assert scene.worn_pack is WORN_PACK
@@ -166,17 +166,17 @@ def test_a_pile_out_of_reach_is_left_where_it_is():
     scene.player.hp = scene.player.max_hp
     scene.player.pos = scene.core.pos  # respawned far away
     scene.update(config.FIXED_DT)
-    assert scene.loot is not None
+    assert len(scene.loot) == 1
     assert scene.backpack is None
 
 
-def test_dying_again_erases_the_earlier_pile():
-    # One pile at a time: a second death before walking back costs the first
-    # outright. Pressure without a timer, and exactly one mistake forgiven.
+def test_a_second_death_leaves_a_second_pile():
+    # Piles accumulate. Dying again does not erase the first one; each runs out
+    # on its own clock, so the pressure is a deadline rather than a rule about
+    # not dying twice.
     scene = _packed(PlayScene())
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    first = scene.loot
     scene._respawn_timer = 0.0
     scene.player.hp = scene.player.max_hp
     scene.backpack = Container.empty(config.BACKPACK_SLOTS)
@@ -184,7 +184,19 @@ def test_dying_again_erases_the_earlier_pile():
     scene.player.pos = scene.core.pos + pygame.Vector2(9_000, 0)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    assert scene.loot is not first
+    assert len(scene.loot) == 2
+    assert scene.loot[0].pos != scene.loot[1].pos
+
+
+def test_a_pile_left_too_long_is_gone():
+    scene = _packed(PlayScene())
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    scene._respawn_timer = 0.0
+    scene.player.hp = scene.player.max_hp
+    scene.player.pos = scene.core.pos  # nowhere near it
+    scene.update(config.LOOT_LIFETIME)
+    assert scene.loot == []
 
 
 def test_respawn_returns_player_to_core():
@@ -320,3 +332,15 @@ def test_night_darkens_the_screen():
     night_pixel = dark.get_at(probe)[:3]
 
     assert sum(night_pixel) < sum(day_pixel)
+
+
+def test_a_pile_decays_while_the_player_waits_to_respawn():
+    # The respawn wait returns early from update(). A deadline that stops while
+    # the player is dead would not be a deadline at all.
+    scene = _packed(PlayScene())
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    assert scene._respawn_timer > 0
+    before = scene.loot[0].ttl
+    scene.update(1.0)
+    assert scene.loot[0].ttl < before
