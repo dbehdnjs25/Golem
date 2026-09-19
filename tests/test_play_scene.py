@@ -6,6 +6,7 @@ from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
 from game.inventory import grid
 from game.inventory.storage import Container
+from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
@@ -91,14 +92,18 @@ def test_draw_runs_without_error(surface):
     scene.draw(surface)  # must not raise on the 64x64 offscreen surface
 
 
-def test_weapon_in_slot_one_on_start():
+def test_the_opening_kit_is_a_pickaxe_an_axe_and_a_weapon():
+    # Wood wants an axe and an axe wants wood, so the axe is handed over until
+    # ground crafting can earn it.
     scene = PlayScene()
-    assert isinstance(scene.hotbar.slots[1], WeaponTool)
+    assert scene.hotbar.slots[0].family == grades.PICKAXE
+    assert scene.hotbar.slots[1].family == grades.AXE
+    assert isinstance(scene.hotbar.slots[2], WeaponTool)
 
 
 def test_firing_weapon_spawns_projectile():
     scene = PlayScene()
-    scene.hotbar.select(1)  # weapon
+    scene.hotbar.select(2)  # weapon
     scene._mouse_held = True
     scene._mouse_screen = pygame.Vector2(0, 0)  # aim off to a side
     scene.update(config.FIXED_DT)

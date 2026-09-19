@@ -22,8 +22,9 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
+from game.items import grades, tools
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
-from game.items.tools import MiningTool, WeaponTool
+from game.items.tools import WeaponTool
 from game.systems import combat, mining, survival
 from game.systems.camera import LOCKED, Camera
 from game.systems.daynight import DayNight
@@ -78,9 +79,12 @@ class PlayScene(Scene):
         self.grid_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
-        # slot 0 mines (key "1"); slot 1 shoots (key "2").
-        self.hotbar.slots[0] = MiningTool()
-        self.hotbar.slots[1] = WeaponTool()
+        # Wooden tools and a weapon to open with. The axe is handed over rather
+        # than earned because wood wants an axe and an axe wants wood -- with
+        # neither there is no first move. Ground crafting replaces this.
+        self.hotbar.slots[0] = tools.pickaxe(grades.WOOD_G)
+        self.hotbar.slots[1] = tools.axe(grades.WOOD_G)
+        self.hotbar.slots[2] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()
         self._scatter_starting_shards()
@@ -172,6 +176,8 @@ class PlayScene(Scene):
                 self.hotbar.select(0)
             elif event.key == pygame.K_2:
                 self.hotbar.select(1)
+            elif event.key == pygame.K_3:
+                self.hotbar.select(2)
             elif event.key == pygame.K_y:
                 self.camera.toggle_lock(self.player.pos)
             elif event.key == pygame.K_SPACE:
