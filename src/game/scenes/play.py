@@ -24,7 +24,7 @@ from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import grades, tools
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
-from game.items.tools import WeaponTool
+from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining, survival
 from game.systems.camera import LOCKED, Camera
 from game.systems.daynight import DayNight
@@ -307,13 +307,7 @@ class PlayScene(Scene):
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_loot(surface)
-        for fragment in self.fragments:
-            pygame.draw.circle(
-                surface,
-                config.FRAGMENT_COLOR,
-                self.camera.world_to_screen(fragment.pos),
-                config.FRAGMENT_RADIUS,
-            )
+        self._draw_nodes(surface)
         for enemy in self.enemies:
             pygame.draw.circle(
                 surface,
@@ -451,6 +445,31 @@ class PlayScene(Scene):
                 )
             pygame.draw.polygon(surface, biome.color, points)
         pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
+
+    def _draw_nodes(self, surface: pygame.Surface) -> None:
+        """Nodes in the colour of what they hold, and a ring on the one aimed at.
+
+        The ring is red when the tool in hand cannot take it. Without that,
+        being under-equipped looks exactly like the game ignoring the click.
+        """
+        tool = self.hotbar.active_tool
+        aimed = (
+            mining.pick_target(
+                self.camera.screen_to_world(self._mouse_screen),
+                self.player.pos,
+                self.fragments,
+                tool.range,
+            )
+            if isinstance(tool, MiningTool)
+            else None
+        )
+        for node in self.fragments:
+            at = self.camera.world_to_screen(node.pos)
+            pygame.draw.circle(surface, node.kind.color, at, config.FRAGMENT_RADIUS)
+            if node is aimed:
+                usable = mining.can_take(tool, node.kind)
+                ring = config.WHITE if usable else config.BLOCKED_COLOR
+                pygame.draw.circle(surface, ring, at, config.FRAGMENT_RADIUS + 4, 2)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
         """The ward's rim, or the bare pedestal before the core is lit."""

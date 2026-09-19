@@ -13,7 +13,7 @@ from __future__ import annotations
 import random
 
 from game import config
-from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE, STONE, ZINC_ORE, ItemKind
+from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE, STONE, WOOD, ZINC_ORE, ItemKind
 
 _GRASSLAND_EDGE = config.GRASSLAND_RADIUS / config.MAP_RADIUS
 _INNER_GRASSLAND = _GRASSLAND_EDGE / 2
@@ -41,3 +41,15 @@ def ore_at(fraction: float, rng: random.Random) -> ItemKind:
             weights = [weight for _, weight in table]
             return rng.choices(kinds, weights=weights, k=1)[0]
     raise AssertionError(f"no ore band covers {fraction}")  # pragma: no cover
+
+
+def node_at(fraction: float, rng: random.Random) -> ItemKind:
+    """What a node at ``fraction`` of the way to the map edge turns out to be.
+
+    Trees are a flat share at every distance rather than a row on the ore
+    table. Folding them in would make deep ground grow fewer trees, which is
+    backwards: distance decides ore QUALITY, and wood is wood wherever it is.
+    """
+    if rng.random() < config.TREE_SHARE:
+        return WOOD
+    return ore_at(fraction, rng)

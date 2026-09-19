@@ -58,3 +58,40 @@ def test_it_is_reproducible_from_a_seed():
     rng_a = random.Random(4)
     rng_b = random.Random(4)
     assert [ore_at(0.8, rng_a) for _ in range(20)] == [ore_at(0.8, rng_b) for _ in range(20)]
+
+
+def test_a_share_of_nodes_are_trees_at_every_distance():
+    # Trees are not on the ore table. Folding them in would make deep ground
+    # grow fewer trees, which is backwards -- the spec has them thicken with
+    # distance like everything else.
+    from game.items.item_kinds import WOOD
+    from game.world.resources import node_at
+
+    for fraction in (0.1, 0.5, 0.95):
+        rng = random.Random(2)
+        drawn = [node_at(fraction, rng) for _ in range(2000)]
+        trees = sum(1 for k in drawn if k is WOOD)
+        assert 0 < trees < len(drawn)  # some, but never all
+
+
+def test_the_tree_share_does_not_fall_away_from_the_core():
+    from game.items.item_kinds import WOOD
+    from game.world.resources import node_at
+
+    def share(fraction: float) -> float:
+        rng = random.Random(5)
+        drawn = [node_at(fraction, rng) for _ in range(4000)]
+        return sum(1 for k in drawn if k is WOOD) / len(drawn)
+
+    assert share(0.95) >= share(0.1) - 0.02
+
+
+def test_node_at_still_yields_ore_the_ore_table_knows():
+    from game.world.resources import node_at
+
+    rng = random.Random(0)
+    allowed = {STONE, COPPER_ORE, IRON_ORE, GOLD_ORE, ZINC_ORE}
+    from game.items.item_kinds import WOOD
+
+    for step in range(21):
+        assert node_at(step / 20, rng) in allowed | {WOOD}

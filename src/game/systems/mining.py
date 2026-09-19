@@ -33,7 +33,7 @@ TOO_HARD = "too_hard"  # the right family, too low a grade
 COLLECTED = "collected"
 
 
-def _pick_target(
+def pick_target(
     aim_world: pygame.Vector2,
     player_pos: pygame.Vector2,
     fragments: list[Fragment],
@@ -60,7 +60,7 @@ def update_mining(
 ) -> tuple[str, ItemKind | None]:
     if not held or not isinstance(active_tool, MiningTool):
         return IDLE, None
-    target = _pick_target(aim_world, player_pos, fragments, active_tool.range)
+    target = pick_target(aim_world, player_pos, fragments, active_tool.range)
     if target is None:
         return OUT_OF_RANGE, None
     # Qualification is checked BEFORE any damage lands. A node that cannot be
@@ -78,3 +78,15 @@ def update_mining(
         fragments.remove(target)
         return COLLECTED, target.kind
     return MINING, None
+
+
+def can_take(tool: object, kind: ItemKind) -> bool:
+    """Whether ``tool`` is allowed at a node of ``kind`` at all.
+
+    The same two checks ``update_mining`` makes, exposed so the scene can show
+    an unusable node without duplicating the rule and drifting from it.
+    """
+    if not isinstance(tool, MiningTool):
+        return False
+    need = grades.need_for(kind)
+    return tool.family == need.family and tool.grade.rank >= need.grade.rank
