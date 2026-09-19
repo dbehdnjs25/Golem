@@ -51,15 +51,20 @@ def test_igniting_twice_changes_nothing():
     assert core.level == 2
 
 
-def test_the_ward_covers_a_tenth_of_the_grassland_at_full_level():
+def test_the_full_ward_reaches_its_stated_maximum():
     core = _core()
     core.bosses_killed = len(config.CORE_LEVEL_CAPS)
     core.ignite()
     while core.upgrade():
         pass
     assert core.level == config.CORE_MAX_LEVEL
-    share = (core.ward_radius / config.GRASSLAND_RADIUS) ** 2
-    assert math.isclose(share, 0.1, rel_tol=1e-6)
+    assert math.isclose(core.ward_radius, config.WARD_RADIUS_MAX, rel_tol=1e-9)
+
+
+def test_fifty_levels_treble_the_ward():
+    # The opening ward is a third of the full one, so the ladder is worth
+    # climbing without the first day feeling cramped.
+    assert math.isclose(config.WARD_RADIUS_MAX / config.WARD_RADIUS_BASE, 3.0, rel_tol=1e-9)
 
 
 def test_the_ward_grows_by_the_same_ratio_every_level():

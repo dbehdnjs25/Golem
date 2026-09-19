@@ -6,7 +6,6 @@ display. Colours are plain RGB tuples for the same reason.
 
 from __future__ import annotations
 
-import math
 from typing import Final
 
 # --- Window -----------------------------------------------------------------
@@ -22,11 +21,11 @@ FIXED_DT: Final[float] = 1.0 / FPS  # seconds per logic step
 MAX_FRAME_TIME: Final[float] = 0.25  # clamp to avoid the "spiral of death"
 
 # --- Day / night --------------------------------------------------------------
-# A day is long enough to reach the biomes and back only just; the night is long
-# enough to matter but not to dominate, since the raid cadence shortens to every
-# two days late on and the player would otherwise only ever see darkness.
-DAY_LENGTH: Final[float] = 300.0  # seconds of daylight
-NIGHT_LENGTH: Final[float] = 180.0  # seconds of night
+# Six and six. Daylight is exactly two walks to the grassland's rim, so a trip
+# out and back fills the day; the night is just as long, which makes surviving it
+# a phase of its own rather than a pause between days.
+DAY_LENGTH: Final[float] = 360.0  # seconds of daylight
+NIGHT_LENGTH: Final[float] = 360.0  # seconds of night
 DAY_TOTAL: Final[float] = DAY_LENGTH + NIGHT_LENGTH
 
 # --- Colours (RGB) ----------------------------------------------------------
@@ -101,13 +100,11 @@ CORE_MAX_LEVEL: Final[int] = 50
 CORE_LEVEL_CAPS: Final[tuple[int, ...]] = (10, 20, 30, 40, 50)
 
 # The ward grows by a constant RATIO per level, not a constant amount: absolute
-# growth makes an early level invisible and a late one enormous. At full level it
-# covers a tenth of the grassland's area, hence the sqrt(10).
-WARD_RADIUS_MAX: Final[float] = GRASSLAND_RADIUS / math.sqrt(10.0)
-# Half the full radius from the start, so the base is a place rather than a
-# circle you can see the far side of. The trade is that fifty levels only
-# double the radius, which makes any single upgrade a small change.
-WARD_RADIUS_BASE: Final[float] = WARD_RADIUS_MAX / 2.0
+# growth makes an early level invisible and a late one enormous. Starting at a
+# third of the full radius leaves room for fifty levels to treble it, which is
+# enough for an upgrade to be worth making without the opening feeling cramped.
+WARD_RADIUS_MAX: Final[float] = 12_000.0  # a ninth of the grassland's area
+WARD_RADIUS_BASE: Final[float] = WARD_RADIUS_MAX / 3.0
 WARD_GROWTH: Final[float] = (WARD_RADIUS_MAX / WARD_RADIUS_BASE) ** (1 / (CORE_MAX_LEVEL - 1))
 
 # --- Survival ----------------------------------------------------------------
