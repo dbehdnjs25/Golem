@@ -86,8 +86,8 @@ def update_enemies(
     for enemy in enemies:
         enemy.update(dt, player.pos, world)
         _hold_outside_ward(enemy, core)
-        if player.invulnerable:
-            continue
+        if player.invulnerable or player.hp <= 0:
+            continue  # i-frames, or already down -- a corpse takes no more
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
             player.hp -= config.GOLEM_CONTACT_DPS * dt
 

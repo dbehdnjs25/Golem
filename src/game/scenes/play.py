@@ -218,19 +218,48 @@ class PlayScene(Scene):
         self.clock.update(dt)
         self._tick_loot(dt)
 
-        if self._respawn_timer > 0:
+        if self.grid_open:
+            return  # the world waits while the belongings are open
+
+        down = self._respawn_timer > 0
+        if down:
             self._respawn_timer -= dt
             if self._respawn_timer <= 0:
                 self.player.pos = pygame.Vector2(self.core.pos)
                 self.player.hp = self.player.max_hp
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
-            return
+                down = False
 
-        if self.grid_open:
-            return  # the world waits while the belongings are open
-
-        self.player.update(dt, self._move_dir(), self.world, dodge)
+        # The camera keeps following even while down, so the wait shows the
+        # world carrying on rather than a frozen frame.
         self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
+
+        if not down:
+            self._update_living(dt, dodge, sync)
+
+        # The world does not stop for a death: golems keep walking, shots keep
+        # flying, and what was chasing the player is still out there on the way
+        # back. Only the player's own half of the step waits.
+        combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
+        combat.update_enemies(dt, self.enemies, self.player, self.world, self.core)
+        self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
+        self.enemy_spawner.update(
+            dt, self.enemies, self.player.pos, self.core, self.rng, self.world
+        )
+
+        if not down and self.player.hp <= 0:
+            # Piles accumulate; each runs out on its own clock rather than
+            # being erased by the next death. The deadline is the pressure.
+            dropped = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
+            if dropped is not None:
+                self.loot.append(dropped)
+            self.backpack = None
+            self.worn_pack = None
+            self._respawn_timer = config.RESPAWN_DELAY
+
+    def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
+        """The half of a step that only happens while the player is on their feet."""
+        self.player.update(dt, self._move_dir(), self.world, dodge)
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
         tool = self.hotbar.active_tool
@@ -254,14 +283,7 @@ class PlayScene(Scene):
             fire_timer=self._fire_timer,
         )
         self.projectiles.extend(shots)
-        combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
-        combat.update_enemies(dt, self.enemies, self.player, self.world, self.core)
         survival.update_regen(dt, self.player, self.core)
-
-        self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
-        self.enemy_spawner.update(
-            dt, self.enemies, self.player.pos, self.core, self.rng, self.world
-        )
 
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
@@ -272,16 +294,6 @@ class PlayScene(Scene):
                 self.core.ignite()
 
         self._recover_underfoot()
-
-        if self.player.hp <= 0:
-            # Piles accumulate; each runs out on its own clock rather than
-            # being erased by the next death. The deadline is the pressure.
-            dropped = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
-            if dropped is not None:
-                self.loot.append(dropped)
-            self.backpack = None
-            self.worn_pack = None
-            self._respawn_timer = config.RESPAWN_DELAY
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:

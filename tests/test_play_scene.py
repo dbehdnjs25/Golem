@@ -389,3 +389,37 @@ def test_closing_the_screen_returns_what_was_in_hand():
     _press_i(scene)
     assert scene.grid.held is None
     assert scene._carried(CORE_SHARD) == 4
+
+
+def test_the_world_keeps_running_while_the_player_is_down():
+    # A death should not freeze the field. What was chasing the player is still
+    # out there on the way back.
+    scene = PlayScene()
+    scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
+    scene.enemies.append(Golem(pos=scene.player.pos + pygame.Vector2(400, 0)))
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    assert scene._respawn_timer > 0
+    where = pygame.Vector2(scene.enemies[0].pos)
+    scene.update(config.FIXED_DT)
+    assert scene.enemies[0].pos != where  # it kept walking
+
+
+def test_a_downed_player_takes_no_further_damage():
+    scene = PlayScene()
+    scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
+    scene.enemies.append(Golem(pos=pygame.Vector2(scene.player.pos)))
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    for _ in range(30):
+        scene.update(config.FIXED_DT)
+    assert scene.player.hp == 0  # not driven further under
+
+
+def test_only_one_pile_comes_of_one_death():
+    # The death branch must not re-fire every frame the player lies at zero.
+    scene = _packed(PlayScene())
+    scene.player.hp = 0
+    for _ in range(30):
+        scene.update(config.FIXED_DT)
+    assert len(scene.loot) == 1
