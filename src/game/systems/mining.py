@@ -19,6 +19,7 @@ import pygame
 from game.entities.fragment import Fragment
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
+from game.items import grades
 from game.items.item_kinds import ItemKind
 from game.items.tools import MiningTool
 from game.systems import carrying
@@ -27,6 +28,8 @@ IDLE = "idle"
 MINING = "mining"
 OUT_OF_RANGE = "out_of_range"
 FULL = "full"
+WRONG_TOOL = "wrong_tool"  # an axe at ore, a pickaxe at a tree
+TOO_HARD = "too_hard"  # the right family, too low a grade
 COLLECTED = "collected"
 
 
@@ -60,6 +63,14 @@ def update_mining(
     target = _pick_target(aim_world, player_pos, fragments, active_tool.range)
     if target is None:
         return OUT_OF_RANGE, None
+    # Qualification is checked BEFORE any damage lands. A node that cannot be
+    # finished must not be left half-chewed, or an unreachable ore sits there
+    # ruined for whoever comes back with the right tool.
+    need = grades.need_for(target.kind)
+    if active_tool.family != need.family:
+        return WRONG_TOOL, None
+    if active_tool.grade.rank < need.grade.rank:
+        return TOO_HARD, None
     if carrying.room_for(target.kind, backpack, hotbar) == 0:
         return FULL, None  # block before damaging -> the node is preserved
     if target.damage(active_tool.dps * dt):
