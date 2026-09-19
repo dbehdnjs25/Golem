@@ -9,9 +9,11 @@ import pygame
 from game import config
 from game.entities.core import Core
 from game.entities.enemy import Golem
+from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
+from game.items.item_kinds import ItemKind
 from game.items.tools import WeaponTool
 from game.world.map import WorldMap
 
@@ -112,15 +114,20 @@ def _hold_outside_ward(enemy: Golem, core: Core) -> None:
     enemy.pos.update(core.pos + offset * (reach / distance))
 
 
-def apply_death_penalty(backpack: Container | None) -> None:
-    """Drop the rounded-up half of every row. The store at the core is untouched.
+def apply_death_penalty(
+    pos: pygame.Vector2,
+    backpack: Container | None,
+    worn: ItemKind | None,
+) -> LootPile | None:
+    """Drop the pack and everything in it. Return the pile, or None if bare.
 
-    Per-row rather than per-total so no kind can be sheltered by dropping another.
-    Rounding up on the dropped side means a count of 1 drops -- rare singles are
-    not protected, which is what gives the hotbar its job. ``rows()`` returns a
-    fresh list, so mutating during the loop is safe.
+    The whole pack, not half of it. An earlier rule dropped half of each stack
+    and kept the rest, which only made sense while a base inventory existed for
+    the kept half to sit in. There is none now: what the player keeps is the
+    hotbar, and what they lose is everything else until they walk back for it.
+
+    The store at the core is untouched -- it was never carried.
     """
     if backpack is None:
-        return  # nothing to take: the hotbar is not the penalty's business
-    for kind, n in backpack.rows():
-        backpack.remove(kind, (n + 1) // 2)
+        return None  # nothing to take: the hotbar is not the penalty's business
+    return LootPile(pos=pygame.Vector2(pos), contents=backpack, pack=worn)

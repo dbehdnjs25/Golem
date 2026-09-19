@@ -5,7 +5,7 @@ from game import config
 from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD
+from game.items.item_kinds import CORE_SHARD, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
 from game.systems.camera import FREE
@@ -124,14 +124,67 @@ def test_death_never_touches_the_hotbar():
     assert scene._respawn_timer > 0
 
 
-def test_death_takes_the_rounded_up_half_of_the_backpack():
-    scene = PlayScene()
+def _packed(scene, count=5):
     scene.backpack = Container.empty(config.BACKPACK_SLOTS)
-    scene.backpack.add(CORE_SHARD, 5)
+    scene.worn_pack = WORN_PACK
+    scene.backpack.add(CORE_SHARD, count)
     scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
+    return scene
+
+
+def test_death_leaves_the_whole_pack_in_one_pile():
+    scene = _packed(PlayScene())
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 2  # drops the rounded-up half
+    assert scene.backpack is None  # every slot is gone, not half the goods
+    assert scene.worn_pack is None
+    assert scene.loot is not None
+    assert scene.loot.contents.count(CORE_SHARD) == 5
+    assert scene.loot.pack is WORN_PACK
+
+
+def test_walking_onto_the_pile_takes_it_all_back():
+    scene = _packed(PlayScene())
+    where = pygame.Vector2(scene.player.pos)
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    scene._respawn_timer = 0.0
+    scene.player.hp = scene.player.max_hp
+    scene.player.pos = where
+    scene.update(config.FIXED_DT)
+    assert scene.loot is None
+    assert scene.backpack is not None
+    assert scene.backpack.count(CORE_SHARD) == 5
+    assert scene.worn_pack is WORN_PACK
+
+
+def test_a_pile_out_of_reach_is_left_where_it_is():
+    scene = _packed(PlayScene())
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    scene._respawn_timer = 0.0
+    scene.player.hp = scene.player.max_hp
+    scene.player.pos = scene.core.pos  # respawned far away
+    scene.update(config.FIXED_DT)
+    assert scene.loot is not None
+    assert scene.backpack is None
+
+
+def test_dying_again_erases_the_earlier_pile():
+    # One pile at a time: a second death before walking back costs the first
+    # outright. Pressure without a timer, and exactly one mistake forgiven.
+    scene = _packed(PlayScene())
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    first = scene.loot
+    scene._respawn_timer = 0.0
+    scene.player.hp = scene.player.max_hp
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
+    scene.worn_pack = WORN_PACK
+    scene.player.pos = scene.core.pos + pygame.Vector2(9_000, 0)
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    assert scene.loot is not first
 
 
 def test_respawn_returns_player_to_core():

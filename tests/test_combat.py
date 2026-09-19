@@ -1,5 +1,4 @@
 import pygame
-import pytest
 
 from game import config
 from game.entities.core import Core
@@ -7,7 +6,7 @@ from game.entities.enemy import Golem
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD, ItemKind
+from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat
 from game.world.map import WorldMap
@@ -118,42 +117,6 @@ def test_distant_enemy_deals_no_damage():
     assert player.hp == config.PLAYER_MAX_HP
 
 
-@pytest.mark.parametrize(
-    "start,kept",
-    [(32, 16), (7, 3), (5, 2), (2, 1), (1, 0), (0, 0)],
-)
-def test_death_penalty_drops_the_rounded_up_half(start, kept):
-    # Rounding up on the DROPPED amount means a lone rare item is lost, which is
-    # what makes the five hotbar slots a real decision every trip.
-    backpack = Container.empty(100)
-    backpack.add(CORE_SHARD, start)
-    combat.apply_death_penalty(backpack)
-    assert backpack.count(CORE_SHARD) == kept
-
-
-def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
-    # rows() only surfaces kinds listed in CATALOGUE, which normally holds just
-    # CORE_SHARD. To exercise the per-row-vs-per-total distinction we need a
-    # second visible kind, so we patch the name storage.py bound at import time
-    # (`from game.items.item_kinds import CATALOGUE`) rather than the catalogue
-    # module itself. Do not delete this patch as "unnecessary" -- without it
-    # HEAVY's row is invisible to apply_death_penalty and the test degrades
-    # back into test_death_penalty_halves_round_up.
-    monkeypatch.setattr("game.inventory.storage.CATALOGUE", (CORE_SHARD, HEAVY))
-
-    backpack = Container.empty(100)
-    backpack.add(CORE_SHARD, 5)
-    backpack.add(HEAVY, 1)
-    combat.apply_death_penalty(backpack)
-
-    # Per-row: each kind drops its own rounded-up half (5 -> 3 dropped, 2 kept;
-    # 1 -> 1 dropped, 0 kept). A per-total implementation would instead halve the
-    # combined count and could spare the smaller HEAVY row entirely to get there,
-    # which is exactly the "sheltering" the per-row rule prevents.
-    assert backpack.count(CORE_SHARD) == 2
-    assert backpack.count(HEAVY) == 0
-
-
 def test_golems_cannot_enter_the_ward():
     core = Core(pos=pygame.Vector2(CENTRE))
     core.ignite()
@@ -173,3 +136,28 @@ def test_an_unlit_core_shelters_nothing():
     golem = Golem(pos=CENTRE + pygame.Vector2(200, 0))
     combat.update_enemies(1.0, [golem], player, WORLD, core)
     assert CENTRE.distance_to(golem.pos) < 200  # walked straight in
+
+
+def test_death_drops_the_whole_pack_and_everything_in_it():
+    # With no base inventory there is nowhere for a "kept half" to sit, so the
+    # pack goes whole. What the player keeps is the hotbar, and only that.
+    pack = Container.empty(4)
+    pack.add(CORE_SHARD, 7)
+    pack.add(HEAVY, 1)
+    pile = combat.apply_death_penalty(pygame.Vector2(CENTRE), pack, WORN_PACK)
+    assert pile is not None
+    assert pile.contents.count(CORE_SHARD) == 7
+    assert pile.contents.count(HEAVY) == 1
+    assert pile.pack is WORN_PACK
+    assert pile.pos == CENTRE
+
+
+def test_dying_with_no_backpack_leaves_nothing_behind():
+    assert combat.apply_death_penalty(pygame.Vector2(CENTRE), None, None) is None
+
+
+def test_the_penalty_cannot_reach_the_hotbar():
+    # Pinned so the signature cannot quietly grow one later.
+    import inspect
+
+    assert "hotbar" not in inspect.signature(combat.apply_death_penalty).parameters

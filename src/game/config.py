@@ -129,6 +129,9 @@ PLAYER_COLOR: Final[tuple[int, int, int]] = (240, 240, 255)
 WARD_COLOR: Final[tuple[int, int, int]] = (120, 220, 255)
 PEDESTAL_COLOR: Final[tuple[int, int, int]] = (150, 150, 165)
 NIGHT_DARKNESS: Final[int] = 150  # alpha of the night overlay, 0-255
+LOOT_COLOR: Final[tuple[int, int, int]] = (245, 200, 90)
+LOOT_RADIUS: Final[float] = 16.0
+LOOT_PICKUP_RADIUS: Final[float] = 60.0  # walk onto it to take it back
 
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0

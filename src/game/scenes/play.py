@@ -14,6 +14,7 @@ from game.core.scene import Scene
 from game.entities.core import Core
 from game.entities.enemy import Golem
 from game.entities.fragment import Fragment
+from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory import packs
@@ -69,6 +70,8 @@ class PlayScene(Scene):
         self.camera.center_on(self.player.pos)
         # No base inventory: without a pack the hotbar is all there is.
         self.backpack: Container | None = None
+        self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
+        self.loot: LootPile | None = None  # one at a time, by design
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
@@ -117,6 +120,23 @@ class PlayScene(Scene):
             return
         if self.backpack is None or packs.slots_of(kind) > self.backpack.size:
             self.backpack = Container.empty(packs.slots_of(kind))
+            self.worn_pack = kind
+
+    def _recover_loot(self) -> None:
+        """Walk onto the pile to take the pack and its contents back."""
+        pile = self.loot
+        if pile is None:
+            return
+        if self.player.pos.distance_to(pile.pos) > config.LOOT_PICKUP_RADIUS:
+            return
+        if self.backpack is None:
+            self.backpack, self.worn_pack = pile.contents, pile.pack
+        else:
+            for kind, n in pile.contents.rows():
+                pile.contents.remove(kind, self.backpack.add(kind, n))
+            if pile.contents.used:
+                return  # a smaller pack cannot hold it all -- leave the rest
+        self.loot = None
 
     def _carried(self, kind: ItemKind) -> int:
         """How many of ``kind`` the player has on them, wherever it sits."""
@@ -227,8 +247,15 @@ class PlayScene(Scene):
                 self._spend(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
                 self.core.ignite()
 
+        self._recover_loot()
+
         if self.player.hp <= 0:
-            combat.apply_death_penalty(self.backpack)
+            # A new pile replaces the old one. Dying again before walking back
+            # costs the first one outright -- pressure without a timer, and
+            # exactly one mistake forgiven.
+            self.loot = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
+            self.backpack = None
+            self.worn_pack = None
             self._respawn_timer = config.RESPAWN_DELAY
 
     # --- rendering -------------------------------------------------------
@@ -236,6 +263,7 @@ class PlayScene(Scene):
         self._draw_world(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
+        self._draw_loot(surface)
         for fragment in self.fragments:
             pygame.draw.circle(
                 surface,
@@ -317,6 +345,17 @@ class PlayScene(Scene):
                 self.core.ward_radius,
             )
         surface.blit(overlay, (0, 0))
+
+    def _draw_loot(self, surface: pygame.Surface) -> None:
+        """Everything a death took, sitting where it happened."""
+        if self.loot is None:
+            return
+        pygame.draw.circle(
+            surface,
+            config.LOOT_COLOR,
+            self.camera.world_to_screen(self.loot.pos),
+            config.LOOT_RADIUS,
+        )
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """Placeholder markers so the five sites are visible before temples exist."""
