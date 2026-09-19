@@ -16,9 +16,10 @@ from game.entities.enemy import Golem
 from game.entities.fragment import Fragment
 from game.entities.player import Player
 from game.entities.projectile import Projectile
+from game.inventory import packs
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD
+from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining, survival
 from game.systems.camera import LOCKED, Camera
@@ -66,7 +67,8 @@ class PlayScene(Scene):
             mode=LOCKED,
         )
         self.camera.center_on(self.player.pos)
-        self.backpack = Container.empty(config.BACKPACK_SLOTS)
+        # No base inventory: without a pack the hotbar is all there is.
+        self.backpack: Container | None = None
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
@@ -99,6 +101,32 @@ class PlayScene(Scene):
             spot = near_player(self.player.pos, self.rng, self.world)
             if spot is not None:
                 self.fragments.append(Fragment(pos=spot, kind=CORE_SHARD))
+        # SCAFFOLDING until crafting lands in step 5: one worn pack out in the
+        # grass, so the backpack can be exercised before it can be made.
+        spot = near_player(self.player.pos, self.rng, self.world)
+        if spot is not None:
+            self.fragments.append(Fragment(pos=spot, kind=WORN_PACK))
+
+    def _wear_if_pack(self, kind: ItemKind | None) -> None:
+        """A pack is worn the moment it is dug up -- it is what holds things.
+
+        A bigger one replaces a smaller one. Swapping without losing what was
+        inside is the grid screen's job.
+        """
+        if kind is None or not packs.is_pack(kind):
+            return
+        if self.backpack is None or packs.slots_of(kind) > self.backpack.size:
+            self.backpack = Container.empty(packs.slots_of(kind))
+
+    def _carried(self, kind: ItemKind) -> int:
+        """How many of ``kind`` the player has on them, wherever it sits."""
+        in_pack = self.backpack.count(kind) if self.backpack is not None else 0
+        return in_pack + self.hotbar.count(kind)
+
+    def _spend(self, kind: ItemKind, n: int) -> int:
+        """Take ``n`` from the backpack first, then the hotbar."""
+        taken = self.backpack.remove(kind, n) if self.backpack is not None else 0
+        return taken + self.hotbar.remove(kind, n - taken)
 
     # --- input (event-driven, no polling) --------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
@@ -162,7 +190,7 @@ class PlayScene(Scene):
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
         tool = self.hotbar.active_tool
-        mining.update_mining(
+        _, mined = mining.update_mining(
             dt,
             active_tool=tool,
             held=self._mouse_held,
@@ -170,7 +198,9 @@ class PlayScene(Scene):
             player_pos=self.player.pos,
             fragments=self.fragments,
             backpack=self.backpack,
+            hotbar=self.hotbar,
         )
+        self._wear_if_pack(mined)
         self._fire_timer, shots = combat.fire_weapon(
             dt,
             weapon=tool,
@@ -191,10 +221,10 @@ class PlayScene(Scene):
 
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
-                moved = self.store.add(CORE_SHARD, self.backpack.count(CORE_SHARD))
-                self.backpack.remove(CORE_SHARD, moved)
-            elif self.backpack.count(CORE_SHARD) >= config.CORE_SHARDS_TO_IGNITE:
-                self.backpack.remove(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
+                moved = self.store.add(CORE_SHARD, self._carried(CORE_SHARD))
+                self._spend(CORE_SHARD, moved)
+            elif self._carried(CORE_SHARD) >= config.CORE_SHARDS_TO_IGNITE:
+                self._spend(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
                 self.core.ignite()
 
         if self.player.hp <= 0:
@@ -295,7 +325,8 @@ class PlayScene(Scene):
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
         # inventory fill gauge
-        frac = self.backpack.used / self.backpack.size if self.backpack.size else 0.0
+        pack = self.backpack
+        frac = pack.used / pack.size if pack is not None and pack.size else 0.0
         _draw_bar(surface, 10, 14, frac, (90, 200, 120))
         # hp bar
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0

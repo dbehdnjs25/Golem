@@ -63,6 +63,13 @@ WEATHERED_STONE = ItemKind("weathered_stone", "풍화석", _STACK, (185, 175, 15
 BOG_MOSS = ItemKind("bog_moss", "늪 이끼", _STACK, (95, 130, 75))
 THUNDER_STONE = ItemKind("thunder_stone", "뇌석", _STACK, (215, 200, 120))
 
+# --- Worn ----------------------------------------------------------------------
+# The only storage there is. Without one the hotbar is the whole of a player's
+# belongings, so the first pack is the first real goal -- and losing one costs
+# every slot at once. They do not stack: you wear one.
+WORN_PACK = ItemKind("worn_pack", "낡은 배낭", 1, (120, 95, 70))
+LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
+
 # --- Consumed -----------------------------------------------------------------
 # Meat restores stamina only; raw costs HP on top. Potions are the HP answer in
 # the field and are deliberately scarce.
@@ -91,6 +98,8 @@ CATALOGUE: tuple[ItemKind, ...] = (
     WEATHERED_STONE,
     BOG_MOSS,
     THUNDER_STONE,
+    WORN_PACK,
+    LEATHER_PACK,
     RAW_MEAT,
     COOKED_MEAT,
     POTION,

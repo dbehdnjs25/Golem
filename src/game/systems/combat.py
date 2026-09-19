@@ -112,7 +112,7 @@ def _hold_outside_ward(enemy: Golem, core: Core) -> None:
     enemy.pos.update(core.pos + offset * (reach / distance))
 
 
-def apply_death_penalty(backpack: Container) -> None:
+def apply_death_penalty(backpack: Container | None) -> None:
     """Drop the rounded-up half of every row. The store at the core is untouched.
 
     Per-row rather than per-total so no kind can be sheltered by dropping another.
@@ -120,5 +120,7 @@ def apply_death_penalty(backpack: Container) -> None:
     not protected, which is what gives the hotbar its job. ``rows()`` returns a
     fresh list, so mutating during the loop is safe.
     """
+    if backpack is None:
+        return  # nothing to take: the hotbar is not the penalty's business
     for kind, n in backpack.rows():
         backpack.remove(kind, (n + 1) // 2)

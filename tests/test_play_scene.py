@@ -4,6 +4,7 @@ import pytest
 from game import config
 from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
+from game.inventory.storage import Container
 from game.items.item_kinds import CORE_SHARD
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
@@ -43,9 +44,9 @@ def test_standing_on_core_does_not_sync_by_itself():
     scene = PlayScene()
     scene.core.ignite()
     scene.player.pos = pygame.Vector2(scene.core.pos)  # stand on the core
-    scene.backpack.add(CORE_SHARD, 3)
+    scene.hotbar.add(CORE_SHARD, 3)
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 3  # sync is manual now
+    assert scene.hotbar.count(CORE_SHARD) == 3  # sync is manual now
     assert scene.store.count(CORE_SHARD) == 0
 
 
@@ -53,10 +54,10 @@ def test_sync_key_transfers_backpack_at_core():
     scene = PlayScene()
     scene.core.ignite()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(CORE_SHARD, 3)
+    scene.hotbar.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 0
+    assert scene.hotbar.count(CORE_SHARD) == 0
     assert scene.store.count(CORE_SHARD) == 3
 
 
@@ -64,10 +65,10 @@ def test_sync_key_does_nothing_out_of_range():
     scene = PlayScene()
     scene.core.ignite()
     scene.player.pos = scene.core.pos + pygame.Vector2(1000, 0)  # outside the sync zone
-    scene.backpack.add(CORE_SHARD, 3)
+    scene.hotbar.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 3
+    assert scene.hotbar.count(CORE_SHARD) == 3
     assert scene.store.count(CORE_SHARD) == 0
 
 
@@ -75,12 +76,12 @@ def test_sync_key_is_consumed_after_one_step():
     scene = PlayScene()
     scene.core.ignite()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(CORE_SHARD, 3)
+    scene.hotbar.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    scene.backpack.add(CORE_SHARD, 2)  # mined more without pressing again
+    scene.hotbar.add(CORE_SHARD, 2)  # mined more without pressing again
     scene.update(config.FIXED_DT)
-    assert scene.backpack.count(CORE_SHARD) == 2  # one press, one transfer
+    assert scene.hotbar.count(CORE_SHARD) == 2  # one press, one transfer
     assert scene.store.count(CORE_SHARD) == 3
 
 
@@ -111,14 +112,26 @@ def test_space_triggers_dodge():
     assert scene.player.invulnerable is True
 
 
-def test_death_applies_penalty_and_starts_respawn():
+def test_death_never_touches_the_hotbar():
+    # The five hotbar slots are the one thing a death spares. That is what
+    # makes choosing their contents a decision worth making.
     scene = PlayScene()
-    scene.player.pos = pygame.Vector2(500, 500)  # away from the core's sync zone
+    scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
+    scene.hotbar.add(CORE_SHARD, 5)
+    scene.player.hp = 0
+    scene.update(config.FIXED_DT)
+    assert scene.hotbar.count(CORE_SHARD) == 5
+    assert scene._respawn_timer > 0
+
+
+def test_death_takes_the_rounded_up_half_of_the_backpack():
+    scene = PlayScene()
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
     scene.backpack.add(CORE_SHARD, 5)
+    scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
     assert scene.backpack.count(CORE_SHARD) == 2  # drops the rounded-up half
-    assert scene._respawn_timer > 0
 
 
 def test_respawn_returns_player_to_core():
@@ -194,28 +207,28 @@ def test_shards_are_scattered_within_reach_of_the_spawn():
 def test_pressing_e_on_the_pedestal_with_enough_shards_ignites_the_core():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
+    scene.hotbar.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
     assert scene.core.ignited is True
     assert scene.core.level == 1
-    assert scene.backpack.count(CORE_SHARD) == 0  # the shards are consumed
+    assert scene.hotbar.count(CORE_SHARD) == 0  # the shards are consumed
 
 
 def test_too_few_shards_does_not_ignite():
     scene = PlayScene()
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.backpack.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE - 1)
+    scene.hotbar.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE - 1)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
     assert scene.core.ignited is False
-    assert scene.backpack.count(CORE_SHARD) == config.CORE_SHARDS_TO_IGNITE - 1
+    assert scene.hotbar.count(CORE_SHARD) == config.CORE_SHARDS_TO_IGNITE - 1
 
 
 def test_igniting_away_from_the_pedestal_does_nothing():
     scene = PlayScene()
     scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
-    scene.backpack.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
+    scene.hotbar.add(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
     assert scene.core.ignited is False
