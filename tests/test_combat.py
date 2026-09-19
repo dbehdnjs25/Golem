@@ -125,7 +125,7 @@ def test_distant_enemy_deals_no_damage():
 def test_death_penalty_drops_the_rounded_up_half(start, kept):
     # Rounding up on the DROPPED amount means a lone rare item is lost, which is
     # what makes the five hotbar slots a real decision every trip.
-    backpack = Container(slots=100)
+    backpack = Container.empty(100)
     backpack.add(CORE_SHARD, start)
     combat.apply_death_penalty(backpack)
     assert backpack.count(CORE_SHARD) == kept
@@ -141,7 +141,7 @@ def test_death_penalty_cannot_shelter_one_kind_by_dropping_another(monkeypatch):
     # back into test_death_penalty_halves_round_up.
     monkeypatch.setattr("game.inventory.storage.CATALOGUE", (CORE_SHARD, HEAVY))
 
-    backpack = Container(slots=100)
+    backpack = Container.empty(100)
     backpack.add(CORE_SHARD, 5)
     backpack.add(HEAVY, 1)
     combat.apply_death_penalty(backpack)

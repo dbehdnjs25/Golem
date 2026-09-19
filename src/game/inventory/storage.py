@@ -1,88 +1,109 @@
-"""Slot-limited storage.
+"""A grid of slots. One slot holds one ``Stack``; an empty slot holds ``None``.
 
-Three instances are used by the game: the carried inventory, the backpack that
-extends it, and the store at the core.
+The backpack is the only one of these the player carries -- there is no base
+inventory. The limit is how many different things fit, never how heavy they
+are; there is no weight system.
 
-A container is a grid of slots. One slot holds up to a kind's ``stack_max`` of
-that kind, so 100 stone at a stack of 64 costs two slots. The limit is how many
-different things you can carry home, not how heavy they are -- there is no
-weight system.
+Slots are addressable because the player drags things between them. An earlier
+version billed slots from a ``{kind: count}`` dict, which could say HOW MANY
+slots were used but never WHICH, and a grid cannot be built on that.
 
-``reserved_slots`` is space promised to a transfer that is still in flight. It
-is subtracted from ``free_slots``, so mining and other transfers cannot take the
-landing space out from under a job that has already left its source container.
-Topping up an already-open stack is exempt: it consumes no new slot, so it
-cannot eat a reservation.
-
-Rows are keyed by the ``ItemKind`` itself (it is frozen, therefore hashable),
-not by its ``key`` string: counting the contents then needs no catalogue lookup
-and cannot fail on an unlisted kind. Saving writes ``kind.key`` -- that is the
-save format's business, not this module's.
+Adding tops up open stacks before opening new ones, and removing drains from the
+end, so a stack the player is looking at does not move under the cursor when
+something is spent.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+from game.inventory.stack import Stack
 from game.items.item_kinds import CATALOGUE, ItemKind
 
 
 @dataclass
 class Container:
-    slots: int
-    items: dict[ItemKind, int] = field(default_factory=dict)
-    reserved_slots: int = 0
+    slots: list[Stack | None]
+
+    @classmethod
+    def empty(cls, size: int) -> Container:
+        return cls(slots=[None] * size)
 
     @property
-    def slots_used(self) -> int:
-        return sum((n + kind.stack_max - 1) // kind.stack_max for kind, n in self.items.items())
+    def size(self) -> int:
+        return len(self.slots)
 
     @property
-    def free_slots(self) -> int:
-        return self.slots - self.slots_used - self.reserved_slots
+    def used(self) -> int:
+        return sum(1 for slot in self.slots if slot is not None)
+
+    @property
+    def free(self) -> int:
+        return self.size - self.used
 
     def count(self, kind: ItemKind) -> int:
-        return self.items.get(kind, 0)
+        return sum(s.count for s in self.slots if s is not None and s.kind is kind)
 
     def fits(self, kind: ItemKind, n: int) -> int:
-        """How many of ``n`` would actually go in right now.
-
-        The open stack's room comes first and is exempt from the reservation,
-        since filling it opens no new slot. Whatever is left needs fresh slots.
-        """
-        open_room = (-self.count(kind)) % kind.stack_max
-        room = open_room + max(0, self.free_slots) * kind.stack_max
-        return max(0, min(n, room))
+        """How many of ``n`` would actually go in right now."""
+        room = sum(s.room for s in self.slots if s is not None and s.kind is kind)
+        return max(0, min(n, room + self.free * kind.stack_max))
 
     def add(self, kind: ItemKind, n: int = 1) -> int:
-        """Add up to ``n``, bounded by free space. Return the number added."""
-        added = self.fits(kind, n)
-        if added:
-            self.items[kind] = self.count(kind) + added
-        return added
+        """Add up to ``n``, topping up open stacks first. Return how many went in."""
+        left = self.fits(kind, n)
+        added = left
+        for slot in self.slots:
+            if left == 0:
+                break
+            if slot is not None and slot.kind is kind:
+                left -= slot.merge(Stack(kind, min(left, kind.stack_max)))
+        for index, slot in enumerate(self.slots):
+            if left == 0:
+                break
+            if slot is None:
+                take = min(left, kind.stack_max)
+                self.slots[index] = Stack(kind, take)
+                left -= take
+        return added - left
 
     def remove(self, kind: ItemKind, n: int = 1) -> int:
-        """Remove up to ``n``, bounded by what is stored. Return the number removed."""
-        removed = max(0, min(n, self.count(kind)))
-        if removed:
-            left = self.count(kind) - removed
-            if left:
-                self.items[kind] = left
-            else:
-                del self.items[kind]  # an empty row frees its slot
-        return removed
+        """Remove up to ``n``, draining the last slots first."""
+        left = min(n, self.count(kind))
+        removed = left
+        for index in range(len(self.slots) - 1, -1, -1):
+            if left == 0:
+                break
+            slot = self.slots[index]
+            if slot is None or slot.kind is not kind:
+                continue
+            left -= slot.split(left).count
+            if slot.count == 0:
+                self.slots[index] = None
+        return removed - left
+
+    def take(self, index: int) -> Stack | None:
+        """Lift a whole slot out, leaving it empty."""
+        lifted = self.slots[index]
+        self.slots[index] = None
+        return lifted
+
+    def put(self, index: int, stack: Stack) -> Stack | None:
+        """Drop ``stack`` into a slot. Return what is left over or displaced.
+
+        Onto the same kind it merges and hands back the remainder; onto a
+        different kind it swaps, which is what a grid does.
+        """
+        slot = self.slots[index]
+        if slot is None:
+            self.slots[index] = stack
+            return None
+        if slot.kind is stack.kind:
+            slot.merge(stack)
+            return stack if stack.count else None
+        self.slots[index] = stack
+        return slot
 
     def rows(self) -> list[tuple[ItemKind, int]]:
-        """``(kind, count)`` in catalogue order, empties omitted.
-
-        A kind absent from ``CATALOGUE`` is invisible here. Every kind the game
-        actually creates is in the catalogue; leaving one out is a bug in the
-        table, not a case to handle.
-        """
-        return [(kind, self.items[kind]) for kind in CATALOGUE if self.items.get(kind)]
-
-    def reserve(self, slots: int) -> None:
-        self.reserved_slots += slots
-
-    def release(self, slots: int) -> None:
-        self.reserved_slots = max(0, self.reserved_slots - slots)
+        """``(kind, total)`` in catalogue order, for anything actually held."""
+        return [(kind, self.count(kind)) for kind in CATALOGUE if self.count(kind)]

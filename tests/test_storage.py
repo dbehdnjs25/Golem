@@ -1,127 +1,118 @@
+from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD, ItemKind
-
-# Deliberately NOT in the catalogue: a container must handle any kind it is
-# handed, so slots_used cannot depend on a catalogue lookup.
-BULK = ItemKind(key="bulk", name="벌크", stack_max=10, color=(1, 2, 3))
+from game.items.item_kinds import CORE_SHARD, STONE
 
 
-def test_add_counts_per_kind_and_bills_slots():
-    c = Container(slots=4)
-    assert c.add(BULK, 3) == 3
-    assert c.count(BULK) == 3
-    assert c.slots_used == 1  # a partial stack still occupies a slot
-    assert c.free_slots == 3
+def test_an_empty_container_has_the_size_it_was_made_with():
+    c = Container.empty(4)
+    assert (c.size, c.used, c.free) == (4, 0, 4)
+    assert c.slots == [None, None, None, None]
 
 
-def test_a_full_stack_rolls_over_into_the_next_slot():
-    c = Container(slots=4)
-    c.add(BULK, 10)
-    assert c.slots_used == 1
-    c.add(BULK, 1)
-    assert c.slots_used == 2
+def test_adding_fills_the_first_empty_slot():
+    c = Container.empty(3)
+    assert c.add(STONE, 5) == 5
+    assert c.slots[0] == Stack(STONE, 5)
+    assert c.slots[1] is None
 
 
-def test_topping_up_an_open_stack_takes_no_new_slot():
-    c = Container(slots=1)
-    c.add(BULK, 4)
-    assert c.free_slots == 0  # the only slot is taken
-    assert c.add(BULK, 6) == 6  # but the open stack still has room
-    assert c.count(BULK) == 10
-    assert c.add(BULK, 1) == 0  # now it is genuinely full
+def test_adding_tops_up_an_open_stack_before_opening_a_new_one():
+    c = Container.empty(3)
+    c.add(STONE, STONE.stack_max - 2)
+    c.add(STONE, 5)
+    assert c.slots[0].count == STONE.stack_max
+    assert c.slots[1].count == 3
+    assert c.used == 2
 
 
-def test_add_caps_at_slot_capacity_and_reports_actual():
-    c = Container(slots=2)
-    assert c.add(BULK, 100) == 20
-    assert c.add(BULK, 1) == 0
-    assert c.free_slots == 0
+def test_adding_stops_when_the_slots_run_out_and_reports_what_went_in():
+    c = Container.empty(1)
+    assert c.add(STONE, 999) == STONE.stack_max
+    assert c.add(STONE, 1) == 0
+    assert c.free == 0
 
 
-def test_remove_is_bounded_by_what_is_stored():
-    c = Container(slots=4)
-    c.add(BULK, 4)
-    assert c.remove(BULK, 3) == 3
-    assert c.count(BULK) == 1
-    assert c.remove(BULK, 99) == 1
-    assert c.count(BULK) == 0
-    assert c.slots_used == 0  # an emptied row frees its slot
-
-
-def test_removing_an_absent_kind_reports_zero():
-    c = Container(slots=4)
-    assert c.remove(BULK, 5) == 0
-
-
-def test_kinds_are_counted_separately_and_share_the_slots():
-    c = Container(slots=2)
-    c.add(BULK, 10)  # one full slot
-    assert c.count(BULK) == 10
+def test_count_sums_a_kind_across_every_slot():
+    c = Container.empty(3)
+    c.add(STONE, STONE.stack_max + 4)
+    assert c.count(STONE) == STONE.stack_max + 4
     assert c.count(CORE_SHARD) == 0
-    assert c.add(CORE_SHARD, 999) == CORE_SHARD.stack_max  # one slot left
+
+
+def test_removing_drains_the_last_slots_first():
+    # Draining from the end keeps earlier slots stable, so a stack the player
+    # is looking at does not jump position when something is spent.
+    c = Container.empty(3)
+    c.add(STONE, STONE.stack_max + 5)
+    assert c.remove(STONE, 5) == 5
+    assert c.slots[1] is None
+    assert c.slots[0].count == STONE.stack_max
+
+
+def test_removing_is_bounded_by_what_is_there():
+    c = Container.empty(2)
+    c.add(STONE, 3)
+    assert c.remove(STONE, 99) == 3
+    assert c.used == 0
 
 
 def test_fits_reports_what_would_actually_go_in():
-    c = Container(slots=2)
-    assert c.fits(BULK, 4) == 4
-    assert c.fits(BULK, 50) == 20
-    c.add(BULK, 15)  # one full stack + a partial holding 5
-    assert c.fits(BULK, 50) == 5  # only the open stack's room is left
+    c = Container.empty(2)
+    assert c.fits(STONE, 999) == STONE.stack_max * 2
+    c.add(STONE, STONE.stack_max + 1)
+    assert c.fits(STONE, 999) == STONE.stack_max - 1
 
 
-def test_rows_follow_catalogue_order_and_skip_empties():
-    c = Container(slots=10)
-    assert c.rows() == []
+def test_different_kinds_share_the_slots():
+    c = Container.empty(2)
+    c.add(STONE, 1)
+    assert c.add(CORE_SHARD, 999) == CORE_SHARD.stack_max
+    assert c.free == 0
+    assert c.add(STONE, 999) == STONE.stack_max - 1  # only the open stone stack
+
+
+def test_take_lifts_a_slot_out_and_leaves_it_empty():
+    c = Container.empty(2)
+    c.add(STONE, 4)
+    assert c.take(0) == Stack(STONE, 4)
+    assert c.slots[0] is None
+
+
+def test_take_on_an_empty_slot_gives_nothing():
+    assert Container.empty(2).take(1) is None
+
+
+def test_put_drops_a_stack_into_an_empty_slot():
+    c = Container.empty(2)
+    assert c.put(1, Stack(STONE, 3)) is None
+    assert c.slots[1] == Stack(STONE, 3)
+
+
+def test_put_onto_the_same_kind_merges_and_hands_back_the_remainder():
+    c = Container.empty(1)
+    c.add(STONE, STONE.stack_max - 2)
+    assert c.put(0, Stack(STONE, 5)) == Stack(STONE, 3)
+    assert c.slots[0].is_full
+
+
+def test_put_onto_a_different_kind_swaps():
+    c = Container.empty(1)
+    c.add(STONE, 4)
+    assert c.put(0, Stack(CORE_SHARD, 2)) == Stack(STONE, 4)
+    assert c.slots[0] == Stack(CORE_SHARD, 2)
+
+
+def test_rows_lists_what_is_held_in_catalogue_order():
+    c = Container.empty(4)
+    c.add(STONE, 3)
     c.add(CORE_SHARD, 2)
-    assert c.rows() == [(CORE_SHARD, 2)]
-    c.add(CORE_SHARD, 3)
-    assert c.rows() == [(CORE_SHARD, 5)]  # count changed, position did not
-    c.remove(CORE_SHARD, 5)
-    assert c.rows() == []  # an emptied row leaves the list
-    # BULK is stored (add/count/slots_used all work on it) but is not in
-    # CATALOGUE, so it must never surface in rows() -- this is what actually
-    # exercises the "absent from CATALOGUE is invisible here" filtering, not
-    # just row ordering.
-    c.add(CORE_SHARD, 1)
-    c.add(BULK, 1)
-    assert c.rows() == [(CORE_SHARD, 1)]
+    assert c.rows() == [(CORE_SHARD, 2), (STONE, 3)]
 
 
-def test_reserved_slots_cannot_be_taken_by_anything_else():
-    c = Container(slots=4)
-    c.reserve(3)
-    assert c.free_slots == 1
-    assert c.fits(BULK, 100) == 10
-    assert c.add(BULK, 100) == 10
-
-
-def test_release_gives_the_slots_back():
-    c = Container(slots=4)
-    c.reserve(4)
-    assert c.fits(BULK, 1) == 0
-    c.release(4)
-    assert c.fits(BULK, 100) == 40
-
-
-def test_release_cannot_drive_the_reservation_negative():
-    c = Container(slots=4)
-    c.reserve(1)
-    c.release(99)
-    assert c.reserved_slots == 0
-    assert c.free_slots == 4
-
-
-def test_two_containers_do_not_share_the_default_dict():
-    a, b = Container(slots=4), Container(slots=4)
-    a.add(CORE_SHARD, 1)
-    assert b.count(CORE_SHARD) == 0
-
-
-def test_the_old_megabyte_api_is_gone():
-    import game.inventory.storage as storage
-
-    assert not hasattr(storage, "Folder")
-    c = Container(slots=4)
-    assert not hasattr(c, "used_mb")
-    assert not hasattr(c, "free_mb")
-    assert not hasattr(c, "cap_mb")
+def test_the_old_dict_model_is_gone():
+    # It could say how many slots were used but never which, and a grid the
+    # player drags things around in cannot be built on that.
+    c = Container.empty(2)
+    assert not hasattr(c, "items")
+    assert not hasattr(c, "reserved_slots")
+    assert not hasattr(c, "slots_used")

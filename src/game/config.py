@@ -72,11 +72,11 @@ MINING_DPS: Final[float] = 40.0  # hp per second while channelling
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
 
 # --- Storage ----------------------------------------------------------------
-# Slots, not weight. One slot holds up to a kind's stack_max of that kind, so
-# the limit is how many DIFFERENT things you can carry, not how heavy they are.
+# Slots, not weight. One slot holds up to a kind's stack_max of that kind. The
+# backpack is the ONLY place items go: there is no base inventory, so a player
+# without one has the hotbar and nothing else.
 STACK_MAX_DEFAULT: Final[int] = 64
-INVENTORY_SLOTS: Final[int] = 10  # carried by default
-BACKPACK_SLOTS: Final[int] = 10  # added by wearing a backpack -> doubles the carry
+BACKPACK_SLOTS: Final[int] = 20  # the basic pack; better ones hold more
 CORE_STORE_SLOTS: Final[int] = 40  # the store at the core, never carried
 
 # --- Camera -----------------------------------------------------------------

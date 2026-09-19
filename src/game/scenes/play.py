@@ -66,8 +66,8 @@ class PlayScene(Scene):
             mode=LOCKED,
         )
         self.camera.center_on(self.player.pos)
-        self.backpack = Container(slots=config.INVENTORY_SLOTS)
-        self.store = Container(slots=config.CORE_STORE_SLOTS)
+        self.backpack = Container.empty(config.BACKPACK_SLOTS)
+        self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # slot 0 mines (key "1"); slot 1 shoots (key "2").
         self.hotbar.slots[0] = MiningTool()
@@ -295,7 +295,7 @@ class PlayScene(Scene):
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
         # inventory fill gauge
-        frac = self.backpack.slots_used / self.backpack.slots if self.backpack.slots else 0.0
+        frac = self.backpack.used / self.backpack.size if self.backpack.size else 0.0
         _draw_bar(surface, 10, 14, frac, (90, 200, 120))
         # hp bar
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0

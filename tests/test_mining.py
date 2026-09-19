@@ -11,7 +11,7 @@ PLAYER = pygame.Vector2(1000, 1000)
 
 
 def _backpack() -> Container:
-    return Container(slots=config.INVENTORY_SLOTS)
+    return Container.empty(config.BACKPACK_SLOTS)
 
 
 def test_idle_when_not_held() -> None:
@@ -81,7 +81,7 @@ def test_out_of_range_does_no_damage() -> None:
 def test_full_backpack_blocks_and_preserves_fragment() -> None:
     frag = Fragment(pos=pygame.Vector2(1010, 1000))
     frags = [frag]
-    bp = Container(slots=1)  # one slot
+    bp = Container.empty(1)  # one slot
     bp.add(CORE_SHARD, CORE_SHARD.stack_max)  # now full
     status = mining.update_mining(
         1.0,
