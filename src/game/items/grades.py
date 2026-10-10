@@ -22,15 +22,29 @@ from dataclasses import dataclass
 
 from game.items.item_kinds import (
     BOG_MOSS,
+    BRASS_AXE,
+    BRASS_PICK,
+    COPPER_AXE,
     COPPER_ORE,
+    COPPER_PICK,
     FROST_CRYSTAL,
+    GOLD_AXE,
     GOLD_ORE,
+    GOLD_PICK,
+    IRON_AXE,
     IRON_ORE,
+    IRON_PICK,
     OBSIDIAN,
+    STEEL_AXE,
+    STEEL_PICK,
     STONE,
+    STONE_AXE,
+    STONE_PICK,
     THUNDER_STONE,
     WEATHERED_STONE,
     WOOD,
+    WOOD_AXE,
+    WOOD_PICK,
     ZINC_ORE,
     ItemKind,
 )
@@ -87,3 +101,32 @@ _ANYTHING = Need(PICKAXE, WOOD_G)
 def need_for(kind: ItemKind) -> Need:
     """What it takes to gather ``kind``. Anything unlisted asks for nothing."""
     return NEEDS.get(kind, _ANYTHING)
+
+
+# Which item IS which tool. The catalogue says a steel pickaxe exists; this says
+# where it sits on the ladder, so the two never have to agree by hand.
+PICK_OF: dict[Grade, ItemKind] = {
+    WOOD_G: WOOD_PICK,
+    STONE_G: STONE_PICK,
+    COPPER_G: COPPER_PICK,
+    IRON_G: IRON_PICK,
+    GOLD_G: GOLD_PICK,
+    BRASS_G: BRASS_PICK,
+    STEEL_G: STEEL_PICK,
+}
+
+AXE_OF: dict[Grade, ItemKind] = {
+    WOOD_G: WOOD_AXE,
+    STONE_G: STONE_AXE,
+    COPPER_G: COPPER_AXE,
+    IRON_G: IRON_AXE,
+    GOLD_G: GOLD_AXE,
+    BRASS_G: BRASS_AXE,
+    STEEL_G: STEEL_AXE,
+}
+
+# The reverse lookup, so an item in a slot can say what tool it is.
+TOOL_ITEMS: dict[ItemKind, tuple[str, Grade]] = {
+    **{item: (PICKAXE, grade) for grade, item in PICK_OF.items()},
+    **{item: (AXE, grade) for grade, item in AXE_OF.items()},
+}

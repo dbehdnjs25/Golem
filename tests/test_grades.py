@@ -77,3 +77,26 @@ def test_something_not_in_the_table_needs_nothing_special():
 def test_a_grade_can_be_compared_to_another():
     assert grades.IRON_G.rank > grades.COPPER_G.rank
     assert grades.WOOD_G.rank < grades.STEEL_G.rank
+
+
+def test_every_grade_has_a_pickaxe_and_an_axe_item():
+    for grade in GRADES:
+        assert grade in grades.PICK_OF
+        assert grade in grades.AXE_OF
+
+
+def test_tool_items_map_back_to_their_family_and_grade():
+    for grade, item in grades.PICK_OF.items():
+        assert grades.TOOL_ITEMS[item] == (PICKAXE, grade)
+    for grade, item in grades.AXE_OF.items():
+        assert grades.TOOL_ITEMS[item] == (AXE, grade)
+
+
+def test_a_tool_item_is_never_mistaken_for_two_things():
+    assert len(grades.TOOL_ITEMS) == 2 * len(GRADES)
+
+
+def test_tool_items_are_real_catalogue_rows_that_do_not_stack():
+    for item in grades.TOOL_ITEMS:
+        assert ITEM_KINDS[item.key] is item
+        assert item.stack_max == 1  # you hold one, you do not hoard them

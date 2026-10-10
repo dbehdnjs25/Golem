@@ -70,6 +70,35 @@ THUNDER_STONE = ItemKind("thunder_stone", "뇌석", _STACK, (215, 200, 120))
 WORN_PACK = ItemKind("worn_pack", "낡은 배낭", 1, (120, 95, 70))
 LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
 
+# --- Tools ----------------------------------------------------------------------
+# One row per family per grade. Verbose on purpose: a tool is an item like any
+# other, so it lands in slots, rides in a pack, and is lost with it. Which grade
+# a row belongs to lives in items/grades.py -- the catalogue says what exists.
+WOOD_PICK = ItemKind("wood_pick", "나무 곡괭이", 1, (150, 110, 70))
+STONE_PICK = ItemKind("stone_pick", "돌 곡괭이", 1, (140, 140, 150))
+COPPER_PICK = ItemKind("copper_pick", "구리 곡괭이", 1, (205, 130, 85))
+IRON_PICK = ItemKind("iron_pick", "철 곡괭이", 1, (185, 185, 195))
+GOLD_PICK = ItemKind("gold_pick", "금 곡괭이", 1, (240, 205, 95))
+BRASS_PICK = ItemKind("brass_pick", "황동 곡괭이", 1, (215, 180, 90))
+STEEL_PICK = ItemKind("steel_pick", "강철 곡괭이", 1, (120, 130, 150))
+
+WOOD_AXE = ItemKind("wood_axe", "나무 도끼", 1, (128, 95, 60))
+STONE_AXE = ItemKind("stone_axe", "돌 도끼", 1, (120, 120, 132))
+COPPER_AXE = ItemKind("copper_axe", "구리 도끼", 1, (180, 112, 72))
+IRON_AXE = ItemKind("iron_axe", "철 도끼", 1, (160, 160, 172))
+GOLD_AXE = ItemKind("gold_axe", "금 도끼", 1, (214, 180, 82))
+BRASS_AXE = ItemKind("brass_axe", "황동 도끼", 1, (190, 158, 78))
+STEEL_AXE = ItemKind("steel_axe", "강철 도끼", 1, (102, 112, 132))
+
+# --- Stations -------------------------------------------------------------------
+# Carried as an item, then placed inside the ward. What each one unlocks is in
+# items/recipes.py; this is only what they are.
+BENCH = ItemKind("bench", "제작대", 1, (146, 112, 74))
+SMELTER = ItemKind("smelter", "용광로", 1, (112, 104, 110))
+HEARTH = ItemKind("hearth", "화덕", 1, (150, 92, 68))
+FINE_BENCH = ItemKind("fine_bench", "고급 제작대", 1, (176, 146, 96))
+BLAST_FURNACE = ItemKind("blast_furnace", "고로", 1, (92, 96, 112))
+
 # --- Consumed -----------------------------------------------------------------
 # Meat restores stamina only; raw costs HP on top. Potions are the HP answer in
 # the field and are deliberately scarce.
@@ -98,6 +127,25 @@ CATALOGUE: tuple[ItemKind, ...] = (
     WEATHERED_STONE,
     BOG_MOSS,
     THUNDER_STONE,
+    WOOD_PICK,
+    STONE_PICK,
+    COPPER_PICK,
+    IRON_PICK,
+    GOLD_PICK,
+    BRASS_PICK,
+    STEEL_PICK,
+    WOOD_AXE,
+    STONE_AXE,
+    COPPER_AXE,
+    IRON_AXE,
+    GOLD_AXE,
+    BRASS_AXE,
+    STEEL_AXE,
+    BENCH,
+    SMELTER,
+    HEARTH,
+    FINE_BENCH,
+    BLAST_FURNACE,
     WORN_PACK,
     LEATHER_PACK,
     RAW_MEAT,
