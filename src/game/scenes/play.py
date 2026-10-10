@@ -366,9 +366,15 @@ class PlayScene(Scene):
                 self.camera.world_to_screen(shot.pos),
                 shot.radius,
             )
-        pygame.draw.circle(
-            surface, config.CORE_COLOR, self.camera.world_to_screen(self.core.pos), self.core.radius
-        )
+        if self.core.ignited:
+            # Only once it burns. An unlit core is an empty socket, and drawing
+            # it lit made the opening look like it had already been won.
+            pygame.draw.circle(
+                surface,
+                config.CORE_COLOR,
+                self.camera.world_to_screen(self.core.pos),
+                self.core.radius,
+            )
         pygame.draw.circle(
             surface,
             config.PLAYER_COLOR,
@@ -670,10 +676,13 @@ class PlayScene(Scene):
                 pygame.draw.circle(surface, ring, at, config.FRAGMENT_RADIUS + 4, 2)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
-        """The ward's rim, or the bare pedestal before the core is lit."""
+        """The ward's rim, or the empty pedestal waiting for the shards."""
         center = self.camera.world_to_screen(self.core.pos)
         if not self.core.ignited:
-            pygame.draw.circle(surface, config.PEDESTAL_COLOR, center, self.core.radius, 3)
+            # A socket with nothing in it: a dark hollow inside a stone rim, so
+            # it reads as somewhere to put something rather than as a thing.
+            pygame.draw.circle(surface, config.VOID_COLOR, center, self.core.radius - 4)
+            pygame.draw.circle(surface, config.PEDESTAL_COLOR, center, self.core.radius, 4)
             return
         pygame.draw.circle(surface, config.WARD_COLOR, center, self.core.ward_radius, 2)
 

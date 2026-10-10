@@ -655,3 +655,26 @@ def test_no_golems_before_the_core_is_lit():
     for _ in range(int(60 / config.FIXED_DT)):
         scene.update(config.FIXED_DT)
     assert scene.enemies == []
+
+
+def test_an_unlit_core_is_not_drawn_lit():
+    # It looked like a bright disc before ignition, which read as a ward that
+    # was already there -- the opening looked won before it began.
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene = PlayScene()
+    scene.camera.center_on(scene.core.pos)
+    scene.player.pos = scene.core.pos + pygame.Vector2(400, 0)  # out of the way
+    scene.draw(surface)
+    middle = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
+    assert surface.get_at(middle)[:3] != config.CORE_COLOR
+
+
+def test_lighting_it_makes_it_show():
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.camera.center_on(scene.core.pos)
+    scene.player.pos = scene.core.pos + pygame.Vector2(400, 0)
+    scene.draw(surface)
+    middle = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
+    assert surface.get_at(middle)[:3] == config.CORE_COLOR
