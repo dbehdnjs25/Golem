@@ -154,6 +154,7 @@ STATION_REACH: Final[float] = 90.0  # stand within this and its recipes open
 # Sits inside the ladder (4,000 -> 12,000) rather than at either end: reachable
 # around level 20, so one boss at least has to fall first.
 BLAST_FURNACE_MIN_WARD: Final[float] = 7_000.0
+STATION_OUTPUT_SLOTS: Final[int] = 4  # what a station can hold before it stalls
 
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0

@@ -27,7 +27,7 @@ from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
 from game.items.recipes import STATION_OF
 from game.items.tools import MiningTool, WeaponTool
-from game.systems import combat, mining, survival
+from game.systems import carrying, combat, mining, survival
 from game.systems.camera import LOCKED, Camera
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
@@ -228,6 +228,8 @@ class PlayScene(Scene):
 
         self.clock.update(dt)
         self._tick_loot(dt)
+        for station in self.stations:
+            station.update(dt)
 
         if self.grid_open:
             return  # the world waits while the belongings are open
@@ -305,6 +307,7 @@ class PlayScene(Scene):
                 self.core.ignite()
 
         self._recover_underfoot()
+        self._collect_stations()
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
@@ -452,6 +455,18 @@ class PlayScene(Scene):
             pygame.draw.polygon(surface, biome.color, points)
         pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
 
+    def _collect_stations(self) -> None:
+        """Take finished goods out of anything the player is standing by."""
+        for station in self.stations:
+            if self.player.pos.distance_to(station.pos) > config.STATION_REACH:
+                continue
+            if not station.output.used:
+                continue
+            for kind, n in station.collect():
+                left = n - carrying.store(kind, n, self.backpack, self.hotbar)
+                if left:
+                    station.output.add(kind, left)  # no room: leave it in there
+
     def _try_place(self, where: pygame.Vector2) -> bool:
         """Put down the selected station item, if that is what is held.
 
@@ -473,6 +488,12 @@ class PlayScene(Scene):
         for station in self.stations:
             at = self.camera.world_to_screen(station.pos)
             pygame.draw.circle(surface, station.kind.color, at, config.STATION_RADIUS)
+            if station.is_busy and station.job is not None:
+                # Fills up as the job runs, so progress is readable in passing.
+                done = 1 - station.remaining / max(station.job.seconds, 1e-9)
+                pygame.draw.circle(surface, config.LOOT_COLOR, at, config.STATION_RADIUS * done)
+            elif station.output.used:
+                pygame.draw.circle(surface, config.LOOT_COLOR, at, config.STATION_RADIUS - 6)
             if STATION_OF.get(station.kind, set()) & open_here:
                 pygame.draw.circle(surface, config.WHITE, at, config.STATION_RADIUS + 3, 2)
 

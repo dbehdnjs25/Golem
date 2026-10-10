@@ -3,8 +3,9 @@ import pygame
 from game import config
 from game.entities.core import Core
 from game.entities.station import Station, place, stations_at
+from game.inventory.storage import Container
 from game.items import recipes
-from game.items.item_kinds import BENCH, BLAST_FURNACE, FINE_BENCH, SMELTER
+from game.items.item_kinds import BENCH, BLAST_FURNACE, COPPER_INGOT, FINE_BENCH, SMELTER
 
 
 def _lit(level: int = 1) -> Core:
@@ -108,3 +109,79 @@ def test_a_station_is_what_it_was_placed_as():
     place(SMELTER, _inside(core), built, core)
     assert isinstance(built[0], Station)
     assert stations_at(built[0].pos, built) == {recipes.NOWHERE, recipes.SMELTER_S}
+
+
+def _smelter() -> Station:
+    return Station(pos=pygame.Vector2(0, 0), kind=SMELTER)
+
+
+COPPER_R = next(r for r in recipes.RECIPES if r.output is COPPER_INGOT)
+
+
+def test_a_fresh_station_is_idle():
+    s = _smelter()
+    assert s.job is None
+    assert s.is_busy is False
+
+
+def test_starting_a_job_puts_it_on_the_clock():
+    s = _smelter()
+    assert s.start(COPPER_R) is True
+    assert s.job is COPPER_R
+    assert s.remaining == COPPER_R.seconds
+    assert s.is_busy is True
+
+
+def test_a_busy_station_takes_no_second_job():
+    s = _smelter()
+    s.start(COPPER_R)
+    assert s.start(COPPER_R) is False
+
+
+def test_time_finishes_the_job_and_leaves_the_output_behind():
+    # The whole point: fill it, walk away, come back to ingots.
+    s = _smelter()
+    s.start(COPPER_R)
+    s.update(COPPER_R.seconds)
+    assert s.job is None
+    assert s.output.count(COPPER_INGOT) == COPPER_R.count
+
+
+def test_a_part_finished_job_yields_nothing_yet():
+    s = _smelter()
+    s.start(COPPER_R)
+    s.update(COPPER_R.seconds / 2)
+    assert s.is_busy is True
+    assert s.output.count(COPPER_INGOT) == 0
+
+
+def test_an_idle_station_ignores_the_clock():
+    s = _smelter()
+    s.update(100.0)
+    assert s.job is None
+
+
+def test_collecting_empties_the_station():
+    s = _smelter()
+    s.start(COPPER_R)
+    s.update(COPPER_R.seconds)
+    assert s.collect() == [(COPPER_INGOT, COPPER_R.count)]
+    assert s.output.used == 0
+    assert s.collect() == []
+
+
+def test_a_full_station_will_not_start_another_job():
+    # Otherwise the finished ingots would be overwritten by the next batch.
+    s = _smelter()
+    s.output = Container.empty(1)
+    s.output.add(COPPER_INGOT, COPPER_INGOT.stack_max)
+    assert s.start(COPPER_R) is False
+
+
+def test_instant_recipes_finish_on_the_very_next_step():
+    # Bench work has no wait, so it must not sit there pending forever.
+    bench_job = next(r for r in recipes.RECIPES if r.station == recipes.BENCH_S)
+    s = Station(pos=pygame.Vector2(0, 0), kind=BENCH)
+    s.start(bench_job)
+    s.update(0.0)
+    assert s.job is None

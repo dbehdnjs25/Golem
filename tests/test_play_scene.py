@@ -471,3 +471,34 @@ def test_building_does_not_also_start_swinging():
     scene = _ready_to_build(PlayScene(), BENCH)
     scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
     assert scene._mouse_held is False
+
+
+def test_a_station_keeps_working_while_the_player_is_away():
+    # The whole value of smelting taking time: set it going, leave, come back.
+    from game.entities.station import Station
+    from game.items.item_kinds import COPPER_INGOT, SMELTER
+    from game.items.recipes import RECIPES
+
+    recipe = next(r for r in RECIPES if r.output is COPPER_INGOT)
+    scene = PlayScene()
+    smelter = Station(pos=scene.core.pos + pygame.Vector2(20_000, 0), kind=SMELTER)
+    smelter.start(recipe)
+    scene.stations.append(smelter)
+    for _ in range(int(recipe.seconds / config.FIXED_DT) + 2):
+        scene.update(config.FIXED_DT)
+    assert smelter.job is None
+    assert smelter.output.count(COPPER_INGOT) == recipe.count
+
+
+def test_standing_by_a_finished_station_empties_it():
+    from game.entities.station import Station
+    from game.items.item_kinds import COPPER_INGOT, SMELTER
+
+    scene = PlayScene()
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
+    smelter = Station(pos=pygame.Vector2(scene.player.pos), kind=SMELTER)
+    smelter.output.add(COPPER_INGOT, 3)
+    scene.stations.append(smelter)
+    scene.update(config.FIXED_DT)
+    assert smelter.output.used == 0
+    assert scene.backpack.count(COPPER_INGOT) == 3
