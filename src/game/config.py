@@ -156,6 +156,10 @@ STATION_REACH: Final[float] = 90.0  # stand within this and its recipes open
 BLAST_FURNACE_MIN_WARD: Final[float] = 7_000.0
 STATION_OUTPUT_SLOTS: Final[int] = 4  # what a station can hold before it stalls
 
+# --- Crafting menu ------------------------------------------------------------
+CRAFT_ROW_HEIGHT: Final[int] = 26
+CRAFT_ROWS_VISIBLE: Final[int] = 14
+
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0
 

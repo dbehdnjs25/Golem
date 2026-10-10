@@ -25,9 +25,9 @@ from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
-from game.items.recipes import STATION_OF
+from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import MiningTool, WeaponTool
-from game.systems import carrying, combat, mining, survival
+from game.systems import carrying, combat, crafting, mining, survival
 from game.systems.camera import LOCKED, Camera
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
@@ -37,6 +37,29 @@ from game.world import biomes
 from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
+
+# Korean first, since every item name is Korean; the fallbacks are only so a
+# machine without these still draws something rather than raising.
+_FONT_NAMES = ("malgungothic", "gulim", "arial")
+_fonts: dict[int, pygame.font.Font] = {}
+
+
+def _font(size: int) -> pygame.font.Font:
+    """A cached font. Built on first use so importing this module needs no display."""
+    cached = _fonts.get(size)
+    if cached is not None:
+        return cached
+    for name in _FONT_NAMES:
+        try:
+            made = pygame.font.SysFont(name, size)
+        except Exception:  # noqa: BLE001 - any font failure just means try the next
+            continue
+        if made.render("가", True, (255, 255, 255)).get_width() > 2:
+            _fonts[size] = made
+            return made
+    _fonts[size] = pygame.font.Font(None, size)
+    return _fonts[size]
+
 
 # HUD gauges: same left edge and width, stacked down the top-left corner.
 _BAR_X = 10
@@ -80,6 +103,7 @@ class PlayScene(Scene):
         self.stations: list[Station] = []
         self.grid = Grid()
         self.grid_open = False
+        self.craft_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # Wooden tools and a weapon to open with. The axe is handed over rather
@@ -189,6 +213,8 @@ class PlayScene(Scene):
                 self._sync_pressed = True
             elif event.key == pygame.K_i:
                 self._toggle_grid()
+            elif event.key == pygame.K_c:
+                self._toggle_craft()
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -198,6 +224,9 @@ class PlayScene(Scene):
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.grid_open:
                 self._click_grid(pygame.Vector2(event.pos))
+                return
+            if self.craft_open:
+                self._click_craft(pygame.Vector2(event.pos))
                 return
             if self._try_place(pygame.Vector2(event.pos)):
                 return
@@ -231,8 +260,8 @@ class PlayScene(Scene):
         for station in self.stations:
             station.update(dt)
 
-        if self.grid_open:
-            return  # the world waits while the belongings are open
+        if self.grid_open or self.craft_open:
+            return  # the world waits while a screen is open
 
         down = self._respawn_timer > 0
         if down:
@@ -343,12 +372,106 @@ class PlayScene(Scene):
         self._draw_night(surface)
         self._draw_hud(surface)
         self._draw_grid(surface)
+        self._draw_craft(surface)
 
     # --- the belongings screen -------------------------------------------
     def _toggle_grid(self) -> None:
         self.grid_open = not self.grid_open
-        if not self.grid_open:
+        if self.grid_open:
+            self.craft_open = False  # one screen at a time
+        else:
             self.grid.close(self.backpack, self.hotbar)
+
+    # --- the crafting menu ------------------------------------------------
+    def _toggle_craft(self) -> None:
+        self.craft_open = not self.craft_open
+        if self.craft_open:
+            if self.grid_open:
+                self.grid.close(self.backpack, self.hotbar)
+            self.grid_open = False
+
+    def _craft_rows(self) -> list[tuple[Recipe, bool]]:
+        """What is offered where the player is standing, affordable first.
+
+        Sorting the affordable ones up means the menu answers "what can I do
+        right now" at a glance, and the rest read as a list of what to go and
+        find.
+        """
+        here = stations_at(self.player.pos, self.stations)
+        rows = crafting.available(here, self.backpack, self.hotbar)
+        return sorted(rows, key=lambda row: (not row[1], row[0].output.name))
+
+    def _craft_panel(self) -> pygame.Rect:
+        rows = min(len(self._craft_rows()), config.CRAFT_ROWS_VISIBLE)
+        height = rows * config.CRAFT_ROW_HEIGHT + 24
+        panel = pygame.Rect(0, 0, 520, max(height, 60))
+        panel.center = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
+        return panel
+
+    def _craft_row_rect(self, index: int) -> pygame.Rect:
+        panel = self._craft_panel()
+        return pygame.Rect(
+            panel.left + 10,
+            panel.top + 12 + index * config.CRAFT_ROW_HEIGHT,
+            panel.width - 20,
+            config.CRAFT_ROW_HEIGHT - 2,
+        )
+
+    def _click_craft(self, where: pygame.Vector2) -> None:
+        for index, (recipe, afford) in enumerate(self._craft_rows()):
+            if index >= config.CRAFT_ROWS_VISIBLE:
+                break
+            if not self._craft_row_rect(index).collidepoint(where):
+                continue
+            if not afford:
+                return
+            if recipe.seconds > 0:
+                self._start_job(recipe)
+            else:
+                crafting.craft(recipe, self.backpack, self.hotbar)
+            return
+
+    def _start_job(self, recipe: Recipe) -> None:
+        """Hand a timed recipe to a station in reach that can take it."""
+        for station in self.stations:
+            if self.player.pos.distance_to(station.pos) > config.STATION_REACH:
+                continue
+            if recipe.station not in STATION_OF.get(station.kind, set()):
+                continue
+            if station.is_busy or not crafting.affordable(recipe, self.backpack, self.hotbar):
+                continue
+            if station.start(recipe):
+                for kind, n in recipe.inputs:
+                    crafting.spend(kind, n, self.backpack, self.hotbar)
+            return
+
+    def _draw_craft(self, surface: pygame.Surface) -> None:
+        """One line per recipe: what it makes, and what it costs."""
+        if not self.craft_open:
+            return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 140))
+        surface.blit(overlay, (0, 0))
+        pygame.draw.rect(surface, config.GRID_PANEL, self._craft_panel(), border_radius=6)
+        for index, (recipe, afford) in enumerate(self._craft_rows()):
+            if index >= config.CRAFT_ROWS_VISIBLE:
+                break
+            rect = self._craft_row_rect(index)
+            pygame.draw.rect(surface, (48, 48, 62), rect, border_radius=3)
+            swatch = pygame.Rect(rect.left + 4, rect.top + 4, 16, rect.height - 8)
+            # Dim when it cannot be made, so "what can I do now" reads at a glance.
+            colour = recipe.output.color if afford else tuple(c // 3 for c in recipe.output.color)
+            pygame.draw.rect(surface, colour, swatch, border_radius=2)
+            ink = config.WHITE if afford else (120, 120, 134)
+            made = (
+                recipe.output.name if recipe.count == 1 else f"{recipe.output.name} x{recipe.count}"
+            )
+            if recipe.seconds:
+                made += f"  ({recipe.seconds:.0f}초)"
+            surface.blit(_font(14).render(made, True, ink), (swatch.right + 8, rect.top + 4))
+            cost = "  ".join(f"{kind.name} {n}" for kind, n in recipe.inputs)
+            label = _font(12).render(cost, True, (150, 150, 165) if afford else (90, 90, 102))
+            surface.blit(label, (rect.right - label.get_width() - 8, rect.top + 6))
 
     def _grid_origin(self) -> tuple[int, int]:
         """Top-left of the pack grid. The hotbar row sits one gap below it."""

@@ -27,8 +27,12 @@ def _carried(kind: ItemKind, backpack: Container | None, hotbar: Hotbar) -> int:
     return in_pack + hotbar.count(kind)
 
 
-def _spend(kind: ItemKind, n: int, backpack: Container | None, hotbar: Hotbar) -> None:
-    """Take from the pack first. The hotbar is what a death spares, so it goes last."""
+def spend(kind: ItemKind, n: int, backpack: Container | None, hotbar: Hotbar) -> None:
+    """Take ``n`` of ``kind``, pack first.
+
+    The hotbar is what a death spares, so it is spent last. Public because a
+    station job spends its inputs up front and then runs on its own.
+    """
     taken = backpack.remove(kind, n) if backpack is not None else 0
     hotbar.remove(kind, n - taken)
 
@@ -59,7 +63,7 @@ def craft(recipe: Recipe, backpack: Container | None, hotbar: Hotbar) -> ItemKin
     if not affordable(recipe, backpack, hotbar):
         return None
     for kind, n in recipe.inputs:
-        _spend(kind, n, backpack, hotbar)
+        spend(kind, n, backpack, hotbar)
     if carrying.store(recipe.output, recipe.count, backpack, hotbar) == recipe.count:
         return recipe.output
     for kind, n in recipe.inputs:  # nowhere to put it -- undo

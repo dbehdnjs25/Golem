@@ -502,3 +502,93 @@ def test_standing_by_a_finished_station_empties_it():
     scene.update(config.FIXED_DT)
     assert smelter.output.used == 0
     assert scene.backpack.count(COPPER_INGOT) == 3
+
+
+def _press_c(scene):
+    scene.handle_event(_key_event(pygame.K_c))
+
+
+def test_c_opens_the_crafting_menu():
+    scene = PlayScene()
+    assert scene.craft_open is False
+    _press_c(scene)
+    assert scene.craft_open is True
+    _press_c(scene)
+    assert scene.craft_open is False
+
+
+def test_only_one_screen_is_open_at_a_time():
+    scene = PlayScene()
+    _press_i(scene)
+    _press_c(scene)
+    assert scene.craft_open is True
+    assert scene.grid_open is False
+
+
+def test_the_menu_offers_only_what_the_spot_allows():
+    from game.items.item_kinds import BENCH, SMELTER
+
+    scene = PlayScene()
+    offered = {r.output for r, _ in scene._craft_rows()}
+    assert BENCH in offered  # empty hands can manage a bench
+    assert SMELTER not in offered  # the smelter wants a bench standing
+
+
+def test_standing_at_a_bench_widens_the_menu():
+    from game.entities.station import Station
+    from game.items.item_kinds import BENCH, SMELTER
+
+    scene = PlayScene()
+    scene.stations.append(Station(pos=pygame.Vector2(scene.player.pos), kind=BENCH))
+    assert SMELTER in {r.output for r, _ in scene._craft_rows()}
+
+
+def test_affordable_rows_sort_to_the_top():
+    from game.items.item_kinds import WOOD
+
+    scene = PlayScene()
+    scene.hotbar.add(WOOD, 3)
+    rows = scene._craft_rows()
+    assert rows[0][1] is True  # something is makeable and it is listed first
+
+
+def test_clicking_an_instant_recipe_makes_it():
+    from game.items.item_kinds import WOOD, WOOD_PICK
+
+    scene = PlayScene()
+    scene.hotbar.add(WOOD, 3)
+    _press_c(scene)
+    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is WOOD_PICK)
+    at = scene._craft_row_rect(index).center
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    assert scene.hotbar.count(WOOD_PICK) == 2  # one started in the slot, one made
+
+
+def test_clicking_an_unaffordable_row_does_nothing():
+    from game.items.item_kinds import BENCH
+
+    scene = PlayScene()
+    _press_c(scene)
+    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is BENCH)
+    at = scene._craft_row_rect(index).center
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    assert scene._carried(BENCH) == 0
+
+
+def test_a_timed_recipe_goes_to_the_station_instead_of_the_hand():
+    # Smelting is set going and walked away from; it does not appear in a pack.
+    from game.entities.station import Station
+    from game.items.item_kinds import COPPER_INGOT, COPPER_ORE, SMELTER
+
+    scene = PlayScene()
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
+    scene.backpack.add(COPPER_ORE, 4)
+    smelter = Station(pos=pygame.Vector2(scene.player.pos), kind=SMELTER)
+    scene.stations.append(smelter)
+    _press_c(scene)
+    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is COPPER_INGOT)
+    at = scene._craft_row_rect(index).center
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    assert smelter.is_busy is True
+    assert scene.backpack.count(COPPER_ORE) == 2  # the ore went in
+    assert scene._carried(COPPER_INGOT) == 0  # nothing yet -- it has to run
