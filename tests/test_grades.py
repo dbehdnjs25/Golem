@@ -1,5 +1,5 @@
 from game.items import grades
-from game.items.grades import AXE, GRADES, PICKAXE
+from game.items.grades import GRADES, PICKAXE
 from game.items.item_kinds import (
     COPPER_ORE,
     GOLD_ORE,
@@ -53,10 +53,18 @@ def test_biome_materials_are_what_gold_is_for():
     assert grades.need_for(OBSIDIAN).grade is grades.GOLD_G
 
 
-def test_wood_wants_an_axe_at_the_bottom_of_the_ladder():
+def test_wood_asks_for_nothing_at_all():
+    # The bootstrap. An axe wants wood and wood wants an axe, so one of them has
+    # to give, and pulling at a branch by hand is the one that costs nothing to
+    # believe. Every other node still demands a tool.
     need = grades.need_for(WOOD)
-    assert need.family == AXE
+    assert need.family == grades.HAND
     assert need.grade is GRADES[0]
+
+
+def test_nothing_but_wood_answers_to_an_empty_hand():
+    hand_jobs = [k for k, need in grades.NEEDS.items() if need.family == grades.HAND]
+    assert hand_jobs == [WOOD]
 
 
 def test_every_ore_wants_a_pickaxe():
@@ -89,7 +97,7 @@ def test_tool_items_map_back_to_their_family_and_grade():
     for grade, item in grades.PICK_OF.items():
         assert grades.TOOL_ITEMS[item] == (PICKAXE, grade)
     for grade, item in grades.AXE_OF.items():
-        assert grades.TOOL_ITEMS[item] == (AXE, grade)
+        assert grades.TOOL_ITEMS[item] == (grades.AXE, grade)
 
 
 def test_a_tool_item_is_never_mistaken_for_two_things():

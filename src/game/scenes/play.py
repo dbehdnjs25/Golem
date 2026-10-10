@@ -23,8 +23,7 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items import grades
-from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
+from game.items.item_kinds import CORE_SHARD, WOOD, ItemKind
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, survival
@@ -106,12 +105,10 @@ class PlayScene(Scene):
         self.craft_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
-        # Wooden tools and a weapon to open with. The axe is handed over rather
-        # than earned because wood wants an axe and an axe wants wood -- with
-        # neither there is no first move. Ground crafting replaces this.
-        self.hotbar.slots[0] = Stack(grades.PICK_OF[grades.WOOD_G], 1)
-        self.hotbar.slots[1] = Stack(grades.AXE_OF[grades.WOOD_G], 1)
-        self.hotbar.slots[2] = WeaponTool()
+        # Nothing but the weapon. Wood comes off a tree with bare hands, and the
+        # first axe is crafted from it -- the opening is a thing the player does
+        # rather than a kit they are handed.
+        self.hotbar.slots[4] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()
         self._scatter_starting_shards()
@@ -139,11 +136,13 @@ class PlayScene(Scene):
             spot = near_player(self.player.pos, self.rng, self.world)
             if spot is not None:
                 self.fragments.append(Fragment(pos=spot, kind=CORE_SHARD))
-        # SCAFFOLDING until crafting lands in step 5: one worn pack out in the
-        # grass, so the backpack can be exercised before it can be made.
-        spot = near_player(self.player.pos, self.rng, self.world)
-        if spot is not None:
-            self.fragments.append(Fragment(pos=spot, kind=WORN_PACK))
+        # A stand of trees by the pedestal. Bare hands take wood off them, wood
+        # makes the first axe and the first bench, and the bench makes the pack
+        # -- so the opening is a short errand with a visible first step.
+        for _ in range(6):
+            spot = near_player(self.player.pos, self.rng, self.world)
+            if spot is not None:
+                self.fragments.append(Fragment(pos=spot, kind=WOOD))
 
     def _wear_if_pack(self, kind: ItemKind | None) -> None:
         """A pack is worn the moment it is dug up -- it is what holds things.
@@ -205,6 +204,10 @@ class PlayScene(Scene):
                 self.hotbar.select(1)
             elif event.key == pygame.K_3:
                 self.hotbar.select(2)
+            elif event.key == pygame.K_4:
+                self.hotbar.select(3)
+            elif event.key == pygame.K_5:
+                self.hotbar.select(4)
             elif event.key == pygame.K_y:
                 self.camera.toggle_lock(self.player.pos)
             elif event.key == pygame.K_SPACE:

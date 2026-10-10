@@ -7,7 +7,6 @@ from game.entities.projectile import Projectile
 from game.inventory import grid
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
@@ -93,21 +92,31 @@ def test_draw_runs_without_error(surface):
     scene.draw(surface)  # must not raise on the 64x64 offscreen surface
 
 
-def test_the_opening_kit_is_a_pickaxe_an_axe_and_a_weapon():
-    # Wood wants an axe and an axe wants wood, so the axe is handed over until
-    # ground crafting can earn it.
+def test_the_run_opens_with_nothing_but_a_weapon():
+    # No tools handed over. Bare hands take wood off a tree, wood makes the
+    # first axe, and the opening is something the player does.
     scene = PlayScene()
-    assert scene.hotbar.slots[0] == Stack(grades.PICK_OF[grades.WOOD_G], 1)
-    assert scene.hotbar.slots[1] == Stack(grades.AXE_OF[grades.WOOD_G], 1)
-    assert isinstance(scene.hotbar.slots[2], WeaponTool)
-    # They are items, so they move in the grid and are lost with the pack.
-    scene.hotbar.select(0)
-    assert scene.hotbar.active_tool.family == grades.PICKAXE
+    assert isinstance(scene.hotbar.slots[4], WeaponTool)
+    assert all(slot is None for slot in scene.hotbar.slots[:4])
+
+
+def test_trees_stand_by_the_pedestal_to_start_from():
+    from game.items.item_kinds import WOOD
+
+    scene = PlayScene()
+    assert sum(1 for f in scene.fragments if f.kind is WOOD) >= 5
+
+
+def test_no_backpack_is_lying_about_any_more():
+    from game.items.item_kinds import WORN_PACK
+
+    scene = PlayScene()
+    assert not any(f.kind is WORN_PACK for f in scene.fragments)
 
 
 def test_firing_weapon_spawns_projectile():
     scene = PlayScene()
-    scene.hotbar.select(2)  # weapon
+    scene.hotbar.select(4)  # weapon
     scene._mouse_held = True
     scene._mouse_screen = pygame.Vector2(0, 0)  # aim off to a side
     scene.update(config.FIXED_DT)
@@ -561,7 +570,7 @@ def test_clicking_an_instant_recipe_makes_it():
     index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is WOOD_PICK)
     at = scene._craft_row_rect(index).center
     scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
-    assert scene.hotbar.count(WOOD_PICK) == 2  # one started in the slot, one made
+    assert scene.hotbar.count(WOOD_PICK) == 1
 
 
 def test_clicking_an_unaffordable_row_does_nothing():

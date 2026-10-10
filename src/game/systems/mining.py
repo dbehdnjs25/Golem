@@ -67,7 +67,7 @@ def update_mining(
     # finished must not be left half-chewed, or an unreachable ore sits there
     # ruined for whoever comes back with the right tool.
     need = grades.need_for(target.kind)
-    if active_tool.family != need.family:
+    if not _suits(active_tool.family, need.family):
         return WRONG_TOOL, None
     if active_tool.grade.rank < need.grade.rank:
         return TOO_HARD, None
@@ -80,6 +80,15 @@ def update_mining(
     return MINING, None
 
 
+def _suits(family: str, wanted: str) -> bool:
+    """Whether a tool of ``family`` may be swung at something wanting ``wanted``.
+
+    Anything suits a HAND job -- that is what makes wood gatherable with nothing
+    in hand, which is where every run has to start.
+    """
+    return wanted == grades.HAND or family == wanted
+
+
 def can_take(tool: object, kind: ItemKind) -> bool:
     """Whether ``tool`` is allowed at a node of ``kind`` at all.
 
@@ -89,4 +98,4 @@ def can_take(tool: object, kind: ItemKind) -> bool:
     if not isinstance(tool, MiningTool):
         return False
     need = grades.need_for(kind)
-    return tool.family == need.family and tool.grade.rank >= need.grade.rank
+    return _suits(tool.family, need.family) and tool.grade.rank >= need.grade.rank

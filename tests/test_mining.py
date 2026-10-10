@@ -147,12 +147,6 @@ def test_an_axe_cannot_mine_ore():
     assert node.hp == config.FRAGMENT_HP
 
 
-def test_a_pickaxe_cannot_chop_wood():
-    status, node = _swing(tools.pickaxe(grades.STEEL_G), WOOD)
-    assert status == mining.WRONG_TOOL
-    assert node.hp == config.FRAGMENT_HP
-
-
 def test_an_axe_chops_wood():
     status, node = _swing(tools.axe(grades.WOOD_G), WOOD, dt=0.1)
     assert status == mining.MINING
@@ -172,3 +166,21 @@ def test_gold_is_shut_until_iron():
 def test_biome_materials_are_shut_until_gold():
     assert _swing(tools.pickaxe(grades.IRON_G), OBSIDIAN)[0] == mining.TOO_HARD
     assert _swing(tools.pickaxe(grades.GOLD_G), OBSIDIAN, dt=0.1)[0] == mining.MINING
+
+
+def test_a_pickaxe_can_pull_at_a_tree():
+    # Wood answers to bare hands, so every tool suits it. That is the bootstrap:
+    # an axe wants wood and wood wants an axe, so one of them has to give.
+    status, node = _swing(tools.pickaxe(grades.WOOD_G), WOOD, dt=0.1)
+    assert status == mining.MINING
+    assert node.hp < config.FRAGMENT_HP
+
+
+def test_an_axe_is_still_the_faster_way_to_wood():
+    _, by_hand = _swing(tools.pickaxe(grades.WOOD_G), WOOD, dt=0.1)
+    _, with_axe = _swing(tools.axe(grades.STEEL_G), WOOD, dt=0.1)
+    assert with_axe.hp < by_hand.hp
+
+
+def test_ore_still_refuses_the_wrong_family():
+    assert _swing(tools.axe(grades.STEEL_G), COPPER_ORE)[0] == mining.WRONG_TOOL

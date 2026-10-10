@@ -51,8 +51,13 @@ from game.items.item_kinds import (
 
 # Tool families. A pickaxe cannot fell a tree and an axe cannot break rock;
 # the wrong one in hand is a different problem from too weak a one.
+#
+# HAND is what an empty hand counts as. Only wood answers to it, and that is the
+# bootstrap: wood wants an axe and an axe wants wood, so one of them has to
+# give. Pulling at a branch by hand is the one that costs nothing to believe.
 PICKAXE = "pickaxe"
 AXE = "axe"
+HAND = "hand"
 
 
 @dataclass(frozen=True)
@@ -82,7 +87,7 @@ class Need:
 
 
 NEEDS: dict[ItemKind, Need] = {
-    WOOD: Need(AXE, WOOD_G),
+    WOOD: Need(HAND, WOOD_G),  # bare hands will do; an axe is simply faster
     STONE: Need(PICKAXE, WOOD_G),
     COPPER_ORE: Need(PICKAXE, WOOD_G),
     IRON_ORE: Need(PICKAXE, COPPER_G),
