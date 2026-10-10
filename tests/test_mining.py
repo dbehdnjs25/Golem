@@ -168,12 +168,24 @@ def test_biome_materials_are_shut_until_gold():
     assert _swing(tools.pickaxe(grades.GOLD_G), OBSIDIAN, dt=0.1)[0] == mining.MINING
 
 
-def test_a_pickaxe_can_pull_at_a_tree():
-    # Wood answers to bare hands, so every tool suits it. That is the bootstrap:
-    # an axe wants wood and wood wants an axe, so one of them has to give.
-    status, node = _swing(tools.pickaxe(grades.WOOD_G), WOOD, dt=0.1)
+def test_litter_comes_up_with_no_tool_at_all():
+    # The bootstrap: a player holding nothing can still pick these up.
+    from game.items.item_kinds import TWIG
+
+    status, node = _swing(tools.pickaxe(grades.CRUDE_G), TWIG, dt=0.1)
     assert status == mining.MINING
     assert node.hp < config.FRAGMENT_HP
+
+
+def test_a_crude_axe_fells_a_tree():
+    status, node = _swing(tools.axe(grades.CRUDE_G), WOOD, dt=0.1)
+    assert status == mining.MINING
+
+
+def test_a_pickaxe_cannot_fell_a_tree():
+    status, node = _swing(tools.pickaxe(grades.STEEL_G), WOOD)
+    assert status == mining.WRONG_TOOL
+    assert node.hp == config.FRAGMENT_HP
 
 
 def test_an_axe_is_still_the_faster_way_to_wood():
@@ -184,3 +196,22 @@ def test_an_axe_is_still_the_faster_way_to_wood():
 
 def test_ore_still_refuses_the_wrong_family():
     assert _swing(tools.axe(grades.STEEL_G), COPPER_ORE)[0] == mining.WRONG_TOOL
+
+
+def test_an_empty_hand_can_still_take_litter():
+    # The very first action of a run: nothing selected, nothing owned.
+    from game.items.item_kinds import TWIG
+
+    status, node = _swing(None, TWIG, dt=0.1)
+    assert status == mining.MINING
+    assert node.hp < config.FRAGMENT_HP
+
+
+def test_an_empty_hand_cannot_fell_a_tree():
+    status, node = _swing(None, WOOD)
+    assert status == mining.WRONG_TOOL
+    assert node.hp == config.FRAGMENT_HP
+
+
+def test_an_empty_hand_cannot_mine():
+    assert _swing(None, STONE)[0] == mining.WRONG_TOOL

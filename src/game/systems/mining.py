@@ -21,7 +21,7 @@ from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items import grades
 from game.items.item_kinds import ItemKind
-from game.items.tools import MiningTool
+from game.items.tools import BARE_HAND, MiningTool
 from game.systems import carrying
 
 IDLE = "idle"
@@ -58,7 +58,11 @@ def update_mining(
     backpack: Container | None,
     hotbar: Hotbar,
 ) -> tuple[str, ItemKind | None]:
-    if not held or not isinstance(active_tool, MiningTool):
+    if not held:
+        return IDLE, None
+    if active_tool is None:
+        active_tool = BARE_HAND  # nothing in hand is still a pair of hands
+    if not isinstance(active_tool, MiningTool):
         return IDLE, None
     target = pick_target(aim_world, player_pos, fragments, active_tool.range)
     if target is None:
@@ -93,8 +97,11 @@ def can_take(tool: object, kind: ItemKind) -> bool:
     """Whether ``tool`` is allowed at a node of ``kind`` at all.
 
     The same two checks ``update_mining`` makes, exposed so the scene can show
-    an unusable node without duplicating the rule and drifting from it.
+    an unusable node without duplicating the rule and drifting from it. ``None``
+    means an empty hand, which can still take litter.
     """
+    if tool is None:
+        tool = BARE_HAND
     if not isinstance(tool, MiningTool):
         return False
     need = grades.need_for(kind)

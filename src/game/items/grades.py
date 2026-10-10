@@ -27,20 +27,24 @@ from game.items.item_kinds import (
     COPPER_AXE,
     COPPER_ORE,
     COPPER_PICK,
+    CRUDE_AXE,
     FROST_CRYSTAL,
     GOLD_AXE,
     GOLD_ORE,
     GOLD_PICK,
+    GRASS,
     IRON_AXE,
     IRON_ORE,
     IRON_PICK,
     OBSIDIAN,
+    PEBBLE,
     STEEL_AXE,
     STEEL_PICK,
     STONE,
     STONE_AXE,
     STONE_PICK,
     THUNDER_STONE,
+    TWIG,
     WEATHERED_STONE,
     WOOD,
     WOOD_AXE,
@@ -68,15 +72,28 @@ class Grade:
     speed: float  # multiplier on how fast a node comes apart
 
 
-WOOD_G = Grade("wood", "나무", 0, 1.0)
-STONE_G = Grade("stone", "돌", 1, 1.4)
-COPPER_G = Grade("copper", "구리", 2, 1.9)
-IRON_G = Grade("iron", "철", 3, 2.5)
-GOLD_G = Grade("gold", "금", 4, 3.2)
-BRASS_G = Grade("brass", "황동", 5, 4.0)
-STEEL_G = Grade("steel", "강철", 6, 5.0)
+# Crude sits below wood: a branch lashed to a stone, made from litter by someone
+# holding nothing. It only ever comes as an axe, which is the point -- it exists
+# to fell the first tree, and everything else waits on the wood that gives.
+CRUDE_G = Grade("crude", "조잡한", 0, 0.6)
+WOOD_G = Grade("wood", "나무", 1, 1.0)
+STONE_G = Grade("stone", "돌", 2, 1.4)
+COPPER_G = Grade("copper", "구리", 3, 1.9)
+IRON_G = Grade("iron", "철", 4, 2.5)
+GOLD_G = Grade("gold", "금", 5, 3.2)
+BRASS_G = Grade("brass", "황동", 6, 4.0)
+STEEL_G = Grade("steel", "강철", 7, 5.0)
 
-GRADES: tuple[Grade, ...] = (WOOD_G, STONE_G, COPPER_G, IRON_G, GOLD_G, BRASS_G, STEEL_G)
+GRADES: tuple[Grade, ...] = (
+    CRUDE_G,
+    WOOD_G,
+    STONE_G,
+    COPPER_G,
+    IRON_G,
+    GOLD_G,
+    BRASS_G,
+    STEEL_G,
+)
 GRADE_BY_KEY: dict[str, Grade] = {grade.key: grade for grade in GRADES}
 
 
@@ -87,7 +104,12 @@ class Need:
 
 
 NEEDS: dict[ItemKind, Need] = {
-    WOOD: Need(HAND, WOOD_G),  # bare hands will do; an axe is simply faster
+    # Litter: the only things an empty hand can take, and the whole bootstrap.
+    TWIG: Need(HAND, CRUDE_G),
+    PEBBLE: Need(HAND, CRUDE_G),
+    GRASS: Need(HAND, CRUDE_G),
+    # A tree wants an axe, and the crude one counts.
+    WOOD: Need(AXE, CRUDE_G),
     STONE: Need(PICKAXE, WOOD_G),
     COPPER_ORE: Need(PICKAXE, WOOD_G),
     IRON_ORE: Need(PICKAXE, COPPER_G),
@@ -100,7 +122,7 @@ NEEDS: dict[ItemKind, Need] = {
     THUNDER_STONE: Need(PICKAXE, GOLD_G),
 }
 
-_ANYTHING = Need(PICKAXE, WOOD_G)
+_ANYTHING = Need(HAND, GRADES[0])
 
 
 def need_for(kind: ItemKind) -> Need:
@@ -120,7 +142,10 @@ PICK_OF: dict[Grade, ItemKind] = {
     STEEL_G: STEEL_PICK,
 }
 
+# Crude has an axe and no pickaxe. It is a branch and a stone: enough to hack at
+# a tree, nowhere near enough to break rock.
 AXE_OF: dict[Grade, ItemKind] = {
+    CRUDE_G: CRUDE_AXE,
     WOOD_G: WOOD_AXE,
     STONE_G: STONE_AXE,
     COPPER_G: COPPER_AXE,

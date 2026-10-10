@@ -33,6 +33,14 @@ class ItemKind:
 # starts day one, so they stack low enough to be felt.
 CORE_SHARD = ItemKind("core_shard", "코어 파편", 16, config.FRAGMENT_COLOR)
 
+# --- Litter ---------------------------------------------------------------------
+# Lying on the ground, free to anyone with hands. The whole bootstrap rests on
+# these three: they are the only things a player with nothing can pick up, and
+# together they make the crude axe that starts everything else.
+TWIG = ItemKind("twig", "나뭇가지", _STACK, (138, 104, 66))
+PEBBLE = ItemKind("pebble", "조약돌", _STACK, (160, 158, 150))
+GRASS = ItemKind("grass", "풀", _STACK, (118, 158, 86))
+
 # --- Gathered -----------------------------------------------------------------
 STONE = ItemKind("stone", "돌", _STACK, (140, 140, 150))
 WOOD = ItemKind("wood", "나무", _STACK, (150, 110, 70))
@@ -74,6 +82,7 @@ LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
 # One row per family per grade. Verbose on purpose: a tool is an item like any
 # other, so it lands in slots, rides in a pack, and is lost with it. Which grade
 # a row belongs to lives in items/grades.py -- the catalogue says what exists.
+CRUDE_AXE = ItemKind("crude_axe", "조잡한 도끼", 1, (124, 112, 84))
 WOOD_PICK = ItemKind("wood_pick", "나무 곡괭이", 1, (150, 110, 70))
 STONE_PICK = ItemKind("stone_pick", "돌 곡괭이", 1, (140, 140, 150))
 COPPER_PICK = ItemKind("copper_pick", "구리 곡괭이", 1, (205, 130, 85))
@@ -110,6 +119,9 @@ POTION = ItemKind("potion", "물약", 8, (210, 80, 130))
 # the cursor as counts change, or drag targets move while the player is aiming.
 CATALOGUE: tuple[ItemKind, ...] = (
     CORE_SHARD,
+    TWIG,
+    PEBBLE,
+    GRASS,
     STONE,
     WOOD,
     CHARCOAL,
@@ -127,6 +139,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     WEATHERED_STONE,
     BOG_MOSS,
     THUNDER_STONE,
+    CRUDE_AXE,
     WOOD_PICK,
     STONE_PICK,
     COPPER_PICK,

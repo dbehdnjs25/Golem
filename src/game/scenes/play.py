@@ -23,9 +23,9 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD, WOOD, ItemKind
+from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, TWIG, WOOD, ItemKind
 from game.items.recipes import STATION_OF, Recipe
-from game.items.tools import MiningTool, WeaponTool
+from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, survival
 from game.systems.camera import LOCKED, Camera
 from game.systems.daynight import DayNight
@@ -136,13 +136,14 @@ class PlayScene(Scene):
             spot = near_player(self.player.pos, self.rng, self.world)
             if spot is not None:
                 self.fragments.append(Fragment(pos=spot, kind=CORE_SHARD))
-        # A stand of trees by the pedestal. Bare hands take wood off them, wood
-        # makes the first axe and the first bench, and the bench makes the pack
-        # -- so the opening is a short errand with a visible first step.
-        for _ in range(6):
-            spot = near_player(self.player.pos, self.rng, self.world)
-            if spot is not None:
-                self.fragments.append(Fragment(pos=spot, kind=WOOD))
+        # Litter first, then trees. A player holding nothing can only take the
+        # litter, and the crude axe it makes is what opens the trees -- so the
+        # first five minutes have an order to them rather than a wall.
+        for kind, count in ((TWIG, 6), (PEBBLE, 4), (GRASS, 6), (WOOD, 6)):
+            for _ in range(count):
+                spot = near_player(self.player.pos, self.rng, self.world)
+                if spot is not None:
+                    self.fragments.append(Fragment(pos=spot, kind=kind))
 
     def _wear_if_pack(self, kind: ItemKind | None) -> None:
         """A pack is worn the moment it is dug up -- it is what holds things.
@@ -629,7 +630,8 @@ class PlayScene(Scene):
         The ring is red when the tool in hand cannot take it. Without that,
         being under-equipped looks exactly like the game ignoring the click.
         """
-        tool = self.hotbar.active_tool
+        # An empty hand still reaches for litter, so it gets a reach too.
+        tool = self.hotbar.active_tool or BARE_HAND
         aimed = (
             mining.pick_target(
                 self.camera.screen_to_world(self._mouse_screen),

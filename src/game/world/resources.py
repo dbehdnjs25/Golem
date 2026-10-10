@@ -13,7 +13,18 @@ from __future__ import annotations
 import random
 
 from game import config
-from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE, STONE, WOOD, ZINC_ORE, ItemKind
+from game.items.item_kinds import (
+    COPPER_ORE,
+    GOLD_ORE,
+    GRASS,
+    IRON_ORE,
+    PEBBLE,
+    STONE,
+    TWIG,
+    WOOD,
+    ZINC_ORE,
+    ItemKind,
+)
 
 _GRASSLAND_EDGE = config.GRASSLAND_RADIUS / config.MAP_RADIUS
 _INNER_GRASSLAND = _GRASSLAND_EDGE / 2
@@ -43,13 +54,23 @@ def ore_at(fraction: float, rng: random.Random) -> ItemKind:
     raise AssertionError(f"no ore band covers {fraction}")  # pragma: no cover
 
 
+LITTER: tuple[ItemKind, ...] = (TWIG, PEBBLE, GRASS)
+
+
 def node_at(fraction: float, rng: random.Random) -> ItemKind:
     """What a node at ``fraction`` of the way to the map edge turns out to be.
 
-    Trees are a flat share at every distance rather than a row on the ore
-    table. Folding them in would make deep ground grow fewer trees, which is
-    backwards: distance decides ore QUALITY, and wood is wood wherever it is.
+    Trees and litter are flat shares at every distance rather than rows on the
+    ore table. Folding them in would make deep ground grow fewer trees, which
+    is backwards: distance decides ore QUALITY, and a branch is a branch
+    wherever it fell.
+
+    Litter keeps turning up on purpose. A run that has somehow lost every tool
+    can always start again from what is lying on the ground.
     """
-    if rng.random() < config.TREE_SHARE:
+    roll = rng.random()
+    if roll < config.LITTER_SHARE:
+        return rng.choice(LITTER)
+    if roll < config.LITTER_SHARE + config.TREE_SHARE:
         return WOOD
     return ore_at(fraction, rng)

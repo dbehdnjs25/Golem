@@ -1,5 +1,5 @@
 from game.items import grades
-from game.items.grades import GRADES, PICKAXE
+from game.items.grades import AXE, GRADES, PICKAXE
 from game.items.item_kinds import (
     COPPER_ORE,
     GOLD_ORE,
@@ -8,6 +8,7 @@ from game.items.item_kinds import (
     OBSIDIAN,
     POTION,
     STONE,
+    TWIG,
     WOOD,
     ZINC_ORE,
 )
@@ -15,6 +16,7 @@ from game.items.item_kinds import (
 
 def test_the_ladder_runs_from_wood_to_steel():
     assert [g.key for g in GRADES] == [
+        "crude",
         "wood",
         "stone",
         "copper",
@@ -53,23 +55,29 @@ def test_biome_materials_are_what_gold_is_for():
     assert grades.need_for(OBSIDIAN).grade is grades.GOLD_G
 
 
-def test_wood_asks_for_nothing_at_all():
-    # The bootstrap. An axe wants wood and wood wants an axe, so one of them has
-    # to give, and pulling at a branch by hand is the one that costs nothing to
-    # believe. Every other node still demands a tool.
+def test_only_litter_answers_to_an_empty_hand():
+    # The bootstrap. A twig, a pebble and some grass are all a player with
+    # nothing can take, and together they make the axe that fells the first
+    # tree. Everything else demands a tool.
+    from game.items.item_kinds import GRASS, PEBBLE
+
+    hand_jobs = {k for k, need in grades.NEEDS.items() if need.family == grades.HAND}
+    assert hand_jobs == {TWIG, PEBBLE, GRASS}
+
+
+def test_a_tree_wants_an_axe_and_the_crude_one_counts():
     need = grades.need_for(WOOD)
-    assert need.family == grades.HAND
-    assert need.grade is GRADES[0]
-
-
-def test_nothing_but_wood_answers_to_an_empty_hand():
-    hand_jobs = [k for k, need in grades.NEEDS.items() if need.family == grades.HAND]
-    assert hand_jobs == [WOOD]
+    assert need.family == AXE
+    assert need.grade is grades.CRUDE_G
 
 
 def test_every_ore_wants_a_pickaxe():
+    # Everything that is dug rather than gathered or felled.
+    from game.items.item_kinds import GRASS, PEBBLE
+
+    gathered = {TWIG, PEBBLE, GRASS, WOOD}
     for kind, need in grades.NEEDS.items():
-        if kind is not WOOD:
+        if kind not in gathered:
             assert need.family == PICKAXE
 
 
@@ -87,10 +95,12 @@ def test_a_grade_can_be_compared_to_another():
     assert grades.WOOD_G.rank < grades.STEEL_G.rank
 
 
-def test_every_grade_has_a_pickaxe_and_an_axe_item():
+def test_every_grade_but_the_crude_one_has_both_families():
+    # Crude is a branch and a stone. Enough to hack at a tree, nowhere near
+    # enough to break rock -- so there is no crude pickaxe to have.
     for grade in GRADES:
-        assert grade in grades.PICK_OF
         assert grade in grades.AXE_OF
+        assert (grade in grades.PICK_OF) is (grade is not grades.CRUDE_G)
 
 
 def test_tool_items_map_back_to_their_family_and_grade():
@@ -101,7 +111,7 @@ def test_tool_items_map_back_to_their_family_and_grade():
 
 
 def test_a_tool_item_is_never_mistaken_for_two_things():
-    assert len(grades.TOOL_ITEMS) == 2 * len(GRADES)
+    assert len(grades.TOOL_ITEMS) == len(GRADES) + len(GRADES) - 1  # no crude pick
 
 
 def test_tool_items_are_real_catalogue_rows_that_do_not_stack():

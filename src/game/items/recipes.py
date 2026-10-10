@@ -28,16 +28,19 @@ from game.items.item_kinds import (
     COPPER_INGOT,
     COPPER_ORE,
     COPPER_PICK,
+    CRUDE_AXE,
     FINE_BENCH,
     GOLD_AXE,
     GOLD_INGOT,
     GOLD_ORE,
     GOLD_PICK,
+    GRASS,
     HEARTH,
     IRON_AXE,
     IRON_INGOT,
     IRON_ORE,
     IRON_PICK,
+    PEBBLE,
     SMELTER,
     STEEL_AXE,
     STEEL_INGOT,
@@ -45,6 +48,7 @@ from game.items.item_kinds import (
     STONE,
     STONE_AXE,
     STONE_PICK,
+    TWIG,
     WOOD,
     WOOD_AXE,
     WOOD_PICK,
@@ -78,6 +82,9 @@ def _tool(output: ItemKind, metal: ItemKind, station: str = BENCH_S) -> Recipe:
 
 RECIPES: tuple[Recipe, ...] = (
     # --- empty-handed: enough to stop being empty-handed --------------------
+    # A branch, a stone and a handful of grass to lash them together. The only
+    # recipe that needs nothing already made, so the run begins here.
+    Recipe(CRUDE_AXE, 1, ((TWIG, 2), (PEBBLE, 1), (GRASS, 2)), NOWHERE),
     Recipe(WOOD_PICK, 1, ((WOOD, 3),), NOWHERE),
     Recipe(WOOD_AXE, 1, ((WOOD, 3),), NOWHERE),
     Recipe(BENCH, 1, ((WOOD, 10), (STONE, 5)), NOWHERE),

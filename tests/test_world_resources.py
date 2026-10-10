@@ -86,12 +86,22 @@ def test_the_tree_share_does_not_fall_away_from_the_core():
     assert share(0.95) >= share(0.1) - 0.02
 
 
-def test_node_at_still_yields_ore_the_ore_table_knows():
-    from game.world.resources import node_at
+def test_node_at_yields_ore_trees_or_litter_and_nothing_else():
+    from game.items.item_kinds import WOOD
+    from game.world.resources import LITTER, node_at
 
     rng = random.Random(0)
-    allowed = {STONE, COPPER_ORE, IRON_ORE, GOLD_ORE, ZINC_ORE}
-    from game.items.item_kinds import WOOD
+    allowed = {STONE, COPPER_ORE, IRON_ORE, GOLD_ORE, ZINC_ORE, WOOD, *LITTER}
+    for step in range(200):
+        assert node_at((step % 21) / 20, rng) in allowed
 
-    for step in range(21):
-        assert node_at(step / 20, rng) in allowed | {WOOD}
+
+def test_litter_keeps_turning_up_at_every_distance():
+    # A run that has somehow lost every tool can always start again from what
+    # is lying on the ground.
+    from game.world.resources import LITTER, node_at
+
+    for fraction in (0.1, 0.5, 0.95):
+        rng = random.Random(7)
+        drawn = [node_at(fraction, rng) for _ in range(2000)]
+        assert sum(1 for k in drawn if k in LITTER) > 0

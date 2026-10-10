@@ -16,7 +16,17 @@ from game.items.item_kinds import (
 )
 
 # What the world hands over without anything being crafted first.
-MINED = {STONE, WOOD, COPPER_ORE, IRON_ORE, GOLD_ORE, ZINC_ORE}
+MINED = {
+    STONE,
+    WOOD,
+    COPPER_ORE,
+    IRON_ORE,
+    GOLD_ORE,
+    ZINC_ORE,
+    ITEM_KINDS["twig"],
+    ITEM_KINDS["pebble"],
+    ITEM_KINDS["grass"],
+}
 
 
 def _by_output(kind):
@@ -42,11 +52,25 @@ def test_nothing_is_made_out_of_itself():
         assert all(kind is not recipe.output for kind, _ in recipe.inputs)
 
 
-def test_only_wooden_tools_and_the_bench_can_be_made_empty_handed():
-    # The opening has to work with no station standing, and no more than that:
-    # everything else is something the bench earns.
+def test_the_empty_handed_list_is_the_bootstrap_and_no_more():
+    # A crude axe from litter, then the wooden tools and bench the wood buys.
+    # Everything past that is something a station earns.
     free = {r.output for r in recipes.recipes_at(recipes.NOWHERE)}
-    assert free == {WOOD_PICK, WOOD_AXE, ITEM_KINDS["bench"]}
+    assert free == {
+        ITEM_KINDS["crude_axe"],
+        WOOD_PICK,
+        WOOD_AXE,
+        ITEM_KINDS["bench"],
+    }
+
+
+def test_the_crude_axe_is_made_of_nothing_that_needs_a_tool():
+    from game.items import grades
+
+    crude = _by_output(ITEM_KINDS["crude_axe"])
+    assert crude.station == recipes.NOWHERE
+    for kind, _ in crude.inputs:
+        assert grades.need_for(kind).family == grades.HAND
 
 
 def test_the_bench_chain_climbs_to_the_fine_bench():

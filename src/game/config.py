@@ -90,6 +90,9 @@ SPAWN_RADIUS: Final[float] = 2_000.0  # spawns follow the player, not the whole 
 # Trees are a flat share of what spawns, at every distance. Ore quality is what
 # distance decides; wood is wood wherever it grows.
 TREE_SHARE: Final[float] = 0.35
+# Litter -- twigs, pebbles, grass -- keeps turning up, so a run that loses its
+# tools can always start over from the ground.
+LITTER_SHARE: Final[float] = 0.15
 
 # --- Core -------------------------------------------------------------------
 CORE_RADIUS: Final[float] = 40.0

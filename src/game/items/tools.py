@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from game import config
-from game.items.grades import AXE, PICKAXE, TOOL_ITEMS, WOOD_G, Grade
+from game.items.grades import AXE, GRADES, HAND, PICKAXE, TOOL_ITEMS, WOOD_G, Grade
 from game.items.item_kinds import ItemKind
 
 _FAMILY_NAMES = {PICKAXE: "곡괭이", AXE: "도끼"}
@@ -35,6 +35,11 @@ class MiningTool:
     @property
     def name(self) -> str:
         return f"{self.grade.name} {_FAMILY_NAMES[self.family]}"
+
+
+# An empty hand is a tool too -- the worst one. Only litter answers to it, and
+# that is what lets a run with nothing in it begin.
+BARE_HAND = MiningTool(family=HAND, grade=GRADES[0])
 
 
 def pickaxe(grade: Grade) -> MiningTool:
