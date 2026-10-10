@@ -95,3 +95,32 @@ def test_has_room_for_sees_an_open_stack_even_with_no_empty_slot():
         hb.slots[i] = MiningTool()
     assert hb.has_room_for(STONE) is True
     assert hb.has_room_for(CORE_SHARD) is False
+
+
+def test_a_tool_item_in_a_slot_is_the_active_tool():
+    # The hotbar carries items; the tool is what one of them means. Otherwise a
+    # crafted pickaxe would sit there as inert cargo.
+    from game.items import grades
+    from game.items.tools import MiningTool
+
+    hb = Hotbar.create()
+    hb.slots[0] = Stack(grades.PICK_OF[grades.IRON_G], 1)
+    tool = hb.active_tool
+    assert isinstance(tool, MiningTool)
+    assert tool.grade is grades.IRON_G
+
+
+def test_a_material_stack_is_not_a_tool():
+    hb = Hotbar.create()
+    hb.slots[0] = Stack(STONE, 5)
+    assert hb.active_tool is None
+    assert hb.active_stack == Stack(STONE, 5)
+
+
+def test_a_tool_item_still_reads_as_a_stack():
+    # It is an item: it can be moved in the grid and lost with the pack.
+    from game.items import grades
+
+    hb = Hotbar.create()
+    hb.slots[0] = Stack(grades.AXE_OF[grades.WOOD_G], 1)
+    assert hb.active_stack is not None

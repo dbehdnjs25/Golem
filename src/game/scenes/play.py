@@ -22,7 +22,7 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items import grades, tools
+from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining, survival
@@ -82,8 +82,8 @@ class PlayScene(Scene):
         # Wooden tools and a weapon to open with. The axe is handed over rather
         # than earned because wood wants an axe and an axe wants wood -- with
         # neither there is no first move. Ground crafting replaces this.
-        self.hotbar.slots[0] = tools.pickaxe(grades.WOOD_G)
-        self.hotbar.slots[1] = tools.axe(grades.WOOD_G)
+        self.hotbar.slots[0] = Stack(grades.PICK_OF[grades.WOOD_G], 1)
+        self.hotbar.slots[1] = Stack(grades.AXE_OF[grades.WOOD_G], 1)
         self.hotbar.slots[2] = WeaponTool()
         self.fragments: list[Fragment] = []
         self.spawner = Spawner()

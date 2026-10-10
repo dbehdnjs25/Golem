@@ -16,7 +16,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from game import config
-from game.items.grades import AXE, PICKAXE, WOOD_G, Grade
+from game.items.grades import AXE, PICKAXE, TOOL_ITEMS, WOOD_G, Grade
+from game.items.item_kinds import ItemKind
 
 _FAMILY_NAMES = {PICKAXE: "곡괭이", AXE: "도끼"}
 
@@ -52,3 +53,17 @@ class WeaponTool:
     projectile_ttl: float = config.PROJECTILE_TTL
     projectile_radius: float = config.PROJECTILE_RADIUS
     name: str = "Pulse Gun"
+
+
+def tool_for(kind: ItemKind) -> MiningTool | None:
+    """The tool a given item IS, or None if it is just cargo.
+
+    This is the bridge between the catalogue and the hand: the hotbar carries
+    items, and a tool is what one of them means. Without it a crafted pickaxe
+    would sit in a slot as inert cargo.
+    """
+    entry = TOOL_ITEMS.get(kind)
+    if entry is None:
+        return None
+    family, grade = entry
+    return MiningTool(family=family, grade=grade)

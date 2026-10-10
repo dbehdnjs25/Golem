@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from game import config
 from game.inventory.stack import Stack
 from game.items.item_kinds import ItemKind
+from game.items.tools import tool_for
 
 
 @dataclass
@@ -31,8 +32,16 @@ class Hotbar:
 
     @property
     def active_tool(self) -> object | None:
+        """What the selected slot works as, if anything.
+
+        A slot holding a tool ITEM reports the tool it is -- the hotbar carries
+        items and the tool is what one of them means. A slot holding a tool
+        object (the weapon, for now) reports itself.
+        """
         held = self.slots[self.selected]
-        return None if isinstance(held, Stack) else held
+        if isinstance(held, Stack):
+            return tool_for(held.kind)
+        return held
 
     @property
     def active_stack(self) -> Stack | None:

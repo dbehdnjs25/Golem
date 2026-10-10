@@ -53,3 +53,17 @@ def test_every_grade_can_make_both_families():
     for grade in grades.GRADES:
         assert tools.pickaxe(grade).grade is grade
         assert tools.axe(grade).grade is grade
+
+
+def test_a_tool_item_says_which_tool_it_is():
+    for grade, item in grades.PICK_OF.items():
+        made = tools.tool_for(item)
+        assert isinstance(made, MiningTool)
+        assert made.family == grades.PICKAXE
+        assert made.grade is grade
+
+
+def test_an_ordinary_item_is_not_a_tool():
+    from game.items.item_kinds import STONE
+
+    assert tools.tool_for(STONE) is None

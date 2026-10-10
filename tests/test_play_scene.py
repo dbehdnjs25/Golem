@@ -5,6 +5,7 @@ from game import config
 from game.entities.enemy import Golem
 from game.entities.projectile import Projectile
 from game.inventory import grid
+from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK
@@ -96,9 +97,12 @@ def test_the_opening_kit_is_a_pickaxe_an_axe_and_a_weapon():
     # Wood wants an axe and an axe wants wood, so the axe is handed over until
     # ground crafting can earn it.
     scene = PlayScene()
-    assert scene.hotbar.slots[0].family == grades.PICKAXE
-    assert scene.hotbar.slots[1].family == grades.AXE
+    assert scene.hotbar.slots[0] == Stack(grades.PICK_OF[grades.WOOD_G], 1)
+    assert scene.hotbar.slots[1] == Stack(grades.AXE_OF[grades.WOOD_G], 1)
     assert isinstance(scene.hotbar.slots[2], WeaponTool)
+    # They are items, so they move in the grid and are lost with the pack.
+    scene.hotbar.select(0)
+    assert scene.hotbar.active_tool.family == grades.PICKAXE
 
 
 def test_firing_weapon_spawns_projectile():
