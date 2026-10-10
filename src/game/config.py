@@ -140,6 +140,8 @@ PEDESTAL_COLOR: Final[tuple[int, int, int]] = (150, 150, 165)
 NIGHT_DARKNESS: Final[int] = 150  # alpha of the night overlay, 0-255
 LOOT_COLOR: Final[tuple[int, int, int]] = (245, 200, 90)
 BLOCKED_COLOR: Final[tuple[int, int, int]] = (230, 90, 90)  # ringed when out of reach
+# How far in from the edge an off-screen pointer sits.
+COMPASS_MARGIN: Final[float] = 34.0
 LOOT_RADIUS: Final[float] = 16.0
 LOOT_PICKUP_RADIUS: Final[float] = 60.0  # walk onto it to take it back
 # A pile waits five minutes. Short of a full day, so the deadline bites inside

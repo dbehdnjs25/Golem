@@ -1,4 +1,5 @@
 import pygame
+import pytest
 
 from game import config
 from game.systems.camera import FREE, LOCKED, Camera
@@ -55,3 +56,46 @@ def test_offset_clamped_to_world():
     cam.update(1.0, pygame.Vector2(1200, 800), (5, 5), False)  # tries to pan up-left past 0
     assert cam.offset.x == 0
     assert cam.offset.y == 0
+
+
+def test_a_target_on_screen_needs_no_marker():
+    from game.systems.camera import edge_marker
+
+    assert edge_marker(pygame.Vector2(480, 270), (960, 540), 30) is None
+
+
+def test_a_target_off_screen_is_pinned_to_the_edge():
+    from game.systems.camera import edge_marker
+
+    marker = edge_marker(pygame.Vector2(5000, 270), (960, 540), 30)
+    assert marker is not None
+    assert marker.x == pytest.approx(960 - 30)  # pinned right, inside the margin
+    assert marker.y == pytest.approx(270)  # straight out, so no vertical shift
+
+
+def test_the_marker_keeps_the_direction_it_points():
+    # Up and to the right must come back up and to the right, or the arrow
+    # sends the player the wrong way.
+    from game.systems.camera import edge_marker
+
+    marker = edge_marker(pygame.Vector2(5000, -5000), (960, 540), 30)
+    assert marker is not None
+    assert marker.x > 480 and marker.y < 270
+
+
+def test_the_marker_never_leaves_the_view():
+    from game.systems.camera import edge_marker
+
+    for point in ((9000, 20), (-9000, 400), (100, -9000), (700, 9000)):
+        marker = edge_marker(pygame.Vector2(point), (960, 540), 30)
+        assert marker is not None
+        # A hair of float slack: the edge is computed, not clamped.
+        assert 30 - 1e-6 <= marker.x <= 930 + 1e-6
+        assert 30 - 1e-6 <= marker.y <= 510 + 1e-6
+
+
+def test_a_target_exactly_on_the_centre_needs_no_marker():
+    # No direction to point in, and none is needed.
+    from game.systems.camera import edge_marker
+
+    assert edge_marker(pygame.Vector2(480, 270), (960, 540), 30) is None

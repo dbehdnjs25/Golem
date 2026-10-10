@@ -72,3 +72,28 @@ class Camera:
         if direction.length_squared() > 0:
             self.offset += direction * config.CAMERA_PAN_SPEED * dt
             self._clamp()
+
+
+def edge_marker(
+    target: pygame.Vector2, view_size: tuple[int, int], margin: float
+) -> pygame.Vector2 | None:
+    """Where to pin a pointer to something off screen, or None if it is on it.
+
+    The world is far larger than a window -- the grassland alone is seventy-five
+    screens across -- so anything out of sight may as well not exist unless the
+    edge of the view says which way it lies.
+
+    The pin sits where the ray from the view's centre to the target crosses a
+    rectangle inset by ``margin``, which keeps the direction honest: up and to
+    the right comes back up and to the right.
+    """
+    view_w, view_h = view_size
+    half_w, half_h = view_w / 2 - margin, view_h / 2 - margin
+    center = pygame.Vector2(view_w / 2, view_h / 2)
+    offset = target - center
+    if abs(offset.x) <= half_w and abs(offset.y) <= half_h:
+        return None
+    scales = [half / abs(axis) for axis, half in ((offset.x, half_w), (offset.y, half_h)) if axis]
+    if not scales:
+        return None
+    return center + offset * min(scales)

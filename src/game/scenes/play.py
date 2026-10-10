@@ -28,7 +28,7 @@ from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, TWIG, WOOD, ItemKin
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, survival
-from game.systems.camera import LOCKED, Camera
+from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.spawn_common import near_player
@@ -382,6 +382,7 @@ class PlayScene(Scene):
             self.player.radius,
         )
         self._draw_night(surface)
+        self._draw_compass(surface)
         self._draw_hud(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
@@ -724,6 +725,41 @@ class PlayScene(Scene):
         """Placeholder markers so the five sites are visible before temples exist."""
         for site in self.temple_sites:
             pygame.draw.circle(surface, config.WHITE, self.camera.world_to_screen(site), 9, 3)
+
+    def _draw_compass(self, surface: pygame.Surface) -> None:
+        """Point at the core when it is off screen, and say how far.
+
+        The grassland alone is seventy-five screens across, so home is out of
+        sight almost all the time. Without this it is not merely far, it is
+        lost -- there is nothing on an empty field to steer by.
+
+        Distance is given in walking time, because that is the unit every other
+        decision is made in: a day is twelve minutes and the biomes are three.
+        """
+        self._point_at(surface, self.core.pos, config.CORE_COLOR, "코어")
+        for pile in self.loot:
+            self._point_at(surface, pile.pos, config.LOOT_COLOR, "짐")
+
+    def _point_at(
+        self,
+        surface: pygame.Surface,
+        target: pygame.Vector2,
+        colour: tuple[int, int, int],
+        label: str,
+    ) -> None:
+        at = edge_marker(
+            self.camera.world_to_screen(target), config.SCREEN_SIZE, config.COMPASS_MARGIN
+        )
+        if at is None:
+            return  # it is on screen; the thing itself is the marker
+        pygame.draw.circle(surface, colour, at, 7)
+        pygame.draw.circle(surface, (20, 20, 28), at, 7, 2)
+        seconds = self.player.pos.distance_to(target) / config.PLAYER_SPEED
+        far = f"{seconds / 60:.1f}분" if seconds >= 60 else f"{seconds:.0f}초"
+        text = _font(12).render(f"{label} {far}", True, colour)
+        box = text.get_rect(center=(int(at.x), int(at.y) + 16))
+        box.clamp_ip(surface.get_rect())
+        surface.blit(text, box)
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
         # inventory fill gauge

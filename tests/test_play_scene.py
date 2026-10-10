@@ -678,3 +678,34 @@ def test_lighting_it_makes_it_show():
     scene.draw(surface)
     middle = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
     assert surface.get_at(middle)[:3] == config.CORE_COLOR
+
+
+def test_the_core_gets_a_pointer_when_it_is_off_screen():
+    from game.systems.camera import FREE
+
+    scene = PlayScene()
+    scene.camera.mode = FREE
+    scene.camera.offset = pygame.Vector2(scene.core.pos) + pygame.Vector2(8_000, 8_000)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    # It pins to whichever edge the ray crosses first -- here the top, since
+    # the view is wider than it is tall. Scan the whole band rather than
+    # guessing a pixel.
+    top = int(config.COMPASS_MARGIN)
+    band = [
+        surface.get_at((x, y))[:3]
+        for x in range(0, config.SCREEN_WIDTH, 2)
+        for y in range(top - 8, top + 9)
+    ]
+    assert config.CORE_COLOR in band
+
+
+def test_no_pointer_when_the_core_is_in_view():
+    # The thing itself is the marker; a second one would just be clutter.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.camera.center_on(scene.core.pos)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    edge = [surface.get_at((int(config.COMPASS_MARGIN), y))[:3] for y in range(40, 500)]
+    assert config.CORE_COLOR not in edge
