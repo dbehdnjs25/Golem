@@ -17,6 +17,7 @@ from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
+from game.entities.station import Station, place, stations_at
 from game.inventory import grid, packs
 from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
@@ -24,6 +25,7 @@ from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import grades
 from game.items.item_kinds import CORE_SHARD, WORN_PACK, ItemKind
+from game.items.recipes import STATION_OF
 from game.items.tools import MiningTool, WeaponTool
 from game.systems import combat, mining, survival
 from game.systems.camera import LOCKED, Camera
@@ -75,6 +77,7 @@ class PlayScene(Scene):
         self.backpack: Container | None = None
         self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
         self.loot: list[LootPile] = []  # several may be outstanding at once
+        self.stations: list[Station] = []
         self.grid = Grid()
         self.grid_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
@@ -196,6 +199,8 @@ class PlayScene(Scene):
             if self.grid_open:
                 self._click_grid(pygame.Vector2(event.pos))
                 return
+            if self._try_place(pygame.Vector2(event.pos)):
+                return
             self._mouse_held = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._mouse_held = False
@@ -307,6 +312,7 @@ class PlayScene(Scene):
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_loot(surface)
+        self._draw_stations(surface)
         self._draw_nodes(surface)
         for enemy in self.enemies:
             pygame.draw.circle(
@@ -445,6 +451,30 @@ class PlayScene(Scene):
                 )
             pygame.draw.polygon(surface, biome.color, points)
         pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
+
+    def _try_place(self, where: pygame.Vector2) -> bool:
+        """Put down the selected station item, if that is what is held.
+
+        Returns True when the click was spent on building, so the same press
+        does not also start swinging a tool at whatever is underneath.
+        """
+        held = self.hotbar.active_stack
+        if held is None or held.kind not in STATION_OF:
+            return False
+        at = self.camera.screen_to_world(where)
+        if not place(held.kind, at, self.stations, self.core):
+            return True  # the click was a build attempt; it simply failed
+        self.hotbar.remove(held.kind, 1)
+        return True
+
+    def _draw_stations(self, surface: pygame.Surface) -> None:
+        """Built stations, and a ring on the one whose recipes are open."""
+        open_here = stations_at(self.player.pos, self.stations)
+        for station in self.stations:
+            at = self.camera.world_to_screen(station.pos)
+            pygame.draw.circle(surface, station.kind.color, at, config.STATION_RADIUS)
+            if STATION_OF.get(station.kind, set()) & open_here:
+                pygame.draw.circle(surface, config.WHITE, at, config.STATION_RADIUS + 3, 2)
 
     def _draw_nodes(self, surface: pygame.Surface) -> None:
         """Nodes in the colour of what they hold, and a ring on the one aimed at.

@@ -146,6 +146,15 @@ GRID_CELL: Final[int] = 44
 GRID_GAP: Final[int] = 4
 GRID_PANEL: Final[tuple[int, int, int]] = (26, 26, 36)
 
+# --- Stations -----------------------------------------------------------------
+STATION_RADIUS: Final[float] = 28.0  # footprint; two cannot overlap
+STATION_REACH: Final[float] = 90.0  # stand within this and its recipes open
+# The blast furnace takes up room, so it waits on the ward being wide enough --
+# which is what puts steel behind levelling the core rather than behind grinding.
+# Sits inside the ladder (4,000 -> 12,000) rather than at either end: reachable
+# around level 20, so one boss at least has to fall first.
+BLAST_FURNACE_MIN_WARD: Final[float] = 7_000.0
+
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0
 

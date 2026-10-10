@@ -12,8 +12,8 @@ BENCH_R = next(r for r in recipes.RECIPES if r.output is BENCH)
 
 def test_what_is_offered_depends_on_where_you_stand():
     hb = Hotbar.create()
-    free = {r.output for r, _ in crafting.available(recipes.NOWHERE, None, hb)}
-    at_bench = {r.output for r, _ in crafting.available(recipes.BENCH_S, None, hb)}
+    free = {r.output for r, _ in crafting.available({recipes.NOWHERE}, None, hb)}
+    at_bench = {r.output for r, _ in crafting.available({recipes.BENCH_S}, None, hb)}
     assert WOOD_PICK in free
     assert COPPER_INGOT not in free
     assert WOOD_PICK not in at_bench  # the bench shows the bench's own list
@@ -22,10 +22,10 @@ def test_what_is_offered_depends_on_where_you_stand():
 
 def test_a_row_is_marked_affordable_only_when_the_materials_are_there():
     hb, pack = Hotbar.create(), Container.empty(4)
-    offered = dict(crafting.available(recipes.NOWHERE, pack, hb))
+    offered = dict(crafting.available({recipes.NOWHERE}, pack, hb))
     assert offered[PICK] is False
     pack.add(WOOD, 3)
-    offered = dict(crafting.available(recipes.NOWHERE, pack, hb))
+    offered = dict(crafting.available({recipes.NOWHERE}, pack, hb))
     assert offered[PICK] is True
 
 
@@ -34,7 +34,7 @@ def test_materials_are_counted_across_the_pack_and_the_hotbar():
     hb, pack = Hotbar.create(), Container.empty(4)
     pack.add(WOOD, 1)
     hb.add(WOOD, 2)
-    assert dict(crafting.available(recipes.NOWHERE, pack, hb))[PICK] is True
+    assert dict(crafting.available({recipes.NOWHERE}, pack, hb))[PICK] is True
 
 
 def test_crafting_takes_the_inputs_and_hands_back_the_output():
@@ -92,7 +92,7 @@ def test_the_output_can_land_in_the_space_the_inputs_free_up():
 def test_a_station_recipe_cannot_be_crafted_from_nowhere():
     hb = Hotbar.create()
     assert all(
-        r.station == recipes.NOWHERE for r, _ in crafting.available(recipes.NOWHERE, None, hb)
+        r.station == recipes.NOWHERE for r, _ in crafting.available({recipes.NOWHERE}, None, hb)
     )
 
 

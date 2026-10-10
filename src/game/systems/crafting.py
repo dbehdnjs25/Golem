@@ -18,7 +18,7 @@ from __future__ import annotations
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items.item_kinds import ItemKind
-from game.items.recipes import Recipe, recipes_at
+from game.items.recipes import RECIPES, Recipe
 from game.systems import carrying
 
 
@@ -38,10 +38,15 @@ def affordable(recipe: Recipe, backpack: Container | None, hotbar: Hotbar) -> bo
 
 
 def available(
-    station: str, backpack: Container | None, hotbar: Hotbar
+    stations: set[str], backpack: Container | None, hotbar: Hotbar
 ) -> list[tuple[Recipe, bool]]:
-    """Every row workable at ``station``, each flagged with whether it is affordable."""
-    return [(r, affordable(r, backpack, hotbar)) for r in recipes_at(station)]
+    """Every row workable from where the player stands, flagged by affordability.
+
+    A set of stations rather than one, because several can be in reach at once
+    and they are not a single ladder -- a smelter and a hearth do different
+    jobs, so both lists show.
+    """
+    return [(r, affordable(r, backpack, hotbar)) for r in RECIPES if r.station in stations]
 
 
 def craft(recipe: Recipe, backpack: Container | None, hotbar: Hotbar) -> ItemKind | None:

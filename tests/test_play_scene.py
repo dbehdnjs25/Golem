@@ -432,3 +432,42 @@ def test_only_one_pile_comes_of_one_death():
     for _ in range(30):
         scene.update(config.FIXED_DT)
     assert len(scene.loot) == 1
+
+
+def _ready_to_build(scene, kind):
+    scene.core.ignite()
+    scene.hotbar.slots[3] = Stack(kind, 1)
+    scene.hotbar.select(3)
+    scene.player.pos = pygame.Vector2(scene.core.pos)
+    scene.camera.center_on(scene.player.pos)
+    return scene
+
+
+def test_clicking_with_a_station_in_hand_builds_it():
+    from game.items.item_kinds import BENCH
+
+    scene = _ready_to_build(PlayScene(), BENCH)
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
+    assert len(scene.stations) == 1
+    assert scene.hotbar.count(BENCH) == 0  # the item is spent
+
+
+def test_a_failed_build_keeps_the_item():
+    from game.items.item_kinds import BENCH
+
+    scene = PlayScene()  # core never lit -> no ward -> nowhere to build
+    scene.hotbar.slots[3] = Stack(BENCH, 1)
+    scene.hotbar.select(3)
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
+    assert scene.stations == []
+    assert scene.hotbar.count(BENCH) == 1
+
+
+def test_building_does_not_also_start_swinging():
+    # One press should do one thing. Otherwise placing a bench would also chew
+    # whatever node happens to be under the cursor.
+    from game.items.item_kinds import BENCH
+
+    scene = _ready_to_build(PlayScene(), BENCH)
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
+    assert scene._mouse_held is False
