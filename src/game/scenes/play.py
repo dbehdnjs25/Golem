@@ -23,6 +23,7 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
+from game.items import grades
 from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, TWIG, WOOD, ItemKind
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
@@ -341,6 +342,7 @@ class PlayScene(Scene):
 
         self._recover_underfoot()
         self._collect_stations()
+        self._gather_underfoot()
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
@@ -581,6 +583,23 @@ class PlayScene(Scene):
                 )
             pygame.draw.polygon(surface, biome.color, points)
         pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
+
+    def _gather_underfoot(self) -> None:
+        """Pick up loose things by walking over them.
+
+        Only what an empty hand could take anyway -- twigs, pebbles, grass.
+        Swinging at a twig is busywork; swinging at a tree is not, so trees and
+        ore are left to the pickaxe.
+
+        Anything that will not fit stays on the ground rather than vanishing.
+        """
+        for node in list(self.fragments):
+            if grades.need_for(node.kind).family != grades.HAND:
+                continue
+            if self.player.pos.distance_to(node.pos) > config.PICKUP_RADIUS:
+                continue
+            if carrying.store(node.kind, 1, self.backpack, self.hotbar):
+                self.fragments.remove(node)
 
     def _collect_stations(self) -> None:
         """Take finished goods out of anything the player is standing by."""

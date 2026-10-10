@@ -1,6 +1,13 @@
-"""Time-based golem spawner. Spawn spots avoid the core's sync zone and a radius
-around the player, so golems never appear on top of either; the cadence, the
-retry cap and the random point rule are shared with the fragment spawner."""
+"""Time-based golem spawner. Silent until the core is lit.
+
+Golems march on the core, so before it burns there is nothing to march on and
+nothing spawns. That leaves the opening quiet enough to gather in -- the threat
+before ignition is the wild animals' job, not theirs.
+
+Once lit, spawn spots avoid the ward, the core's sync zone and a radius around
+the player, so a golem never appears on top of anything; the cadence, the retry
+cap and the "near the player" rule are shared with the node spawner.
+"""
 
 from __future__ import annotations
 
@@ -34,6 +41,8 @@ class EnemySpawner(TimedSpawner):
     ) -> Golem | None:
         if not self.is_due(dt):
             return None
+        if not core.ignited:
+            return None  # they come for the core; before it burns there is none
         if len(enemies) >= self.max_enemies:
             return None
         spot = self._find_spot(player_pos, core, rng, world)

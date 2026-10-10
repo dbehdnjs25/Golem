@@ -601,3 +601,57 @@ def test_a_timed_recipe_goes_to_the_station_instead_of_the_hand():
     assert smelter.is_busy is True
     assert scene.backpack.count(COPPER_ORE) == 2  # the ore went in
     assert scene._carried(COPPER_INGOT) == 0  # nothing yet -- it has to run
+
+
+def test_walking_over_litter_picks_it_up():
+    # Twigs and pebbles are lying there, not embedded in anything. Swinging at
+    # them was busywork; stepping on them is not.
+    from game.items.item_kinds import TWIG
+
+    scene = PlayScene()
+    twig = next(f for f in scene.fragments if f.kind is TWIG)
+    scene.player.pos = pygame.Vector2(twig.pos)
+    scene.update(config.FIXED_DT)
+    assert scene._carried(TWIG) >= 1
+    assert twig not in scene.fragments
+
+
+def test_a_tree_is_not_picked_up_by_walking_into_it():
+    from game.items.item_kinds import WOOD
+
+    scene = PlayScene()
+    tree = next(f for f in scene.fragments if f.kind is WOOD)
+    scene.player.pos = pygame.Vector2(tree.pos)
+    scene.update(config.FIXED_DT)
+    assert scene._carried(WOOD) == 0
+    assert tree in scene.fragments
+
+
+def test_litter_out_of_reach_stays_put():
+    from game.items.item_kinds import TWIG
+
+    scene = PlayScene()
+    twig = next(f for f in scene.fragments if f.kind is TWIG)
+    scene.player.pos = twig.pos + pygame.Vector2(config.PICKUP_RADIUS * 3, 0)
+    scene.update(config.FIXED_DT)
+    assert twig in scene.fragments
+
+
+def test_litter_stays_on_the_ground_when_there_is_nowhere_to_put_it():
+    from game.items.item_kinds import TWIG
+    from game.items.tools import MiningTool
+
+    scene = PlayScene()
+    for i in range(len(scene.hotbar.slots)):
+        scene.hotbar.slots[i] = MiningTool()
+    twig = next(f for f in scene.fragments if f.kind is TWIG)
+    scene.player.pos = pygame.Vector2(twig.pos)
+    scene.update(config.FIXED_DT)
+    assert twig in scene.fragments
+
+
+def test_no_golems_before_the_core_is_lit():
+    scene = PlayScene()
+    for _ in range(int(60 / config.FIXED_DT)):
+        scene.update(config.FIXED_DT)
+    assert scene.enemies == []

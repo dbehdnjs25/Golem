@@ -87,6 +87,9 @@ CAMERA_EDGE_MARGIN: Final[int] = 40  # px band at screen edge that pans
 SPAWN_INTERVAL: Final[float] = 2.0  # seconds between spawn attempts
 SPAWN_MAX: Final[int] = 30  # max simultaneous fragments
 SPAWN_RADIUS: Final[float] = 2_000.0  # spawns follow the player, not the whole map
+# Loose things on the ground come up by walking over them. Swinging at a twig
+# is busywork; swinging at a tree is not.
+PICKUP_RADIUS: Final[float] = 70.0
 # Trees are a flat share of what spawns, at every distance. Ore quality is what
 # distance decides; wood is wood wherever it grows.
 TREE_SHARE: Final[float] = 0.35
