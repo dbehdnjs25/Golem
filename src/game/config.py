@@ -244,6 +244,10 @@ GLYPH_POWER_BASIC: Final[float] = 6.0
 GLYPH_POWER_GREATER: Final[float] = 14.0
 GLYPH_POWER_SUPREME: Final[float] = 30.0
 GLYPH_STRAIN_PER_POWER: Final[float] = 1.6
+# Cuts per chisel. Learning is free and forever, so this is the only price
+# carving has -- and it is what makes "is this the right glyph for this
+# weapon" a question every time instead of a formality.
+CHISEL_USES: Final[int] = 3
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

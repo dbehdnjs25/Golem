@@ -75,6 +75,9 @@ THUNDER_STONE = ItemKind("thunder_stone", "뇌석", _STACK, (215, 200, 120))
 # The only storage there is. Without one the hotbar is the whole of a player's
 # belongings, so the first pack is the first real goal -- and losing one costs
 # every slot at once. They do not stack: you wear one.
+# A chisel is three cuts and gone, so it stacks like a consumable, not like
+# the one-of-a-kind bag it sits next to.
+CHISEL = ItemKind("chisel", "새김 도구", 8, (205, 185, 150))
 WORN_PACK = ItemKind("worn_pack", "낡은 배낭", 1, (120, 95, 70))
 LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
 
@@ -160,6 +163,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     HEARTH,
     FINE_BENCH,
     BLAST_FURNACE,
+    CHISEL,
     WORN_PACK,
     LEATHER_PACK,
     HIDE,

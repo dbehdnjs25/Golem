@@ -147,3 +147,11 @@ def test_the_leather_pack_is_paid_for_in_hide():
     from game.items.item_kinds import HIDE
 
     assert HIDE in {kind for kind, _ in _by_output(ITEM_KINDS["leather_pack"]).inputs}
+
+
+def test_the_chisel_is_reachable_and_cheap():
+    # Its scarcity is the three cuts in it, not the iron it cost. Expensive to
+    # make as well as quick to use up would just mean nobody carves anything.
+    recipe = _by_output(ITEM_KINDS["chisel"])
+    assert recipe.station == recipes.BENCH_S
+    assert sum(n for _, n in recipe.inputs) <= 4

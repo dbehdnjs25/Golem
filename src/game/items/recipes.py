@@ -24,6 +24,7 @@ from game.items.item_kinds import (
     BRASS_INGOT,
     BRASS_PICK,
     CHARCOAL,
+    CHISEL,
     COPPER_AXE,
     COPPER_INGOT,
     COPPER_ORE,
@@ -93,6 +94,9 @@ RECIPES: tuple[Recipe, ...] = (
     # --- the bench ----------------------------------------------------------
     Recipe(SMELTER, 1, ((STONE, 20),), BENCH_S),
     Recipe(HEARTH, 1, ((STONE, 12), (WOOD, 6)), BENCH_S),
+    # Cheap to make and quick to use up. The scarcity that matters is the
+    # three cuts it has in it, not the iron it took.
+    Recipe(CHISEL, 1, ((IRON_INGOT, 1), (WOOD, 2)), BENCH_S),
     Recipe(WORN_PACK, 1, ((WOOD, 12),), BENCH_S),
     # Hide only comes off an animal, so the bigger pack is paid for in nights
     # spent out rather than in ore.
