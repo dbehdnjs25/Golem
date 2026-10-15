@@ -204,6 +204,13 @@ BEAST_RING: Final[float] = 900.0  # how far from the player they turn up
 # would pin every rabbit against the map's rim, uncatchable.
 BEAST_FLEE_RANGE: Final[float] = 320.0
 
+# --- Raids ----------------------------------------------------------------
+# Days between raids, indexed by how many bosses are down. The calendar is
+# tied to progress rather than to a difficulty dial: every boss takes a day off
+# the gap, so the nights crowd in as the player gets stronger and it reads as
+# "you are paying for this" rather than as the game turning a knob.
+RAID_INTERVALS: Final[tuple[int, ...]] = (7, 6, 5, 4, 3, 2)
+
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0
 WEAPON_FIRE_RATE: Final[float] = 4.0  # shots per second while held
