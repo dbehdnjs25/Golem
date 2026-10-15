@@ -143,3 +143,100 @@ def test_a_golem_beside_the_core_is_the_plain_row():
     if near is not None:  # the ward may swallow every attempt; that is fine
         assert near.scale >= 1.0
         assert near.hp >= PLAIN_GOLEM.hp
+
+
+def test_a_raid_reaches_a_player_sitting_at_home():
+    # They come at the core on a raid night, so where the player is standing
+    # does not matter. Spawning "near the player" meant none at all while that
+    # player stood in a four-thousand-unit ward -- the first raid arrived with
+    # nobody in it.
+    spawner = EnemySpawner()
+    core = _core()
+    core.ignite()
+    enemies: list[Golem] = []
+    golem = spawner.update(
+        config.RAID_SPAWN_INTERVAL, enemies, core.pos, core, random.Random(1), WORLD, raid=True
+    )
+    assert golem is not None
+    assert not core.is_in_ward(golem.pos)
+
+
+def test_a_quiet_night_at_home_brings_nothing_at_all():
+    # The ward is the point. On an ordinary night they turn up where the player
+    # is working, and the player at home is not working.
+    spawner = EnemySpawner()
+    core = _core()
+    core.ignite()
+    enemies: list[Golem] = []
+    for _ in range(50):
+        spawner.update(
+            config.GOLEM_SPAWN_INTERVAL, enemies, core.pos, core, random.Random(1), WORLD
+        )
+    assert enemies == []
+
+
+def test_a_raid_night_fills_the_field_faster_than_a_quiet_one():
+    def count(raid: bool) -> int:
+        spawner = EnemySpawner()
+        core = _core()
+        core.ignite()
+        enemies: list[Golem] = []
+        for _ in range(400):
+            spawner.update(
+                config.FIXED_DT, enemies, core.pos, core, random.Random(1), WORLD, raid=raid
+            )
+        return len(enemies)
+
+    assert count(raid=True) > count(raid=False)
+
+
+def test_a_raid_raises_the_ceiling_too():
+    # A faster trickle into the same small cap would barely read as a raid.
+    assert config.RAID_SPAWN_MAX > config.GOLEM_SPAWN_MAX
+    assert config.RAID_SPAWN_INTERVAL < config.GOLEM_SPAWN_INTERVAL
+
+
+def test_they_still_do_not_land_on_the_player_standing_outside():
+    spawner = EnemySpawner()
+    core = _core()
+    core.ignite()
+    out = core.pos + pygame.Vector2(core.ward_radius + 1500, 0)
+    for seed in range(25):
+        enemies: list[Golem] = []
+        spawner = EnemySpawner()
+        golem = spawner.update(
+            config.GOLEM_SPAWN_INTERVAL, enemies, out, core, random.Random(seed), WORLD
+        )
+        if golem is not None:
+            assert golem.pos.distance_to(out) >= 600.0
+
+
+def test_a_wider_ward_means_a_longer_march_in():
+    # Raiders gather at a share of the ward's own reach, so levelling the core
+    # buys travel time as well as ground -- the first blow of a raid lands
+    # later on a big ward than on a small one, with no extra rule for it.
+    def mean_distance(level: int) -> float:
+        core = _core()
+        core.ignite()
+        core.bosses_killed = 5
+        while core.level < level and core.upgrade():
+            pass
+        spawner = EnemySpawner()
+        spots = []
+        for seed in range(30):
+            enemies: list[Golem] = []
+            spawner = EnemySpawner()
+            golem = spawner.update(
+                config.RAID_SPAWN_INTERVAL,
+                enemies,
+                core.pos,
+                core,
+                random.Random(seed),
+                WORLD,
+                raid=True,
+            )
+            if golem is not None:
+                spots.append(core.pos.distance_to(golem.pos))
+        return sum(spots) / len(spots)
+
+    assert mean_distance(35) > mean_distance(1) * 2

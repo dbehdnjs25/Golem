@@ -8,6 +8,7 @@ import random
 
 import pygame
 
+from game import config
 from game.entities.beast import Beast
 from game.entities.core import Core
 from game.entities.enemy import TARGET_PLAYER, Creature, Golem
@@ -85,10 +86,21 @@ def update_enemies(
     player: Player,
     world: WorldMap,
     core: Core,
+    raid: bool = False,
 ) -> None:
+    """Move the golems, let them chew what they reach.
+
+    On a raid night the ward stops turning them away -- that is what a raid IS.
+    The healing keeps working through it: it is the golems that get through,
+    not the hearth that goes out, and a raid fought with no way to recover is
+    not survived so much as endured.
+    """
     for enemy in enemies:
         enemy.update(dt, _what_it_is_after(enemy, player, core), world)
-        _hold_outside_ward(enemy, core)
+        if not raid:
+            _hold_outside_ward(enemy, core)
+        elif core.ignited and enemy.pos.distance_to(core.pos) <= enemy.radius + core.radius:
+            core.damage(config.CORE_CONTACT_DPS * dt)
         if player.invulnerable or player.hp <= 0:
             continue  # i-frames, or already down -- a corpse takes no more
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:

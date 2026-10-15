@@ -52,9 +52,16 @@ class TimedSpawner:
     interval: float
     _accumulator: float = field(default=0.0, init=False)
 
-    def is_due(self, dt: float) -> bool:
+    def is_due(self, dt: float, interval: float | None = None) -> bool:
+        """Advance the clock; True on the tick a spawn is owed.
+
+        ``interval`` overrides the usual cadence for this call, which is how a
+        raid night pours golems in faster without a second spawner keeping its
+        own separate accumulator.
+        """
+        every = self.interval if interval is None else interval
         self._accumulator += dt
-        if self._accumulator < self.interval:
+        if self._accumulator < every:
             return False
-        self._accumulator -= self.interval
+        self._accumulator -= every
         return True

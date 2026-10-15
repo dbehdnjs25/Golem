@@ -25,10 +25,10 @@ from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import grades
-from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, TWIG, WOOD, ItemKind
+from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, STONE, TWIG, WOOD, ItemKind
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
-from game.systems import carrying, combat, crafting, mining, survival
+from game.systems import carrying, combat, crafting, mining, raids, survival
 from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
@@ -90,6 +90,7 @@ class PlayScene(Scene):
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
+        self.defeated = False
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -265,6 +266,9 @@ class PlayScene(Scene):
         self._sync_pressed = False
 
         self.clock.update(dt)
+        # A signal and nothing more. What a run does about losing its core is
+        # the ending's business, and the ending is still being designed.
+        self.defeated = self.defeated or self.core.is_destroyed
         self._tick_loot(dt)
         for station in self.stations:
             station.update(dt)
@@ -292,10 +296,12 @@ class PlayScene(Scene):
         # flying, and what was chasing the player is still out there on the way
         # back. Only the player's own half of the step waits.
         combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
-        combat.update_enemies(dt, self.enemies, self.player, self.world, self.core)
+        combat.update_enemies(
+            dt, self.enemies, self.player, self.world, self.core, raid=self.is_raid
+        )
         self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
         self.enemy_spawner.update(
-            dt, self.enemies, self.player.pos, self.core, self.rng, self.world
+            dt, self.enemies, self.player.pos, self.core, self.rng, self.world, raid=self.is_raid
         )
         self.beast_spawner.update(
             dt,
@@ -319,6 +325,19 @@ class PlayScene(Scene):
             self.backpack = None
             self.worn_pack = None
             self._respawn_timer = config.RESPAWN_DELAY
+
+    @property
+    def is_raid(self) -> bool:
+        """Whether the ward is open tonight.
+
+        Only ever at night. A raid is a night the wall comes down, and one
+        running through the afternoon would make the word meaningless.
+        """
+        return self.clock.is_night and raids.is_raid_night(self.clock.day, self.core.bosses_killed)
+
+    @property
+    def days_to_raid(self) -> int:
+        return raids.days_until(self.clock.day, self.core.bosses_killed)
 
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
@@ -350,6 +369,9 @@ class PlayScene(Scene):
 
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
+                # Mending first. The same key already means "deal with the
+                # core", and after a raid the urgent business is the cracks.
+                self._spend(STONE, self.core.repair(self._carried(STONE)))
                 moved = self.store.add(CORE_SHARD, self._carried(CORE_SHARD))
                 self._spend(CORE_SHARD, moved)
             elif self._carried(CORE_SHARD) >= config.CORE_SHARDS_TO_IGNITE:

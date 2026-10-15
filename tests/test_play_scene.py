@@ -7,9 +7,10 @@ from game.entities.projectile import Projectile
 from game.inventory import grid
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD, WORN_PACK
+from game.items.item_kinds import CORE_SHARD, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
+from game.systems import raids
 from game.systems.camera import FREE
 
 
@@ -728,3 +729,83 @@ def test_night_does_not_darken_the_player():
     middle = scene.camera.world_to_screen(scene.player.pos)
     lit = surface.get_at((int(middle.x), int(middle.y)))[:3]
     assert lit == config.PLAYER_COLOR
+
+
+# --- raids ----------------------------------------------------------------
+
+
+def _wind_to(scene, day: int, night: bool) -> None:
+    """Drive the clock to a given day and phase without touching anything else."""
+    while scene.clock.day < day or scene.clock.is_night != night:
+        scene.clock.update(10.0)
+
+
+def test_a_raid_is_a_night_not_an_afternoon():
+    scene = PlayScene()
+    scene.core.ignite()
+    raid_day = next(d for d in range(2, 40) if raids.is_raid_night(d, 0))
+    _wind_to(scene, raid_day, night=False)
+    assert not scene.is_raid  # the daytime of a raid day is still just a day
+    _wind_to(scene, raid_day, night=True)
+    assert scene.is_raid
+
+
+def test_the_first_night_is_quiet():
+    scene = PlayScene()
+    scene.core.ignite()
+    _wind_to(scene, 1, night=True)
+    assert not scene.is_raid
+
+
+def test_the_scene_counts_down_to_the_next_raid():
+    scene = PlayScene()
+    scene.core.ignite()
+    assert scene.days_to_raid == raids.interval(0)
+
+
+def test_killing_bosses_brings_the_raids_closer():
+    scene = PlayScene()
+    scene.core.ignite()
+    before = scene.days_to_raid
+    scene.core.bosses_killed = 5
+    assert scene.days_to_raid < before
+
+
+def test_losing_the_core_raises_the_signal_and_it_sticks():
+    # A flag, not an ending. What a run does about it belongs with step 9.
+    scene = PlayScene()
+    scene.core.ignite()
+    assert not scene.defeated
+    scene.core.damage(scene.core.max_hp)
+    scene.update(config.FIXED_DT)
+    assert scene.defeated
+    scene.core.repair(100)
+    scene.update(config.FIXED_DT)
+    assert scene.defeated  # it happened; mending the stone does not unhappen it
+
+
+def test_stone_in_hand_mends_the_core_at_its_own_key():
+    # The same press that deals with the core deals with its cracks. After a
+    # raid that is the urgent half of the errand.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.core.damage(config.CORE_REPAIR_PER_ITEM * 3)
+    scene.player.pos.update(scene.core.pos)
+    scene.hotbar.add(STONE, 10)
+    hurt = scene.core.hp
+
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+
+    assert scene.core.hp > hurt
+    assert scene.hotbar.count(STONE) == 7  # three spent, the rest kept
+
+
+def test_mending_a_whole_core_spends_no_stone():
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.player.pos.update(scene.core.pos)
+    scene.hotbar.add(STONE, 10)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+    assert scene.hotbar.count(STONE) == 10

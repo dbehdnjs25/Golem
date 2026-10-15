@@ -211,6 +211,24 @@ BEAST_FLEE_RANGE: Final[float] = 320.0
 # "you are paying for this" rather than as the game turning a knob.
 RAID_INTERVALS: Final[tuple[int, ...]] = (7, 6, 5, 4, 3, 2)
 
+# The core's own health. It grows per level, which is what the last stretch of
+# the ladder buys: the ward finishes at WARD_MAX_LEVEL, so levels past that
+# would otherwise purchase nothing at all.
+CORE_BASE_HP: Final[float] = 400.0
+CORE_HP_PER_LEVEL: Final[float] = 120.0
+CORE_REPAIR_PER_ITEM: Final[float] = 25.0  # hp mended per stone spent
+# A raid night pours them in faster and lets more stand at once. A quicker
+# trickle into the same small cap would hardly read as a raid at all.
+RAID_SPAWN_INTERVAL: Final[float] = 2.0
+RAID_SPAWN_MAX: Final[int] = 20
+# Clawing a person and clawing a stone monolith are not the same work, so the
+# core takes its hits far more slowly than the player does. Without this every
+# raider piles onto one point and even a level-50 core falls inside two
+# minutes of a six-minute night, which leaves no raid to fight.
+CORE_CONTACT_DPS: Final[float] = 5.0
+# How far out they walk in from, as a share of the ward's reach beyond its rim.
+GOLEM_APPROACH: Final[float] = 0.45
+
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0
 WEAPON_FIRE_RATE: Final[float] = 4.0  # shots per second while held

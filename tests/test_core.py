@@ -135,3 +135,66 @@ def test_the_ward_stops_growing_at_its_own_cap():
 
 def test_the_ward_cap_sits_below_the_level_cap():
     assert 1 < config.WARD_MAX_LEVEL < config.CORE_MAX_LEVEL
+
+
+# --- hit points -----------------------------------------------------------
+
+
+def test_an_unlit_core_has_nothing_to_damage():
+    # There is no ward, no raid and no stake before ignition. A pedestal with
+    # a health bar would be promising a fight that cannot happen yet.
+    core = Core(pos=pygame.Vector2(0, 0))
+    assert core.max_hp == 0
+    assert core.hp == 0
+    assert not core.is_destroyed
+
+
+def test_lighting_it_brings_it_up_at_full_health():
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    assert core.max_hp > 0
+    assert core.hp == core.max_hp
+
+
+def test_levelling_raises_the_ceiling_and_the_gain_is_given():
+    # Growing the core is the only way to make it tougher, so a level must not
+    # merely raise a cap the player then has to pay to fill.
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    before_cap, before_hp = core.max_hp, core.hp
+    core.upgrade()
+    assert core.max_hp > before_cap
+    assert core.hp == before_hp + (core.max_hp - before_cap)
+
+
+def test_damage_stops_at_zero_and_reads_as_destroyed():
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    core.damage(core.max_hp * 10)
+    assert core.hp == 0  # never negative; the bar would draw backwards
+    assert core.is_destroyed
+
+
+def test_repair_spends_whole_units_and_never_overfills():
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    core.damage(config.CORE_REPAIR_PER_ITEM * 2)
+    assert core.repair(10) == 2  # only two were needed, so only two are taken
+    assert core.hp == core.max_hp
+
+
+def test_repairing_a_whole_core_takes_nothing():
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    assert core.repair(5) == 0
+    assert core.hp == core.max_hp
+
+
+def test_a_destroyed_core_can_still_be_repaired():
+    # Defeat is a signal this far; whether a run can come back from it is the
+    # ending's business, not the core's.
+    core = Core(pos=pygame.Vector2(0, 0))
+    core.ignite()
+    core.damage(core.max_hp)
+    assert core.repair(1) == 1
+    assert not core.is_destroyed

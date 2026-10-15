@@ -210,3 +210,71 @@ def test_standing_in_its_way_still_gets_you_hit():
     for _ in range(300):  # five seconds at the fixed step
         combat.update_enemies(config.FIXED_DT, [golem], player, WORLD, core)
     assert player.hp < config.PLAYER_MAX_HP
+
+
+# --- raid nights ----------------------------------------------------------
+
+
+def _lit_core() -> Core:
+    core = Core(pos=pygame.Vector2(CENTRE))
+    core.ignite()
+    return core
+
+
+def test_an_ordinary_night_still_turns_golems_away():
+    core = _lit_core()
+    player = Player(pos=pygame.Vector2(CENTRE))
+    inside = Golem(pos=core.pos + pygame.Vector2(core.ward_radius / 2, 0))
+    combat.update_enemies(0.1, [inside], player, WORLD, core, raid=False)
+    assert not core.is_in_ward(inside.pos)
+    assert core.hp == core.max_hp
+
+
+def test_a_raid_lets_them_through_the_ward():
+    # The whole point of a raid. The wall comes down for golems.
+    core = _lit_core()
+    player = Player(pos=pygame.Vector2(CENTRE))
+    inside = Golem(pos=core.pos + pygame.Vector2(core.ward_radius / 2, 0))
+    combat.update_enemies(0.1, [inside], player, WORLD, core, raid=True)
+    assert core.is_in_ward(inside.pos)
+
+
+def test_a_golem_on_the_core_eats_into_it():
+    core = _lit_core()
+    player = Player(pos=pygame.Vector2(CENTRE))
+    on_it = Golem(pos=pygame.Vector2(core.pos))
+    combat.update_enemies(1.0, [on_it], player, WORLD, core, raid=True)
+    assert core.hp < core.max_hp
+
+
+def test_a_golem_that_has_not_reached_the_core_does_no_harm_to_it():
+    core = _lit_core()
+    player = Player(pos=pygame.Vector2(CENTRE))
+    far = Golem(pos=core.pos + pygame.Vector2(core.ward_radius, 0))
+    combat.update_enemies(0.1, [far], player, WORLD, core, raid=True)
+    assert core.hp == core.max_hp
+
+
+def test_an_unlit_core_is_never_chewed_on():
+    # Nothing marches on a pedestal, and a raid cannot start before day one.
+    core = Core(pos=pygame.Vector2(CENTRE))
+    player = Player(pos=pygame.Vector2(CENTRE))
+    combat.update_enemies(
+        1.0, [Golem(pos=pygame.Vector2(core.pos))], player, WORLD, core, raid=True
+    )
+    assert core.hp == 0
+    assert not core.is_destroyed
+
+
+def test_the_ward_still_heals_while_a_raid_is_on():
+    # The golems get through; the hearth does not go out. A raid fought with
+    # no way to recover is not survived so much as endured.
+    core = _lit_core()
+    player = Player(pos=pygame.Vector2(CENTRE))
+    player.hp = 10.0
+    from game.systems import survival
+
+    for _ in range(120):
+        combat.update_enemies(config.FIXED_DT, [], player, WORLD, core, raid=True)
+        survival.update_regen(config.FIXED_DT, player, core)
+    assert player.hp > 10.0
