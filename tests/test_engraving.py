@@ -7,8 +7,8 @@ from game.items.glyphs import LESSER_SWIFT, STAFF, WEAPON
 from game.systems.grimoire import Grimoire
 from game.world import biomes
 
-FIRE = glyphs.VOLCANO_GLYPHS[0]
-BLAZE = glyphs.VOLCANO_GLYPHS[1]
+FIRE = glyphs.BURNT_GLYPHS[0]
+BLAZE = glyphs.BURNT_GLYPHS[1]
 FROST = glyphs.SNOWFIELD_GLYPHS[0]
 
 
@@ -43,7 +43,7 @@ def test_the_book_lists_in_catalogue_order():
 
 def test_the_book_can_be_asked_per_biome():
     book = _knowing(FIRE, FROST)
-    assert book.known(biomes.VOLCANO) == (FIRE,)
+    assert book.known(biomes.BURNT_FOREST) == (FIRE,)
     assert book.known(biomes.SNOWFIELD) == (FROST,)
     assert book.known(biomes.BOG) == ()
 

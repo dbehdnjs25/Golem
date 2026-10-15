@@ -6,9 +6,9 @@ from game.items.glyphs import STAFF
 from game.items.staff import GREATER_STAFF_SLOTS, Staff
 from game.systems.grimoire import Grimoire
 
-EMBER = glyphs.VOLCANO_GLYPHS[0]  # basic: cheap to throw
-BLAZE = glyphs.VOLCANO_GLYPHS[1]  # greater
-HEART = glyphs.VOLCANO_GLYPHS[2]  # supreme: the dear one
+EMBER = glyphs.BURNT_GLYPHS[0]  # basic: cheap to throw
+BLAZE = glyphs.BURNT_GLYPHS[1]  # greater
+HEART = glyphs.BURNT_GLYPHS[2]  # supreme: the dear one
 FROST = glyphs.SNOWFIELD_GLYPHS[0]
 
 

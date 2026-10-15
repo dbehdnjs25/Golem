@@ -20,9 +20,9 @@ from dataclasses import dataclass
 from game import config
 from game.world.biomes import (
     BOG,
+    BURNT_FOREST,
     GRASSLAND,
     SNOWFIELD,
-    VOLCANO,
     WASTELAND,
     WIND_PLATEAU,
     Biome,
@@ -119,7 +119,7 @@ GREATER_SWIFT = Glyph(
     source=FROM_STRUCTURE,
 )
 
-VOLCANO_GLYPHS = _ladder(VOLCANO, "burn", ("불씨", "화염", "용암심"))
+BURNT_GLYPHS = _ladder(BURNT_FOREST, "burn", ("불씨", "화염", "잿불심"))
 SNOWFIELD_GLYPHS = _ladder(SNOWFIELD, "chill", ("서리", "한파", "절대영도"))
 WIND_GLYPHS = _ladder(WIND_PLATEAU, "gust", ("산들바람", "돌풍", "폭풍핵"))
 BOG_GLYPHS = _ladder(BOG, "rot", ("독기", "맹독", "부패심"))
@@ -128,7 +128,7 @@ WASTELAND_GLYPHS = _ladder(WASTELAND, "shock", ("정전기", "낙뢰", "뇌신�
 GLYPHS: tuple[Glyph, ...] = (
     LESSER_SWIFT,
     GREATER_SWIFT,
-    *VOLCANO_GLYPHS,
+    *BURNT_GLYPHS,
     *SNOWFIELD_GLYPHS,
     *WIND_GLYPHS,
     *BOG_GLYPHS,

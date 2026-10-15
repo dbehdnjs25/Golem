@@ -70,7 +70,7 @@ def test_lookup_by_key_covers_the_catalogue():
 
 
 def test_a_glyph_knows_what_it_can_be_carved_on():
-    fire = next(g for g in GLYPHS if g.biome is biomes.VOLCANO and g.tier == BASIC)
+    fire = next(g for g in GLYPHS if g.biome is biomes.BURNT_FOREST and g.tier == BASIC)
     assert glyphs.STAFF in fire.fits
 
 

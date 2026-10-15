@@ -81,7 +81,7 @@ THUNDER_STONE = ItemKind("thunder_stone", "뇌석", _STACK, (215, 200, 120))
 # carved on it, so two identical ones would be two of the same decision.
 # One detector per ring biome, made of that biome's own material. It points at
 # that biome's temple and nothing else.
-VOLCANO_DETECTOR = ItemKind("volcano_detector", "화산 탐지기", 1, (190, 90, 70))
+BURNT_FOREST_DETECTOR = ItemKind("burnt_forest_detector", "불탄 숲 탐지기", 1, (190, 90, 70))
 SNOWFIELD_DETECTOR = ItemKind("snowfield_detector", "설원 탐지기", 1, (180, 215, 235))
 WIND_DETECTOR = ItemKind("wind_detector", "바람 탐지기", 1, (190, 190, 175))
 BOG_DETECTOR = ItemKind("bog_detector", "늪지 탐지기", 1, (110, 140, 85))
@@ -176,7 +176,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     FINE_BENCH,
     BLAST_FURNACE,
     CHISEL,
-    VOLCANO_DETECTOR,
+    BURNT_FOREST_DETECTOR,
     SNOWFIELD_DETECTOR,
     WIND_DETECTOR,
     BOG_DETECTOR,

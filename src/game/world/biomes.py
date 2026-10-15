@@ -44,17 +44,22 @@ class Biome:
 
 GRASSLAND = Biome("grassland", "초원", None, None, (90, 130, 72))
 
-# Ring order is difficulty order. Volcano first because lava is a visible,
-# stationary hazard -- the easiest kind to read. Bog fourth because its stamina
-# drain is unfair before cooking and potions exist. Wasteland last because raids
-# come in crowds and chaining is the answer to the final gauntlet.
-VOLCANO = Biome("volcano", "화산지대", FIRE, OBSIDIAN, (126, 54, 44))
+# Ring order is difficulty order. The burnt forest first because the lava
+# standing in it is a visible, stationary hazard -- the easiest kind to read.
+# Bog fourth because its stamina drain is unfair before cooking and potions
+# exist. Wasteland last because raids come in crowds and chaining is the answer
+# to the final gauntlet.
+#
+# Scorched red-brown. A darker, greyer burn read as almost exactly the bog's
+# dark green on the map -- close enough that the two sectors ran together, and
+# a biome you cannot pick out is a biome you cannot choose to avoid.
+BURNT_FOREST = Biome("burnt_forest", "불탄 숲", FIRE, OBSIDIAN, (120, 78, 62))
 SNOWFIELD = Biome("snowfield", "설원", ICE, FROST_CRYSTAL, (206, 219, 230))
 WIND_PLATEAU = Biome("wind_plateau", "바람 고원", WIND, WEATHERED_STONE, (150, 152, 140))
 BOG = Biome("bog", "늪지", POISON, BOG_MOSS, (55, 62, 42))
 WASTELAND = Biome("wasteland", "황무지", LIGHTNING, THUNDER_STONE, (152, 122, 80))
 
-RING_BIOMES: tuple[Biome, ...] = (VOLCANO, SNOWFIELD, WIND_PLATEAU, BOG, WASTELAND)
+RING_BIOMES: tuple[Biome, ...] = (BURNT_FOREST, SNOWFIELD, WIND_PLATEAU, BOG, WASTELAND)
 BIOMES: tuple[Biome, ...] = (GRASSLAND, *RING_BIOMES)
 
 BIOME_BY_KEY: dict[str, Biome] = {biome.key: biome for biome in BIOMES}

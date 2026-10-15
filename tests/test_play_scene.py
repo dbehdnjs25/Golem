@@ -961,7 +961,7 @@ def test_the_world_puts_out_a_ruin_for_every_basic_glyph():
 def _ready_to_carve(scene) -> None:
     """Hold the weapon, know a glyph, have a chisel."""
     scene.hotbar.select(4)
-    scene.grimoire.learn(glyph_table.VOLCANO_GLYPHS[0])
+    scene.grimoire.learn(glyph_table.BURNT_GLYPHS[0])
     scene.hotbar.add(ITEM_KINDS["chisel"], 1)
 
 
@@ -970,7 +970,7 @@ def test_carving_adds_its_power_to_what_the_weapon_lands_for():
     # else -- an engraved weapon has to actually hit harder.
     scene = PlayScene()
     _ready_to_carve(scene)
-    fire = glyph_table.VOLCANO_GLYPHS[0]
+    fire = glyph_table.BURNT_GLYPHS[0]
     weapon = scene.hotbar.active_tool
     before = weapon.total_damage
 
@@ -997,7 +997,7 @@ def test_three_cuts_and_the_chisel_is_gone():
 def test_carving_without_a_chisel_does_nothing_and_says_so():
     scene = PlayScene()
     scene.hotbar.select(4)
-    fire = glyph_table.VOLCANO_GLYPHS[0]
+    fire = glyph_table.BURNT_GLYPHS[0]
     scene.grimoire.learn(fire)
 
     scene.carve(fire)
@@ -1026,7 +1026,7 @@ def test_the_rows_list_refusals_rather_than_hiding_them():
 
 def test_holding_a_pickaxe_offers_nothing_to_carve():
     scene = PlayScene()
-    scene.grimoire.learn(glyph_table.VOLCANO_GLYPHS[0])
+    scene.grimoire.learn(glyph_table.BURNT_GLYPHS[0])
     scene.hotbar.select(0)
     scene.hotbar.slots[0] = Stack(ITEM_KINDS["stone_pick"], 1)
     assert scene.carve_target is None
@@ -1070,7 +1070,7 @@ def test_a_better_staff_widens_the_one_you_already_own():
     # Carried on the item, every glyph already cut in would be thrown out with
     # the old staff. Nobody would take that upgrade.
     scene = _with_staff(PlayScene())
-    ember = glyph_table.VOLCANO_GLYPHS[0]
+    ember = glyph_table.BURNT_GLYPHS[0]
     scene.grimoire.learn(ember)
     scene.hotbar.add(ITEM_KINDS["chisel"], 1)
     scene.carve(ember)
@@ -1090,7 +1090,7 @@ def test_a_bare_staff_fires_nothing():
 
 def test_a_carved_staff_throws_its_glyph():
     scene = _with_staff(PlayScene())
-    ember = glyph_table.VOLCANO_GLYPHS[0]
+    ember = glyph_table.BURNT_GLYPHS[0]
     scene.grimoire.learn(ember)
     scene.hotbar.add(ITEM_KINDS["chisel"], 1)
     scene.carve(ember)
@@ -1151,7 +1151,7 @@ def test_walking_the_bearing_actually_gets_you_there():
     # has to end up saying you have arrived.
     scene = PlayScene()
     scene.hotbar.select(2)
-    scene.hotbar.slots[2] = Stack(ITEM_KINDS["volcano_detector"], 1)
+    scene.hotbar.slots[2] = Stack(ITEM_KINDS["burnt_forest_detector"], 1)
     for _ in range(4000):
         reading = scene.detector_reading()
         assert reading is not None
@@ -1185,7 +1185,7 @@ def test_an_opened_ruin_stops_being_flagged():
 def test_the_staff_line_says_what_it_will_throw():
     scene = _with_staff(PlayScene())
     assert scene.staff_line == "빈 지팡이"
-    ember = glyph_table.VOLCANO_GLYPHS[0]
+    ember = glyph_table.BURNT_GLYPHS[0]
     scene.grimoire.learn(ember)
     scene.hotbar.add(ITEM_KINDS["chisel"], 1)
     scene.carve(ember)

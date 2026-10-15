@@ -155,6 +155,6 @@ def test_biome_material_is_scarce_next_to_the_ordinary_ore():
     from game.world.resources import node_at
 
     rng = random.Random(8)
-    drawn = [node_at(0.8, rng, biomes.VOLCANO) for _ in range(4000)]
-    share = sum(1 for k in drawn if k is biomes.VOLCANO.material) / len(drawn)
+    drawn = [node_at(0.8, rng, biomes.BURNT_FOREST) for _ in range(4000)]
+    share = sum(1 for k in drawn if k is biomes.BURNT_FOREST.material) / len(drawn)
     assert 0.02 < share < 0.25

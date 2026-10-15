@@ -22,17 +22,25 @@ import pygame
 from game import config
 from game.items.item_kinds import (
     BOG_DETECTOR,
+    BURNT_FOREST_DETECTOR,
     SNOWFIELD_DETECTOR,
-    VOLCANO_DETECTOR,
     WASTELAND_DETECTOR,
     WIND_DETECTOR,
     ItemKind,
 )
-from game.world.biomes import BOG, RING_BIOMES, SNOWFIELD, VOLCANO, WASTELAND, WIND_PLATEAU, Biome
+from game.world.biomes import (
+    BOG,
+    BURNT_FOREST,
+    RING_BIOMES,
+    SNOWFIELD,
+    WASTELAND,
+    WIND_PLATEAU,
+    Biome,
+)
 from game.world.map import WorldMap
 
 DETECTOR_OF: dict[Biome, ItemKind] = {
-    VOLCANO: VOLCANO_DETECTOR,
+    BURNT_FOREST: BURNT_FOREST_DETECTOR,
     SNOWFIELD: SNOWFIELD_DETECTOR,
     WIND_PLATEAU: WIND_DETECTOR,
     BOG: BOG_DETECTOR,

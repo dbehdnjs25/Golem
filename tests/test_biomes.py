@@ -17,7 +17,7 @@ def test_ring_order_is_difficulty_order():
     # Bog fourth: its stamina drain is unfair before cooking and potions exist.
     # Wasteland last: raids come in crowds and chaining is the answer to them.
     assert [b.key for b in RING_BIOMES] == [
-        "volcano",
+        "burnt_forest",
         "snowfield",
         "wind_plateau",
         "bog",

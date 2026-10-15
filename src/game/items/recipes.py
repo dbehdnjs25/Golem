@@ -25,6 +25,7 @@ from game.items.item_kinds import (
     BRASS_AXE,
     BRASS_INGOT,
     BRASS_PICK,
+    BURNT_FOREST_DETECTOR,
     CHARCOAL,
     CHISEL,
     COPPER_AXE,
@@ -61,7 +62,6 @@ from game.items.item_kinds import (
     SUPREME_STAFF_ITEM,
     THUNDER_STONE,
     TWIG,
-    VOLCANO_DETECTOR,
     WASTELAND_DETECTOR,
     WEATHERED_STONE,
     WIND_DETECTOR,
@@ -144,7 +144,7 @@ RECIPES: tuple[Recipe, ...] = (
     # One per biome, out of that biome's own material. Which means the fifth
     # temple can only be found after mining in the fifth biome -- the detectors
     # chain the tour rather than handing out the whole map at once.
-    Recipe(VOLCANO_DETECTOR, 1, ((OBSIDIAN, 3), (GOLD_INGOT, 1)), FINE_S),
+    Recipe(BURNT_FOREST_DETECTOR, 1, ((OBSIDIAN, 3), (GOLD_INGOT, 1)), FINE_S),
     Recipe(SNOWFIELD_DETECTOR, 1, ((FROST_CRYSTAL, 3), (GOLD_INGOT, 1)), FINE_S),
     Recipe(WIND_DETECTOR, 1, ((WEATHERED_STONE, 3), (GOLD_INGOT, 1)), FINE_S),
     Recipe(BOG_DETECTOR, 1, ((BOG_MOSS, 3), (GOLD_INGOT, 1)), FINE_S),
