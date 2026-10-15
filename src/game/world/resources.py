@@ -76,12 +76,18 @@ def node_at(fraction: float, rng: random.Random, biome: Biome | None = None) -> 
     can always start again from what is lying on the ground.
     """
     roll = rng.random()
+    timber = CHARRED_WOOD if biome is BURNT_FOREST else WOOD
     if roll < config.LITTER_SHARE:
         return rng.choice(LITTER)
     if roll < config.LITTER_SHARE + config.TREE_SHARE:
         # A burnt forest grows no sound timber. Same share of trees as
         # anywhere -- burnt is not barren -- but what they are is different.
-        return CHARRED_WOOD if biome is BURNT_FOREST else WOOD
+        return timber
+    # The scattered-material roll is skipped where the trees already ARE the
+    # material. Rolling it as well would hand the burnt forest nearly twice the
+    # charred wood of any other biome's material, for no reason anyone asked for.
+    if biome is not None and biome.material is timber:
+        return ore_at(fraction, rng)
     if (
         biome is not None
         and biome.material is not None

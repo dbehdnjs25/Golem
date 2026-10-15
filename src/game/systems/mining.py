@@ -20,7 +20,7 @@ from game.entities.fragment import Fragment
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items import grades
-from game.items.item_kinds import ItemKind
+from game.items.item_kinds import ItemKind, yield_of
 from game.items.tools import BARE_HAND, MiningTool
 from game.systems import carrying
 
@@ -75,12 +75,15 @@ def update_mining(
         return WRONG_TOOL, None
     if active_tool.grade.rank < need.grade.rank:
         return TOO_HARD, None
-    if carrying.room_for(target.kind, backpack, hotbar) == 0:
+    # What comes out may not be what was swung at: the studded stone by the
+    # lava gives obsidian.
+    got = yield_of(target.kind)
+    if carrying.room_for(got, backpack, hotbar) == 0:
         return FULL, None  # block before damaging -> the node is preserved
     if target.damage(active_tool.dps * dt):
-        carrying.store(target.kind, 1, backpack, hotbar)
+        carrying.store(got, 1, backpack, hotbar)
         fragments.remove(target)
-        return COLLECTED, target.kind
+        return COLLECTED, got
     return MINING, None
 
 

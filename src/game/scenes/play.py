@@ -32,6 +32,7 @@ from game.items.item_kinds import (
     CHISEL,
     CORE_SHARD,
     GRASS,
+    OBSIDIAN_STONE,
     PEBBLE,
     STONE,
     TWIG,
@@ -143,6 +144,13 @@ class PlayScene(Scene):
         # rather than a kit they are handed.
         self.hotbar.slots[4] = WeaponTool()
         self.fragments: list[Fragment] = []
+        # Terrain, laid down once: obsidian only ever comes off these, and they
+        # stand close enough to the lava that chipping one means standing where
+        # it is hot. Marked fixed so the roaming node spawner ignores them.
+        self.fragments.extend(
+            Fragment(pos=spot, kind=OBSIDIAN_STONE, fixed=True)
+            for spot in lava.obsidian_sites(self.lava, self.rng)
+        )
         self.spawner = Spawner()
         self._scatter_starting_shards()
 

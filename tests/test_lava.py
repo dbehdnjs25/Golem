@@ -106,3 +106,54 @@ def test_the_ward_does_not_hold_lava_back():
     player = Player(pos=pygame.Vector2(0, 0))
     survival.update_lava(1.0, player, [pool])
     assert player.hp < config.PLAYER_MAX_HP
+
+
+# --- the obsidian belt ----------------------------------------------------
+
+
+def _belt(seed: int = 1):
+    pools = _pools(seed)
+    return pools, lava.obsidian_sites(pools, random.Random(seed))
+
+
+def test_obsidian_stone_stands_only_around_a_pool():
+    # The whole point of the change. Mining obsidian means standing next to
+    # the hazard; scattered across the biome it cost nothing at all.
+    for seed in range(6):
+        pools, sites = _belt(seed)
+        for spot in sites:
+            assert min(p.pos.distance_to(spot) - p.radius for p in pools) <= config.OBSIDIAN_BELT
+
+
+def test_none_of_it_stands_in_the_lava():
+    # An unreachable vein is the same as no vein.
+    for seed in range(6):
+        pools, sites = _belt(seed)
+        for spot in sites:
+            assert not lava.burns(spot, pools)
+
+
+def test_every_pool_is_worth_walking_to():
+    for seed in range(6):
+        pools, sites = _belt(seed)
+        for pool in pools:
+            near = [
+                s for s in sites if pool.pos.distance_to(s) <= pool.radius + config.OBSIDIAN_BELT
+            ]
+            assert near, f"seed {seed}: a pool with nothing around it"
+
+
+def test_the_belt_is_reproducible_from_a_seed():
+    assert _belt(4)[1] == _belt(4)[1]
+
+
+def test_the_ordinary_ground_never_yields_obsidian_any_more():
+    import random as rnd
+
+    from game.items.item_kinds import OBSIDIAN
+    from game.world.resources import node_at
+
+    for biome in (biomes.BURNT_FOREST, biomes.BOG, None):
+        rng = rnd.Random(3)
+        drawn = {node_at(0.8, rng, biome) for _ in range(4000)}
+        assert OBSIDIAN not in drawn, biome

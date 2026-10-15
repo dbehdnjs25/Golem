@@ -18,8 +18,8 @@ from dataclasses import dataclass
 
 from game.items.item_kinds import (
     BOG_MOSS,
+    CHARRED_WOOD,
     FROST_CRYSTAL,
-    OBSIDIAN,
     THUNDER_STONE,
     WEATHERED_STONE,
     ItemKind,
@@ -39,6 +39,8 @@ class Biome:
     name: str  # shown to the player
     element: str | None  # the attribute its glyphs grant; None in the grassland
     material: ItemKind | None  # what only this biome yields; None in the grassland
+    # NOTE: the burnt forest's OBSIDIAN is not here. It comes off studded stone
+    # around the lava rather than being scattered, so it is terrain's business.
     color: tuple[int, int, int]  # flat fill until real tiles exist
 
 
@@ -53,7 +55,7 @@ GRASSLAND = Biome("grassland", "초원", None, None, (90, 130, 72))
 # Scorched red-brown. A darker, greyer burn read as almost exactly the bog's
 # dark green on the map -- close enough that the two sectors ran together, and
 # a biome you cannot pick out is a biome you cannot choose to avoid.
-BURNT_FOREST = Biome("burnt_forest", "불탄 숲", FIRE, OBSIDIAN, (120, 78, 62))
+BURNT_FOREST = Biome("burnt_forest", "불탄 숲", FIRE, CHARRED_WOOD, (120, 78, 62))
 SNOWFIELD = Biome("snowfield", "설원", ICE, FROST_CRYSTAL, (206, 219, 230))
 WIND_PLATEAU = Biome("wind_plateau", "바람 고원", WIND, WEATHERED_STONE, (150, 152, 140))
 BOG = Biome("bog", "늪지", POISON, BOG_MOSS, (55, 62, 42))

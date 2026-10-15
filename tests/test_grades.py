@@ -5,7 +5,6 @@ from game.items.item_kinds import (
     GOLD_ORE,
     IRON_ORE,
     ITEM_KINDS,
-    OBSIDIAN,
     POTION,
     STONE,
     TWIG,
@@ -52,7 +51,8 @@ def test_the_gates_climb_with_the_ore():
 def test_biome_materials_are_what_gold_is_for():
     # Ore stops at gold, so without this the top three grades would open
     # nothing at all and be a speed bonus dressed as a ladder.
-    assert grades.need_for(OBSIDIAN).grade is grades.GOLD_G
+    # Obsidian itself is never swung at -- the studded stone by the lava is.
+    assert grades.need_for(ITEM_KINDS["obsidian_stone"]).grade is grades.GOLD_G
 
 
 def test_only_litter_answers_to_an_empty_hand():

@@ -55,3 +55,26 @@ def place(world: WorldMap, rng: random.Random) -> list[LavaPool]:
 
 def burns(point: pygame.Vector2, pools: list[LavaPool]) -> bool:
     return any(pool.holds(point) for pool in pools)
+
+
+def obsidian_sites(pools: list[LavaPool], rng: random.Random) -> tuple[pygame.Vector2, ...]:
+    """Where the obsidian-studded stone stands: a ring around each pool.
+
+    Outside the lava, inside the belt. Standing IN it would be an unreachable
+    vein, which is the same as no vein; beyond the belt it would be ordinary
+    ground, which is what this change exists to stop.
+
+    Every pool gets at least one, so no pool is a walk for nothing.
+    """
+    sites: list[pygame.Vector2] = []
+    for pool in pools:
+        for _ in range(rng.randint(config.OBSIDIAN_PER_POOL_MIN, config.OBSIDIAN_PER_POOL_MAX)):
+            radians = math.radians(rng.uniform(0.0, 360.0))
+            reach = pool.radius + rng.uniform(config.OBSIDIAN_BELT * 0.1, config.OBSIDIAN_BELT)
+            sites.append(
+                pygame.Vector2(
+                    pool.pos.x + math.cos(radians) * reach,
+                    pool.pos.y + math.sin(radians) * reach,
+                )
+            )
+    return tuple(sites)

@@ -8,12 +8,14 @@ from game.items.item_kinds import (
     GOLD_ORE,
     IRON_ORE,
     ITEM_KINDS,
+    OBSIDIAN_STONE,
     STEEL_INGOT,
     STONE,
     WOOD,
     WOOD_AXE,
     WOOD_PICK,
     ZINC_ORE,
+    yield_of,
 )
 from game.world.biomes import RING_BIOMES
 
@@ -26,6 +28,11 @@ HUNTED = {kind for beast in BEAST_KINDS for kind, _ in beast.drops}
 # and kept separate from MINED because reaching it is a different problem: a
 # gold pick AND a trip out past the grassland.
 BIOME_MATERIALS = {b.material for b in RING_BIOMES if b.material is not None}
+
+# Obsidian is not on that table any more. It comes off studded stone standing
+# around the lava pools, which is terrain rather than scattered ore -- so the
+# walk has to be told, or it would call the greater staff a dead end.
+FROM_THE_LAVA = {yield_of(OBSIDIAN_STONE)}
 
 MINED = {
     STONE,
@@ -123,7 +130,7 @@ def test_every_recipe_is_reachable_from_an_empty_hand():
     # The world hands out two ways, not one: what is mined and what is hunted.
     # Hide is only ever cut off an animal, so the walk has to start from both or
     # it would call the leather pack unreachable when it plainly is not.
-    have = set(MINED) | set(HUNTED) | set(BIOME_MATERIALS)
+    have = set(MINED) | set(HUNTED) | set(BIOME_MATERIALS) | set(FROM_THE_LAVA)
     stations = {recipes.NOWHERE}
     progress = True
     while progress:
@@ -198,3 +205,12 @@ def test_charred_wood_is_a_shortcut_to_charcoal():
     assert (
         sum(n for _, n in quick.inputs) / quick.count < sum(n for _, n in slow.inputs) / slow.count
     )
+
+
+def test_obsidian_is_still_reachable_now_that_it_lives_by_the_lava():
+    # It stopped being any biome's scattered material, so the reachability walk
+    # has to know about the belt or it would call the greater staff a dead end.
+    from game.items.item_kinds import OBSIDIAN
+
+    assert OBSIDIAN in FROM_THE_LAVA
+    assert OBSIDIAN not in {b.material for b in RING_BIOMES if b.material}

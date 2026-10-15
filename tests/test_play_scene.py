@@ -1196,3 +1196,43 @@ def test_the_staff_line_says_overloaded_with_the_time_left():
     scene = _with_staff(PlayScene())
     scene.staff.lockout = config.STAFF_LOCKOUT
     assert "과부하" in scene.staff_line
+
+
+# --- the burnt forest -----------------------------------------------------
+
+
+def test_the_world_stands_obsidian_stone_around_its_lava():
+    scene = PlayScene()
+    stones = [f for f in scene.fragments if f.kind is ITEM_KINDS["obsidian_stone"]]
+    assert stones
+    for stone in stones:
+        assert stone.fixed
+        near = min(p.pos.distance_to(stone.pos) - p.radius for p in scene.lava)
+        assert 0 < near <= config.OBSIDIAN_BELT
+
+
+def test_terrain_nodes_do_not_crowd_out_the_roaming_ones():
+    # The spawner's cap is its own population. Counting the lava field's stones
+    # would let a busy biome starve the rest of the map of ore.
+    scene = PlayScene()
+    fixed = sum(1 for f in scene.fragments if f.fixed)
+    assert fixed > 0
+    for _ in range(int(config.SPAWN_INTERVAL / config.FIXED_DT) + 2):
+        scene.update(config.FIXED_DT)
+    assert sum(1 for f in scene.fragments if not f.fixed) > 0
+
+
+def test_chipping_the_stone_hands_over_obsidian():
+    from game.items.item_kinds import OBSIDIAN, yield_of
+
+    assert yield_of(ITEM_KINDS["obsidian_stone"]) is OBSIDIAN
+    assert yield_of(ITEM_KINDS["stone"]) is ITEM_KINDS["stone"]
+
+
+def test_walking_into_the_lava_hurts():
+    scene = PlayScene()
+    scene.player.pos.update(scene.lava[0].pos)
+    before = scene.player.hp
+    for _ in range(30):
+        scene.update(config.FIXED_DT)
+    assert scene.player.hp < before

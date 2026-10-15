@@ -69,6 +69,9 @@ STEEL_INGOT = ItemKind("steel_ingot", "강철 주괴", _STACK, (120, 130, 150))
 # of it -- see recipes.
 CHARRED_WOOD = ItemKind("charred_wood", "불탄 나무", _STACK, (72, 58, 50))
 OBSIDIAN = ItemKind("obsidian", "흑요석", _STACK, (45, 35, 55))
+# What stands around a lava pool. Swinging at it is what yields obsidian --
+# the glass itself is never lying on the ground.
+OBSIDIAN_STONE = ItemKind("obsidian_stone", "흑요석 박힌 돌", _STACK, (62, 48, 66))
 FROST_CRYSTAL = ItemKind("frost_crystal", "서리 결정", _STACK, (150, 220, 240))
 WEATHERED_STONE = ItemKind("weathered_stone", "풍화석", _STACK, (185, 175, 155))
 BOG_MOSS = ItemKind("bog_moss", "늪 이끼", _STACK, (95, 130, 75))
@@ -155,6 +158,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     STEEL_INGOT,
     CHARRED_WOOD,
     OBSIDIAN,
+    OBSIDIAN_STONE,
     FROST_CRYSTAL,
     WEATHERED_STONE,
     BOG_MOSS,
@@ -197,3 +201,14 @@ CATALOGUE: tuple[ItemKind, ...] = (
 )
 
 ITEM_KINDS: dict[str, ItemKind] = {kind.key: kind for kind in CATALOGUE}
+
+
+# A node whose name is not what comes out of it. Chipping the studded stone by
+# a lava pool gives the glass, not the stone -- the only place in the catalogue
+# where swinging at a thing yields something else.
+_YIELDS: dict[ItemKind, ItemKind] = {OBSIDIAN_STONE: OBSIDIAN}
+
+
+def yield_of(kind: ItemKind) -> ItemKind:
+    """What mining a node of ``kind`` actually hands over."""
+    return _YIELDS.get(kind, kind)

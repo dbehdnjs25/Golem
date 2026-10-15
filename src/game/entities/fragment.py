@@ -14,7 +14,11 @@ from game.items.item_kinds import CORE_SHARD, ItemKind
 class Fragment:
     pos: pygame.Vector2
     hp: float = config.FRAGMENT_HP
-    kind: ItemKind = CORE_SHARD  # what mining it out yields
+    kind: ItemKind = CORE_SHARD  # what it is; what it YIELDS can differ
+    # Terrain rather than part of the drifting node population. The obsidian
+    # stone around a lava pool is placed by the world and never comes back once
+    # it is gone, so the spawner must not count it against its own cap.
+    fixed: bool = False
 
     @property
     def is_depleted(self) -> bool:

@@ -262,6 +262,8 @@ LAVA_RADIUS_MAX: Final[float] = 620.0
 # a decision.
 LAVA_DPS: Final[float] = 26.0
 OBSIDIAN_BELT: Final[float] = 420.0  # how far the studded stone reaches out
+OBSIDIAN_PER_POOL_MIN: Final[int] = 3  # never a pool worth no walk
+OBSIDIAN_PER_POOL_MAX: Final[int] = 6
 LAVA_COLOR: Final[tuple[int, int, int]] = (214, 92, 38)
 LAVA_RIM_COLOR: Final[tuple[int, int, int]] = (255, 186, 92)
 # Cuts per chisel. Learning is free and forever, so this is the only price

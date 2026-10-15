@@ -33,7 +33,9 @@ class Spawner(TimedSpawner):
     ) -> Fragment | None:
         if not self.is_due(dt):
             return None
-        if len(fragments) >= self.max_fragments:
+        # Only its own. Fixed nodes are terrain the world placed, and counting
+        # them would let a busy lava field starve the rest of the map of ore.
+        if sum(1 for f in fragments if not f.fixed) >= self.max_fragments:
             return None
         spot = self._find_spot(fragments, core, rng, world, player_pos)
         if spot is None:

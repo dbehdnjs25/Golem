@@ -10,7 +10,7 @@ from game.items.item_kinds import (
     CORE_SHARD,
     GOLD_ORE,
     IRON_ORE,
-    OBSIDIAN,
+    OBSIDIAN_STONE,
     STONE,
     WOOD,
 )
@@ -164,8 +164,8 @@ def test_gold_is_shut_until_iron():
 
 
 def test_biome_materials_are_shut_until_gold():
-    assert _swing(tools.pickaxe(grades.IRON_G), OBSIDIAN)[0] == mining.TOO_HARD
-    assert _swing(tools.pickaxe(grades.GOLD_G), OBSIDIAN, dt=0.1)[0] == mining.MINING
+    assert _swing(tools.pickaxe(grades.IRON_G), OBSIDIAN_STONE)[0] == mining.TOO_HARD
+    assert _swing(tools.pickaxe(grades.GOLD_G), OBSIDIAN_STONE, dt=0.1)[0] == mining.MINING
 
 
 def test_litter_comes_up_with_no_tool_at_all():

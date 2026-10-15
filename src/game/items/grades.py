@@ -37,7 +37,7 @@ from game.items.item_kinds import (
     IRON_AXE,
     IRON_ORE,
     IRON_PICK,
-    OBSIDIAN,
+    OBSIDIAN_STONE,
     PEBBLE,
     STEEL_AXE,
     STEEL_PICK,
@@ -119,7 +119,9 @@ NEEDS: dict[ItemKind, Need] = {
     # Burnt wood is still wood: an axe fells it, at the same grade as any
     # other tree. The fire did the hard part already.
     CHARRED_WOOD: Need(AXE, CRUDE_G),
-    OBSIDIAN: Need(PICKAXE, GOLD_G),
+    # The stone by the lava, not the glass. Obsidian is never lying about to be
+    # picked up -- it is chipped out of this, beside the pool.
+    OBSIDIAN_STONE: Need(PICKAXE, GOLD_G),
     FROST_CRYSTAL: Need(PICKAXE, GOLD_G),
     WEATHERED_STONE: Need(PICKAXE, GOLD_G),
     BOG_MOSS: Need(PICKAXE, GOLD_G),
