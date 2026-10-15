@@ -27,6 +27,7 @@ from game.items.item_kinds import (
     BRASS_PICK,
     BURNT_FOREST_DETECTOR,
     CHARCOAL,
+    CHARRED_WOOD,
     CHISEL,
     COPPER_AXE,
     COPPER_INGOT,
@@ -161,6 +162,14 @@ RECIPES: tuple[Recipe, ...] = (
     Recipe(GOLD_INGOT, 1, ((GOLD_ORE, 2),), SMELTER_S, 20.0),
     Recipe(BRASS_INGOT, 1, ((COPPER_ORE, 2), (ZINC_ORE, 1)), SMELTER_S, 25.0),
     # --- the hearth: wood into charcoal -------------------------------------
+    # The reason to walk into the burnt forest. Ordinary charcoal is three logs
+    # burned for twelve seconds; this wood is already half burnt, so the fire
+    # only has to finish it -- better rate and a quarter of the wait.
+    #
+    # Still at the hearth rather than bare-handed: the empty-handed list is the
+    # bootstrap and nothing else, and a player holding nothing has no business
+    # being told about charcoal.
+    Recipe(CHARCOAL, 2, ((CHARRED_WOOD, 2),), HEARTH_S, 3.0),
     Recipe(CHARCOAL, 2, ((WOOD, 3),), HEARTH_S, 12.0),
     # --- the blast furnace: the only way to steel ---------------------------
     Recipe(STEEL_INGOT, 1, ((IRON_INGOT, 2), (CHARCOAL, 2)), FURNACE_S, 40.0),

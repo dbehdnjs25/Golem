@@ -176,3 +176,25 @@ def test_each_staff_eats_the_one_below_it():
     for better, worse in (("greater_staff", "staff"), ("supreme_staff", "greater_staff")):
         inputs = {kind for kind, _ in _by_output(ITEM_KINDS[better]).inputs}
         assert ITEM_KINDS[worse] in inputs
+
+
+def test_charred_wood_is_a_shortcut_to_charcoal():
+    # The reason to walk into the burnt forest. Ordinary charcoal is three logs
+    # burned for twelve seconds; this wood is already half burnt, so the fire
+    # only has to finish it.
+    from game.items.item_kinds import CHARCOAL, CHARRED_WOOD
+
+    quick = next(
+        r
+        for r in recipes.RECIPES
+        if r.output is CHARCOAL and CHARRED_WOOD in {k for k, _ in r.inputs}
+    )
+    slow = next(r for r in recipes.RECIPES if r.output is CHARCOAL and r is not quick)
+    assert quick.seconds < slow.seconds
+    # Both at the hearth: the empty-handed list is the bootstrap and nothing
+    # else, and a player holding nothing has no business hearing about charcoal.
+    assert quick.station == slow.station == recipes.HEARTH_S
+    # Per charcoal made, the shortcut costs fewer things to carry home.
+    assert (
+        sum(n for _, n in quick.inputs) / quick.count < sum(n for _, n in slow.inputs) / slow.count
+    )

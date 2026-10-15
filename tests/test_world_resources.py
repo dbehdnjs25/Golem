@@ -158,3 +158,50 @@ def test_biome_material_is_scarce_next_to_the_ordinary_ore():
     drawn = [node_at(0.8, rng, biomes.BURNT_FOREST) for _ in range(4000)]
     share = sum(1 for k in drawn if k is biomes.BURNT_FOREST.material) / len(drawn)
     assert 0.02 < share < 0.25
+
+
+def test_the_burnt_forest_grows_no_sound_timber():
+    # It burned. A pristine log coming out of it would say otherwise, and the
+    # whole point of the biome is that its wood is already half charcoal.
+    import random
+
+    from game.items.item_kinds import CHARRED_WOOD, WOOD
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    rng = random.Random(2)
+    drawn = [node_at(0.8, rng, biomes.BURNT_FOREST) for _ in range(3000)]
+    assert WOOD not in drawn
+    assert CHARRED_WOOD in drawn
+
+
+def test_charred_wood_grows_nowhere_else():
+    import random
+
+    from game.items.item_kinds import CHARRED_WOOD
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    for biome in (None, biomes.GRASSLAND, biomes.BOG, biomes.SNOWFIELD):
+        rng = random.Random(6)
+        drawn = {node_at(0.8, rng, biome) for _ in range(3000)}
+        assert CHARRED_WOOD not in drawn, biome
+
+
+def test_the_burnt_forest_still_grows_as_many_trees_as_anywhere():
+    # Burnt is not barren. The share of nodes that are trees should not move
+    # just because of what the trees turn out to be.
+    import random
+
+    from game.items.item_kinds import CHARRED_WOOD, WOOD
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    def tree_share(biome, want):
+        rng = random.Random(11)
+        drawn = [node_at(0.8, rng, biome) for _ in range(4000)]
+        return sum(1 for k in drawn if k is want) / len(drawn)
+
+    burnt = tree_share(biomes.BURNT_FOREST, CHARRED_WOOD)
+    plain = tree_share(biomes.SNOWFIELD, WOOD)
+    assert abs(burnt - plain) < 0.03

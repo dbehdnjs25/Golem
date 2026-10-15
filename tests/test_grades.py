@@ -75,7 +75,8 @@ def test_every_ore_wants_a_pickaxe():
     # Everything that is dug rather than gathered or felled.
     from game.items.item_kinds import GRASS, PEBBLE
 
-    gathered = {TWIG, PEBBLE, GRASS, WOOD}
+    # Charred wood is a tree, not ore -- burnt or not, an axe is what fells it.
+    gathered = {TWIG, PEBBLE, GRASS, WOOD, ITEM_KINDS["charred_wood"]}
     for kind, need in grades.NEEDS.items():
         if kind not in gathered:
             assert need.family == PICKAXE

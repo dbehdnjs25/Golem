@@ -14,6 +14,7 @@ import random
 
 from game import config
 from game.items.item_kinds import (
+    CHARRED_WOOD,
     COPPER_ORE,
     GOLD_ORE,
     GRASS,
@@ -25,7 +26,7 @@ from game.items.item_kinds import (
     ZINC_ORE,
     ItemKind,
 )
-from game.world.biomes import Biome
+from game.world.biomes import BURNT_FOREST, Biome
 
 _GRASSLAND_EDGE = config.GRASSLAND_RADIUS / config.MAP_RADIUS
 _INNER_GRASSLAND = _GRASSLAND_EDGE / 2
@@ -78,7 +79,9 @@ def node_at(fraction: float, rng: random.Random, biome: Biome | None = None) -> 
     if roll < config.LITTER_SHARE:
         return rng.choice(LITTER)
     if roll < config.LITTER_SHARE + config.TREE_SHARE:
-        return WOOD
+        # A burnt forest grows no sound timber. Same share of trees as
+        # anywhere -- burnt is not barren -- but what they are is different.
+        return CHARRED_WOOD if biome is BURNT_FOREST else WOOD
     if (
         biome is not None
         and biome.material is not None

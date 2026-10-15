@@ -65,6 +65,9 @@ STEEL_INGOT = ItemKind("steel_ingot", "강철 주괴", _STACK, (120, 130, 150))
 # --- Biome materials ----------------------------------------------------------
 # These never raise a grade. They feed magic and temple locators instead -- grade
 # and attribute are two ladders that do not mix.
+# The burnt forest's timber. Already half charcoal, which is the whole point
+# of it -- see recipes.
+CHARRED_WOOD = ItemKind("charred_wood", "불탄 나무", _STACK, (72, 58, 50))
 OBSIDIAN = ItemKind("obsidian", "흑요석", _STACK, (45, 35, 55))
 FROST_CRYSTAL = ItemKind("frost_crystal", "서리 결정", _STACK, (150, 220, 240))
 WEATHERED_STONE = ItemKind("weathered_stone", "풍화석", _STACK, (185, 175, 155))
@@ -150,6 +153,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     GOLD_INGOT,
     BRASS_INGOT,
     STEEL_INGOT,
+    CHARRED_WOOD,
     OBSIDIAN,
     FROST_CRYSTAL,
     WEATHERED_STONE,

@@ -24,6 +24,7 @@ from game.items.item_kinds import (
     BOG_MOSS,
     BRASS_AXE,
     BRASS_PICK,
+    CHARRED_WOOD,
     COPPER_AXE,
     COPPER_ORE,
     COPPER_PICK,
@@ -115,6 +116,9 @@ NEEDS: dict[ItemKind, Need] = {
     IRON_ORE: Need(PICKAXE, COPPER_G),
     GOLD_ORE: Need(PICKAXE, IRON_G),
     ZINC_ORE: Need(PICKAXE, IRON_G),
+    # Burnt wood is still wood: an axe fells it, at the same grade as any
+    # other tree. The fire did the hard part already.
+    CHARRED_WOOD: Need(AXE, CRUDE_G),
     OBSIDIAN: Need(PICKAXE, GOLD_G),
     FROST_CRYSTAL: Need(PICKAXE, GOLD_G),
     WEATHERED_STONE: Need(PICKAXE, GOLD_G),
