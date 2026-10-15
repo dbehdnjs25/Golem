@@ -49,7 +49,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, structures
+from game.world import biomes, lava, structures
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -118,6 +118,7 @@ class PlayScene(Scene):
         # staff is what is carved on it, and that cannot ride in a Stack.
         self.staff = Staff()
         self.structures = structures.place(self.world, self.rng)
+        self.lava = lava.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -429,6 +430,7 @@ class PlayScene(Scene):
             )
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
+        survival.update_lava(dt, self.player, self.lava)
 
         if sync:
             self._open_structure()
@@ -450,6 +452,7 @@ class PlayScene(Scene):
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_world(surface)
+        self._draw_lava(surface)  # ground, so under everything that stands on it
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_structures(surface)
@@ -1052,6 +1055,17 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.WHITE, at, site.radius, 2)
             if site.in_reach(self.player.pos):
                 pygame.draw.circle(surface, config.WHITE, at, site.radius + 6, 2)
+
+    def _draw_lava(self, surface: pygame.Surface) -> None:
+        """Pools, bright enough to read before they are stepped in.
+
+        A lighter rim inside a hot fill: the edge is the only part that
+        matters, since the whole decision is whether to cross it.
+        """
+        for pool in self.lava:
+            at = self.camera.world_to_screen(pool.pos)
+            pygame.draw.circle(surface, config.LAVA_COLOR, at, pool.radius)
+            pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """Placeholder markers so the five sites are visible before temples exist."""

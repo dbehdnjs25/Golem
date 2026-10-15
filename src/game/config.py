@@ -248,6 +248,22 @@ GLYPH_STRAIN_PER_POWER: Final[float] = 1.6
 # source of any of it, and scarce on purpose: it gates the second ladder,
 # so it should be worth the trip rather than picked up on the way past.
 BIOME_MATERIAL_SHARE: Final[float] = 0.12
+
+# --- Lava -----------------------------------------------------------------
+# Pools standing in the burnt forest. Terrain, not a creature: they never move
+# and the ward has no opinion about them, which is why the spec put this biome
+# at the easy end -- a danger you can see and decide about is the kindest kind.
+LAVA_POOLS_MIN: Final[int] = 6
+LAVA_POOLS_MAX: Final[int] = 10
+LAVA_RADIUS_MIN: Final[float] = 260.0
+LAVA_RADIUS_MAX: Final[float] = 620.0
+# Hot enough that wading is a real cost, slow enough that a dash across the
+# narrow end is a choice. Instant death would make it a wall, and a wall is not
+# a decision.
+LAVA_DPS: Final[float] = 26.0
+OBSIDIAN_BELT: Final[float] = 420.0  # how far the studded stone reaches out
+LAVA_COLOR: Final[tuple[int, int, int]] = (214, 92, 38)
+LAVA_RIM_COLOR: Final[tuple[int, int, int]] = (255, 186, 92)
 # Cuts per chisel. Learning is free and forever, so this is the only price
 # carving has -- and it is what makes "is this the right glyph for this
 # weapon" a question every time instead of a formality.

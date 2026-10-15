@@ -13,7 +13,9 @@ from __future__ import annotations
 
 from game import config
 from game.entities.core import Core
+from game.entities.lava import LavaPool
 from game.entities.player import Player
+from game.world import lava
 
 
 def update_regen(dt: float, player: Player, core: Core) -> None:
@@ -27,3 +29,16 @@ def update_regen(dt: float, player: Player, core: Core) -> None:
     )
     player.ward_time += dt
     player.hp = min(player.max_hp, player.hp + rate * dt)
+
+
+def update_lava(dt: float, player: Player, pools: list[LavaPool]) -> None:
+    """Burn whoever is standing in it.
+
+    No ward check and no invulnerability check: the ward is a wall against
+    things that walk, and i-frames are for blows that land. Hot ground is
+    neither -- it is simply where you are standing.
+    """
+    if player.hp <= 0:
+        return
+    if lava.burns(player.pos, pools):
+        player.hp -= config.LAVA_DPS * dt
