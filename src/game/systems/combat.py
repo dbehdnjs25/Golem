@@ -4,10 +4,14 @@ unit-testable headlessly. Rendering lives in the scene, never here."""
 
 from __future__ import annotations
 
+import random
+
 import pygame
 
+from game.entities.beast import Beast
 from game.entities.core import Core
-from game.entities.enemy import Golem
+from game.entities.enemy import TARGET_PLAYER, Creature, Golem
+from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
@@ -83,7 +87,7 @@ def update_enemies(
     core: Core,
 ) -> None:
     for enemy in enemies:
-        enemy.update(dt, player.pos, world)
+        enemy.update(dt, _what_it_is_after(enemy, player, core), world)
         _hold_outside_ward(enemy, core)
         if player.invulnerable or player.hp <= 0:
             continue  # i-frames, or already down -- a corpse takes no more
@@ -91,14 +95,34 @@ def update_enemies(
             player.hp -= enemy.contact_dps * dt  # from its kind, not a global
 
 
+def _what_it_is_after(enemy: Golem, player: Player, core: Core) -> pygame.Vector2:
+    """Where this one is walking, which its kind decides.
+
+    A golem marches on the core and will walk straight past you to reach it;
+    standing in the way is a choice, and that is what makes defending the core
+    a job rather than a chase. Anything after the player hunts instead.
+
+    Until this existed the ``target`` column was decoration -- the table said
+    core and every golem walked at the player anyway.
+    """
+    if enemy.kind.target == TARGET_PLAYER:
+        return player.pos
+    return core.pos
+
+
 _WARD_MARGIN = 0.5  # px clear of the rim; invisible, but keeps the check honest
 
 
-def _hold_outside_ward(enemy: Golem, core: Core) -> None:
-    """Push a golem back to the ward's rim. The ward is what the core buys.
+def _hold_outside_ward(enemy: Creature, core: Core) -> None:
+    """Push a creature back to the ward's rim. The ward is what the core buys.
 
-    On raid nights this will be lifted -- that is the whole point of a raid --
-    but the exception belongs with the raid scheduler, not here.
+    Animals are held out as well as golems. The spec has them gathering AROUND
+    the ward, and a wolf that strolls in cancels the healing the whole ward
+    exists to give -- the safe ground would stop being safe and step 3's reason
+    to light the core with it.
+
+    On raid nights this is lifted for golems -- that is the whole point of a
+    raid -- but the exception belongs with the raid scheduler, not here.
     """
     if not core.is_in_ward(enemy.pos):
         return
@@ -130,3 +154,39 @@ def apply_death_penalty(
     if backpack is None:
         return None  # nothing to take: the hotbar is not the penalty's business
     return LootPile(pos=pygame.Vector2(pos), contents=backpack, pack=worn)
+
+
+def update_beasts(
+    dt: float,
+    beasts: list[Beast],
+    player: Player,
+    world: WorldMap,
+    core: Core,
+    rng: random.Random,
+    drops: list[Fragment],
+) -> None:
+    """Move the animals, bite what they catch, and leave what they were made of.
+
+    The ward holds them out as it holds out golems: they gather AROUND it, and
+    one that strolls in would cancel the healing the ward exists to give.
+
+    What a dead one leaves is dropped on the ground as an ordinary node rather
+    than pushed into the pack, so a kill with no room is not a kill wasted.
+    """
+    for beast in beasts:
+        beast.update(dt, player.pos, world)
+        _hold_outside_ward(beast, core)
+        if player.invulnerable or player.hp <= 0 or not beast.contact_dps:
+            continue
+        if beast.pos.distance_to(player.pos) <= beast.radius + player.radius:
+            player.hp -= beast.contact_dps * dt
+    fallen = [b for b in beasts if b.is_dead]
+    if not fallen:
+        return
+    for beast in fallen:
+        for kind, count in beast.kind.drops:
+            for _ in range(count):
+                spot = beast.pos + pygame.Vector2(rng.uniform(-30, 30), rng.uniform(-30, 30))
+                world.clamp(spot)
+                drops.append(Fragment(pos=spot, kind=kind, hp=1.0))
+    beasts[:] = [b for b in beasts if not b.is_dead]

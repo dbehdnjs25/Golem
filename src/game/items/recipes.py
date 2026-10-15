@@ -36,10 +36,12 @@ from game.items.item_kinds import (
     GOLD_PICK,
     GRASS,
     HEARTH,
+    HIDE,
     IRON_AXE,
     IRON_INGOT,
     IRON_ORE,
     IRON_PICK,
+    LEATHER_PACK,
     PEBBLE,
     SMELTER,
     STEEL_AXE,
@@ -92,6 +94,9 @@ RECIPES: tuple[Recipe, ...] = (
     Recipe(SMELTER, 1, ((STONE, 20),), BENCH_S),
     Recipe(HEARTH, 1, ((STONE, 12), (WOOD, 6)), BENCH_S),
     Recipe(WORN_PACK, 1, ((WOOD, 12),), BENCH_S),
+    # Hide only comes off an animal, so the bigger pack is paid for in nights
+    # spent out rather than in ore.
+    Recipe(LEATHER_PACK, 1, ((HIDE, 8), (WOOD, 10)), BENCH_S),
     Recipe(FINE_BENCH, 1, ((BRASS_INGOT, 4), (GOLD_INGOT, 2), (WOOD, 20)), BENCH_S),
     _tool(STONE_PICK, STONE),
     _tool(STONE_AXE, STONE),

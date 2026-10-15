@@ -11,8 +11,9 @@ import pygame
 
 from game import config
 from game.core.scene import Scene
+from game.entities.beast import Beast
 from game.entities.core import Core
-from game.entities.enemy import Golem
+from game.entities.enemy import Creature, Golem
 from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
 from game.entities.player import Player
@@ -28,6 +29,7 @@ from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, TWIG, WOOD, ItemKin
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, survival
+from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
@@ -117,6 +119,8 @@ class PlayScene(Scene):
         self.enemies: list[Golem] = []
         self.projectiles: list[Projectile] = []
         self.enemy_spawner = EnemySpawner()
+        self.beasts: list[Beast] = []
+        self.beast_spawner = BeastSpawner()
         self._fire_timer = 0.0
         self._dodge_pressed = False
         self._sync_pressed = False
@@ -293,6 +297,18 @@ class PlayScene(Scene):
         self.enemy_spawner.update(
             dt, self.enemies, self.player.pos, self.core, self.rng, self.world
         )
+        self.beast_spawner.update(
+            dt,
+            self.beasts,
+            self.player.pos,
+            self.core,
+            self.rng,
+            self.world,
+            night=self.clock.is_night,
+        )
+        combat.update_beasts(
+            dt, self.beasts, self.player, self.world, self.core, self.rng, self.fragments
+        )
 
         if not down and self.player.hp <= 0:
             # Piles accumulate; each runs out on its own clock rather than
@@ -349,15 +365,21 @@ class PlayScene(Scene):
         self._draw_world(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
-        self._draw_loot(surface)
         self._draw_stations(surface)
         self._draw_nodes(surface)
-        for enemy in self.enemies:
+        # Night falls on the GROUND. Everything alive, everything in flight and
+        # everything on a clock is drawn over it, because a wolf you cannot
+        # tell from yourself is not atmosphere, it is a lost fight -- and a
+        # loot pile with five minutes left should not be hidden by the hour.
+        self._draw_night(surface)
+        self._draw_loot(surface)
+        on_field: tuple[Creature, ...] = (*self.enemies, *self.beasts)
+        for creature in on_field:
             pygame.draw.circle(
                 surface,
-                enemy.color,  # from its kind, so biome golems look different
-                self.camera.world_to_screen(enemy.pos),
-                enemy.radius,
+                creature.color,  # from its kind, so each sort reads differently
+                self.camera.world_to_screen(creature.pos),
+                creature.radius,
             )
         for shot in self.projectiles:
             pygame.draw.circle(
@@ -381,7 +403,6 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
-        self._draw_night(surface)
         self._draw_compass(surface)
         self._draw_hud(surface)
         self._draw_grid(surface)
@@ -688,10 +709,12 @@ class PlayScene(Scene):
         pygame.draw.circle(surface, config.WARD_COLOR, center, self.core.ward_radius, 2)
 
     def _draw_night(self, surface: pygame.Surface) -> None:
-        """Darken everything outside the ward once night falls.
+        """Darken the ground outside the ward once night falls.
 
-        Drawn before the HUD so the gauges stay readable, and punched through
-        inside the ward so the safe ground reads as safe at a glance.
+        Punched through inside the ward, so the safe land reads as safe at a
+        glance. Laid over the terrain and the scenery only -- creatures, the
+        player, shots and loot all go on top, so the dark is a mood rather than
+        a blindfold.
         """
         if not self.clock.is_night:
             return

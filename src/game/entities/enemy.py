@@ -18,6 +18,7 @@ Contact damage is applied by systems/combat, not here.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Protocol
 
 import pygame
 
@@ -28,6 +29,23 @@ from game.world.map import WorldMap
 # core, or the player.
 TARGET_CORE = "core"
 TARGET_PLAYER = "player"
+
+
+class Creature(Protocol):
+    """What everything on the field has in common: a place, a size, a colour.
+
+    Golems and animals share no behaviour -- one walks on the core and one
+    hunts the player -- but drawing them is the same job, and a protocol says
+    that without inventing a base class neither of them wants.
+    """
+
+    pos: pygame.Vector2
+
+    @property
+    def radius(self) -> float: ...
+
+    @property
+    def color(self) -> tuple[int, int, int]: ...
 
 
 @dataclass(frozen=True)

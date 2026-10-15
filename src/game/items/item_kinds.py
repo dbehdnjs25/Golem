@@ -111,6 +111,7 @@ BLAST_FURNACE = ItemKind("blast_furnace", "고로", 1, (92, 96, 112))
 # --- Consumed -----------------------------------------------------------------
 # Meat restores stamina only; raw costs HP on top. Potions are the HP answer in
 # the field and are deliberately scarce.
+HIDE = ItemKind("hide", "가죽", _STACK, (164, 120, 86))
 RAW_MEAT = ItemKind("raw_meat", "생고기", 16, (200, 110, 115))
 COOKED_MEAT = ItemKind("cooked_meat", "익힌 고기", 16, (165, 105, 65))
 POTION = ItemKind("potion", "물약", 8, (210, 80, 130))
@@ -161,6 +162,7 @@ CATALOGUE: tuple[ItemKind, ...] = (
     BLAST_FURNACE,
     WORN_PACK,
     LEATHER_PACK,
+    HIDE,
     RAW_MEAT,
     COOKED_MEAT,
     POTION,

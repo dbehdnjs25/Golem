@@ -1,3 +1,4 @@
+from game.entities.beast import BEAST_KINDS
 from game.items import grades, recipes
 from game.items.item_kinds import (
     BLAST_FURNACE,
@@ -16,6 +17,10 @@ from game.items.item_kinds import (
 )
 
 # What the world hands over without anything being crafted first.
+# Everything an animal leaves behind. Read off the beast table rather than
+# listed by hand, so a new drop cannot quietly go missing from this check.
+HUNTED = {kind for beast in BEAST_KINDS for kind, _ in beast.drops}
+
 MINED = {
     STONE,
     WOOD,
@@ -108,7 +113,11 @@ def test_steel_is_locked_behind_brass_which_is_locked_behind_zinc():
 def test_every_recipe_is_reachable_from_an_empty_hand():
     # The most important test in this table. One broken link and the game is
     # unwinnable, and no amount of reading the rows will show it.
-    have = set(MINED)
+    #
+    # The world hands out two ways, not one: what is mined and what is hunted.
+    # Hide is only ever cut off an animal, so the walk has to start from both or
+    # it would call the leather pack unreachable when it plainly is not.
+    have = set(MINED) | set(HUNTED)
     stations = {recipes.NOWHERE}
     progress = True
     while progress:
@@ -130,3 +139,11 @@ def test_placing_a_station_is_what_opens_its_recipes():
     assert recipes.STATION_OF[ITEM_KINDS["bench"]] == {recipes.BENCH_S}
     assert recipes.STATION_OF[FINE_BENCH] == {recipes.FINE_S}
     assert recipes.STATION_OF[BLAST_FURNACE] == {recipes.FURNACE_S}
+
+
+def test_the_leather_pack_is_paid_for_in_hide():
+    # The bigger pack costs nights spent out among the animals rather than ore,
+    # which is the only reason to go near a wolf.
+    from game.items.item_kinds import HIDE
+
+    assert HIDE in {kind for kind, _ in _by_output(ITEM_KINDS["leather_pack"]).inputs}

@@ -182,3 +182,31 @@ def test_contact_damage_comes_from_the_golem_s_kind():
         1.0, [Golem(pos=pygame.Vector2(CENTRE), kind=gentle)], player, WORLD, UNLIT
     )
     assert player.hp == config.PLAYER_MAX_HP - gentle.contact_dps
+
+
+def test_a_golem_walks_at_the_core_not_at_you():
+    # The spec's whole classification. Until this held, the kind table said
+    # "core" and every golem chased the player anyway.
+    core = Core(pos=pygame.Vector2(CENTRE))
+    core.ignite()
+    away = core.pos + pygame.Vector2(core.ward_radius + 3000, 0)
+    player = Player(pos=away + pygame.Vector2(0, 2000))
+    golem = Golem(pos=pygame.Vector2(away))
+    before_core = golem.pos.distance_to(core.pos)
+    before_player = golem.pos.distance_to(player.pos)
+    combat.update_enemies(1.0, [golem], player, WORLD, core)
+    assert golem.pos.distance_to(core.pos) < before_core
+    assert golem.pos.distance_to(player.pos) >= before_player
+
+
+def test_standing_in_its_way_still_gets_you_hit():
+    # It does not aim at you, but it does not politely walk around you either.
+    # Plant yourself on the line it is marching down and it comes through.
+    core = Core(pos=pygame.Vector2(CENTRE))
+    core.ignite()
+    player = Player(pos=core.pos + pygame.Vector2(core.ward_radius + 500, 0))
+    golem = Golem(pos=core.pos + pygame.Vector2(core.ward_radius + 900, 0))
+    # Long enough for it to cover the 400 units between them at its own pace.
+    for _ in range(300):  # five seconds at the fixed step
+        combat.update_enemies(config.FIXED_DT, [golem], player, WORLD, core)
+    assert player.hp < config.PLAYER_MAX_HP

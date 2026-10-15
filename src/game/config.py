@@ -193,6 +193,17 @@ GOLEM_SPEED_SCALING: Final[float] = 0.25
 # ore out there is better for exactly this reason: distance is the danger.
 GOLEM_SCALE_AT_EDGE: Final[float] = 4.0
 
+# --- Wild animals ---------------------------------------------------------
+# They press around the ward at night and are the only thing abroad before the
+# core is lit -- with nowhere to heal, a night out is what makes lighting it
+# worth doing.
+BEAST_SPAWN_INTERVAL: Final[float] = 4.0
+BEAST_SPAWN_MAX: Final[int] = 12
+BEAST_RING: Final[float] = 900.0  # how far from the player they turn up
+# How close you have to get before a rabbit bolts. Fleeing at any distance
+# would pin every rabbit against the map's rim, uncatchable.
+BEAST_FLEE_RANGE: Final[float] = 320.0
+
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0
 WEAPON_FIRE_RATE: Final[float] = 4.0  # shots per second while held

@@ -709,3 +709,22 @@ def test_no_pointer_when_the_core_is_in_view():
     scene.draw(surface)
     edge = [surface.get_at((int(config.COMPASS_MARGIN), y))[:3] for y in range(40, 500)]
     assert config.CORE_COLOR not in edge
+
+
+def test_night_does_not_darken_the_player():
+    # The dark is a mood, not a blindfold. Dimmed to the same grey as a wolf,
+    # the player loses track of themselves in exactly the fight that matters.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.player.pos.update(scene.core.pos + pygame.Vector2(scene.core.ward_radius + 500, 0))
+    scene.camera.center_on(scene.player.pos)
+
+    while not scene.clock.is_night:
+        scene.clock.update(1.0)
+    # A full-size surface: the camera maps into the real screen, so the tiny
+    # shared fixture cannot hold the point we want to look at.
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    middle = scene.camera.world_to_screen(scene.player.pos)
+    lit = surface.get_at((int(middle.x), int(middle.y)))[:3]
+    assert lit == config.PLAYER_COLOR
