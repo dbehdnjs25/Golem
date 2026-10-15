@@ -291,6 +291,13 @@ STAFF_LOCKOUT: Final[float] = 4.0  # seconds out of action after an overload
 DISTANCE_WORDS: Final[tuple[str, ...]] = ("바로 앞", "가까움", "멂", "아주 멂")
 # Upper bound of each word, in world units; the last catches everything else.
 DISTANCE_BANDS: Final[tuple[float, ...]] = (900.0, 9000.0, 28000.0)
+
+# How close to a ruin before the compass flags it. Twelve scattered over a map
+# this size are unfindable by walking and tedious with every one flagged from
+# anywhere; a short leash makes exploring pay without handing over the map.
+RUIN_SIGHTING: Final[float] = 3000.0
+STRAIN_COLOR: Final[tuple[int, int, int]] = (150, 120, 215)
+STRAIN_LOCKED_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

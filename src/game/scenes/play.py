@@ -19,6 +19,7 @@ from game.entities.loot import LootPile
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.entities.station import Station, place, stations_at
+from game.entities.structure import Structure
 from game.inventory import grid, packs
 from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
@@ -491,9 +492,12 @@ class PlayScene(Scene):
             self.player.radius,
         )
         self._draw_raid_edge(surface)
+        self._draw_hud(surface)
+        # Markers last, so one is never lost behind the gauges. A ruin you
+        # cannot see is a ruin you walk past; the date underneath it can wait a
+        # second. Each label carries its own backing so both stay readable.
         self._draw_compass(surface)
         self._draw_detector(surface)
-        self._draw_hud(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
         self._draw_carve(surface)
@@ -523,6 +527,22 @@ class PlayScene(Scene):
                 self.grid.close(self.backpack, self.hotbar)
             self.grid_open = False
             self.craft_open = False
+
+    def flagged_ruins(self) -> list[Structure]:
+        """Unopened ruins close enough to be worth pointing at."""
+        return [
+            site
+            for site in self.structures
+            if not site.opened and self.player.pos.distance_to(site.pos) <= config.RUIN_SIGHTING
+        ]
+
+    @property
+    def staff_line(self) -> str:
+        """What the staff is doing, in a few words under the gauges."""
+        if self.staff.overloaded:
+            return f"과부하 {self.staff.lockout:.1f}초"
+        held = self.staff.ready
+        return held.name if held is not None else "빈 지팡이"
 
     @property
     def holding_staff(self) -> bool:
@@ -1087,6 +1107,13 @@ class PlayScene(Scene):
         self._point_at(surface, self.core.pos, config.CORE_COLOR, "코어")
         for pile in self.loot:
             self._point_at(surface, pile.pos, config.LOOT_COLOR, "짐")
+        # Ruins, but only ones within sight of. Twelve of them scattered over a
+        # map seventy-two thousand units across would be unfindable by walking
+        # and tedious to find with every one flagged from anywhere; a short
+        # leash makes exploring pay without handing over the map.
+        for site in self.flagged_ruins():
+            colour = config.VAULT_COLOR if site.guarded else config.RUIN_COLOR
+            self._point_at(surface, site.pos, colour, "유적")
 
     def _point_at(
         self,
@@ -1107,9 +1134,19 @@ class PlayScene(Scene):
         text = _font(12).render(f"{label} {far}", True, colour)
         box = text.get_rect(center=(int(at.x), int(at.y) + 16))
         box.clamp_ip(surface.get_rect())
+        backing = pygame.Surface((box.width + 6, box.height + 2), pygame.SRCALPHA)
+        backing.fill((0, 0, 0, 150))
+        surface.blit(backing, (box.left - 3, box.top - 1))
         surface.blit(text, box)
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
+        # A dim backing first. Compass markers are pinned to the screen's edge
+        # and can land anywhere along it, including on top of these gauges --
+        # when that happened both the marker's label and the date underneath
+        # it became unreadable at once.
+        backing = pygame.Surface((_BAR_X + _BAR_W + 8, 108), pygame.SRCALPHA)
+        backing.fill((0, 0, 0, 90))
+        surface.blit(backing, (0, 4))
         # inventory fill gauge
         pack = self.backpack
         frac = pack.used / pack.size if pack is not None and pack.size else 0.0
@@ -1130,8 +1167,20 @@ class PlayScene(Scene):
         # the core's own health, below the clock -- only once it can be hurt
         if self.core.ignited:
             _draw_bar(surface, 74, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
-        line = _font(13).render(self.calendar_line, True, config.WHITE)
-        surface.blit(line, (10, 88))
+        # the staff's strain, but only while it is the thing in hand: a gauge
+        # for something slung on your back is a gauge nobody reads
+        if self.holding_staff:
+            hot = self.staff.strain / config.STAFF_STRAIN_MAX
+            colour = config.STRAIN_LOCKED_COLOR if self.staff.overloaded else config.STRAIN_COLOR
+            _draw_bar(surface, 88, 6, hot, colour, bg=(40, 40, 55))
+        # The written lines sit low, just above the hotbar. Up beside the
+        # gauges they shared the corner with the compass markers, which pin
+        # themselves to the screen's edge and land there often -- two unrelated
+        # sentences overlapping is worse than either being somewhere odd.
+        floor = surface.get_height() - 50
+        surface.blit(_font(13).render(self.calendar_line, True, config.WHITE), (10, floor - 44))
+        if self.holding_staff:
+            surface.blit(_font(12).render(self.staff_line, True, config.WHITE), (10, floor - 24))
         if self.note_left > 0:
             # Fades out rather than vanishing, so a glance that catches the
             # tail of it still reads as "something just happened".

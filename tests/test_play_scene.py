@@ -1161,3 +1161,38 @@ def test_walking_the_bearing_actually_gets_you_there():
         step = pygame.Vector2(math.cos(math.radians(degrees)), math.sin(math.radians(degrees)))
         scene.player.pos += step * 50
     assert scene.detector_reading()[1] == config.DISTANCE_WORDS[0]
+
+
+def test_a_nearby_unopened_ruin_is_flagged_and_a_distant_one_is_not():
+    # Twelve ruins on a map this size are unfindable by walking, and flagged
+    # from anywhere they are a checklist. The leash is the compromise.
+    scene = PlayScene()
+    site = scene.structures[0]
+    scene.player.pos.update(site.pos + pygame.Vector2(config.RUIN_SIGHTING * 0.5, 0))
+    assert scene.flagged_ruins() == [site]
+    scene.player.pos.update(site.pos + pygame.Vector2(config.RUIN_SIGHTING * 2, 0))
+    assert site not in scene.flagged_ruins()
+
+
+def test_an_opened_ruin_stops_being_flagged():
+    scene = PlayScene()
+    site = scene.structures[0]
+    scene.player.pos.update(site.pos)
+    site.open()
+    assert scene.flagged_ruins() == []
+
+
+def test_the_staff_line_says_what_it_will_throw():
+    scene = _with_staff(PlayScene())
+    assert scene.staff_line == "빈 지팡이"
+    ember = glyph_table.VOLCANO_GLYPHS[0]
+    scene.grimoire.learn(ember)
+    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
+    scene.carve(ember)
+    assert scene.staff_line == ember.name
+
+
+def test_the_staff_line_says_overloaded_with_the_time_left():
+    scene = _with_staff(PlayScene())
+    scene.staff.lockout = config.STAFF_LOCKOUT
+    assert "과부하" in scene.staff_line
