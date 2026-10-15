@@ -226,6 +226,15 @@ RAID_SPAWN_MAX: Final[int] = 20
 # raider piles onto one point and even a level-50 core falls inside two
 # minutes of a six-minute night, which leaves no raid to fight.
 CORE_CONTACT_DPS: Final[float] = 5.0
+# The ward's rim on a night it is not holding anything out.
+WARD_BROKEN_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
+# The screen-edge pulse that says a raid is on. The ward is thousands of units
+# across and the view is hundreds, so the broken rim is off screen; this is the
+# one sign that does not depend on where the camera is pointed.
+RAID_EDGE_WIDTH: Final[int] = 28
+RAID_PULSE_SPEED: Final[float] = 2.2  # radians/s
+RAID_PULSE_MIN: Final[int] = 40
+RAID_PULSE_MAX: Final[int] = 120
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

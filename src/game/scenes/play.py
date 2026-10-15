@@ -339,6 +339,22 @@ class PlayScene(Scene):
     def days_to_raid(self) -> int:
         return raids.days_until(self.clock.day, self.core.bosses_killed)
 
+    @property
+    def ward_colour(self) -> tuple[int, int, int]:
+        """Red on a raid night. The wall being down has to read from inside."""
+        return config.WARD_BROKEN_COLOR if self.is_raid else config.WARD_COLOR
+
+    @property
+    def calendar_line(self) -> str:
+        """What day it is and how long until the next raid.
+
+        The spec's shortening cycle only means something if the player can
+        count it; unreadable, it is just the occasional bad night.
+        """
+        left = self.days_to_raid
+        when = "습격 오늘 밤" if left == 0 else f"습격까지 {left}일"
+        return f"{self.clock.day}일차 · {when}"
+
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
         self.player.update(dt, self._move_dir(), self.world, dodge)
@@ -425,6 +441,7 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
+        self._draw_raid_edge(surface)
         self._draw_compass(surface)
         self._draw_hud(surface)
         self._draw_grid(surface)
@@ -728,7 +745,7 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.VOID_COLOR, center, self.core.radius - 4)
             pygame.draw.circle(surface, config.PEDESTAL_COLOR, center, self.core.radius, 4)
             return
-        pygame.draw.circle(surface, config.WARD_COLOR, center, self.core.ward_radius, 2)
+        pygame.draw.circle(surface, self.ward_colour, center, self.core.ward_radius, 2)
 
     def _draw_night(self, surface: pygame.Surface) -> None:
         """Darken the ground outside the ward once night falls.
@@ -742,7 +759,11 @@ class PlayScene(Scene):
             return
         overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         overlay.fill((0, 0, 20, config.NIGHT_DARKNESS))
-        if self.core.ignited:
+        # On a raid night the hole is not punched at all. The ward is holding
+        # nothing out, so there is no safe circle to show -- and it makes the
+        # bad nights look different from the quiet ones at a glance, which
+        # matters when the rim itself is far off screen.
+        if self.core.ignited and not self.is_raid:
             pygame.draw.circle(
                 overlay,
                 (0, 0, 0, 0),
@@ -750,6 +771,30 @@ class PlayScene(Scene):
                 self.core.ward_radius,
             )
         surface.blit(overlay, (0, 0))
+
+    def _draw_raid_edge(self, surface: pygame.Surface) -> None:
+        """A red pulse around the screen's rim while the ward is open.
+
+        The ward is thousands of units across and the view is hundreds, so on
+        a raid night the broken rim and the golems walking in on it are both
+        off screen. Something has to say "this is happening" at a size that
+        does not depend on where the camera is pointed.
+        """
+        if not self.is_raid:
+            return
+        beat = 0.5 + 0.5 * math.sin(self.clock.elapsed * config.RAID_PULSE_SPEED)
+        alpha = int(config.RAID_PULSE_MIN + beat * (config.RAID_PULSE_MAX - config.RAID_PULSE_MIN))
+        glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        width, height = surface.get_size()
+        for step in range(config.RAID_EDGE_WIDTH):
+            fade = 1 - step / config.RAID_EDGE_WIDTH
+            pygame.draw.rect(
+                glow,
+                (*config.WARD_BROKEN_COLOR, int(alpha * fade)),
+                pygame.Rect(step, step, width - 2 * step, height - 2 * step),
+                1,
+            )
+        surface.blit(glow, (0, 0))
 
     def _draw_loot(self, surface: pygame.Surface) -> None:
         """Everything a death took, sitting where it happened.
@@ -817,9 +862,18 @@ class PlayScene(Scene):
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
         _draw_bar(surface, 48, 5, ready, (120, 160, 220), bg=(40, 40, 55))
-        # day/night progress: warm across the day, cold across the night
-        phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
+        # day/night progress: warm across the day, cold across the night, and
+        # red while the ward is open, so the hour and the danger are one gauge.
+        if self.is_raid:
+            phase_color = config.WARD_BROKEN_COLOR
+        else:
+            phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
         _draw_bar(surface, 62, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
+        # the core's own health, below the clock -- only once it can be hurt
+        if self.core.ignited:
+            _draw_bar(surface, 74, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
+        line = _font(13).render(self.calendar_line, True, config.WHITE)
+        surface.blit(line, (10, 88))
         # hotbar (bottom-left). Hidden while the belongings screen is open,
         # which draws its own -- two hotbars on screen reads as two hotbars.
         if self.grid_open:

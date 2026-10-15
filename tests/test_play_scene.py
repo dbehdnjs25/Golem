@@ -708,7 +708,9 @@ def test_no_pointer_when_the_core_is_in_view():
     scene.camera.center_on(scene.core.pos)
     surface = pygame.Surface(config.SCREEN_SIZE)
     scene.draw(surface)
-    edge = [surface.get_at((int(config.COMPASS_MARGIN), y))[:3] for y in range(40, 500)]
+    # Started below the gauges: the core's own health bar is drawn in the same
+    # colour up in the corner, and it is not a compass marker.
+    edge = [surface.get_at((int(config.COMPASS_MARGIN), y))[:3] for y in range(120, 500)]
     assert config.CORE_COLOR not in edge
 
 
@@ -809,3 +811,88 @@ def test_mending_a_whole_core_spends_no_stone():
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
     scene.update(config.FIXED_DT)
     assert scene.hotbar.count(STONE) == 10
+
+
+def _shot(scene) -> pygame.Surface:
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    return surface
+
+
+def _has_ink(surface: pygame.Surface, rect: pygame.Rect, colour) -> bool:
+    """Whether any pixel in ``rect`` is drawn in ``colour``."""
+    for x in range(rect.left, rect.right, 2):
+        for y in range(rect.top, rect.bottom, 2):
+            if surface.get_at((x, y))[:3] == colour:
+                return True
+    return False
+
+
+def test_the_calendar_is_on_screen():
+    # The spec's shortening cycle only means anything if the player can count
+    # it. Unreadable, it is just the occasional bad night.
+    scene = PlayScene()
+    scene.core.ignite()
+    assert "1일차" in scene.calendar_line
+    assert "7일" in scene.calendar_line  # a whole week stands between
+
+
+def test_the_calendar_says_tonight_on_a_raid_day():
+    scene = PlayScene()
+    scene.core.ignite()
+    raid_day = next(d for d in range(2, 40) if raids.is_raid_night(d, 0))
+    _wind_to(scene, raid_day, night=False)
+    assert "오늘" in scene.calendar_line
+
+
+def test_the_core_bar_only_appears_once_the_core_can_be_hurt():
+    # An unlit pedestal with a health bar promises a fight that cannot happen.
+    scene = PlayScene()
+    before = _shot(scene)
+    gauge = pygame.Rect(8, 74, 126, 8)
+    assert not _has_ink(before, gauge, config.CORE_COLOR)
+    scene.core.ignite()
+    assert _has_ink(_shot(scene), gauge, config.CORE_COLOR)
+
+
+def test_a_raid_night_recolours_the_ward():
+    # The wall is down, and that has to be visible from inside it.
+    scene = PlayScene()
+    scene.core.ignite()
+    assert scene.ward_colour == config.WARD_COLOR
+    raid_day = next(d for d in range(2, 40) if raids.is_raid_night(d, 0))
+    _wind_to(scene, raid_day, night=True)
+    assert scene.ward_colour == config.WARD_BROKEN_COLOR
+
+
+def test_a_raid_paints_the_screen_edge():
+    # The ward is thousands of units across and the view is hundreds, so the
+    # broken rim and the golems on it are both off screen. This is the one
+    # sign that does not depend on where the camera is looking.
+    scene = PlayScene()
+    scene.core.ignite()
+    quiet = _shot(scene)
+    corner = pygame.Rect(0, 0, config.RAID_EDGE_WIDTH, config.RAID_EDGE_WIDTH)
+    assert not _has_ink(quiet, corner, config.WARD_BROKEN_COLOR)
+
+    raid_day = next(d for d in range(2, 40) if raids.is_raid_night(d, 0))
+    _wind_to(scene, raid_day, night=True)
+    loud = _shot(scene)
+    assert loud.get_at((1, 1))[:3] != quiet.get_at((1, 1))[:3]
+
+
+def test_a_raid_night_leaves_no_safe_circle_in_the_dark():
+    # The ward is holding nothing out, so there is no bright patch to show.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.camera.center_on(scene.core.pos)
+    middle = scene.camera.world_to_screen(scene.core.pos)
+    probe = (int(middle.x) + 200, int(middle.y) + 120)
+
+    _wind_to(scene, 2, night=True)  # an ordinary night
+    assert not scene.is_raid
+    calm = _shot(scene).get_at(probe)[:3]
+
+    raid_day = next(d for d in range(3, 40) if raids.is_raid_night(d, 0))
+    _wind_to(scene, raid_day, night=True)
+    assert sum(_shot(scene).get_at(probe)[:3]) < sum(calm)
