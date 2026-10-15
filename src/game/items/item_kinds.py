@@ -71,7 +71,7 @@ CHARRED_WOOD = ItemKind("charred_wood", "불탄 나무", _STACK, (72, 58, 50))
 OBSIDIAN = ItemKind("obsidian", "흑요석", _STACK, (45, 35, 55))
 # What stands around a lava pool. Swinging at it is what yields obsidian --
 # the glass itself is never lying on the ground.
-OBSIDIAN_STONE = ItemKind("obsidian_stone", "흑요석 박힌 돌", _STACK, (62, 48, 66))
+OBSIDIAN_STONE = ItemKind("obsidian_stone", "흑요석 박힌 돌", _STACK, (96, 84, 98))
 FROST_CRYSTAL = ItemKind("frost_crystal", "서리 결정", _STACK, (150, 220, 240))
 WEATHERED_STONE = ItemKind("weathered_stone", "풍화석", _STACK, (185, 175, 155))
 BOG_MOSS = ItemKind("bog_moss", "늪 이끼", _STACK, (95, 130, 75))

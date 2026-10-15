@@ -264,8 +264,14 @@ LAVA_DPS: Final[float] = 26.0
 OBSIDIAN_BELT: Final[float] = 420.0  # how far the studded stone reaches out
 OBSIDIAN_PER_POOL_MIN: Final[int] = 3  # never a pool worth no walk
 OBSIDIAN_PER_POOL_MAX: Final[int] = 6
+# The sheen on the glass showing through the rock. Volcanic glass is black,
+# and black on black would be the same as no fleck at all.
+OBSIDIAN_GLINT: Final[tuple[int, int, int]] = (176, 150, 205)
 LAVA_COLOR: Final[tuple[int, int, int]] = (214, 92, 38)
 LAVA_RIM_COLOR: Final[tuple[int, int, int]] = (255, 186, 92)
+# How strongly the screen washes while standing in it. A health bar falling
+# with no cause on screen is the kind of thing a player blames on the game.
+LAVA_WASH: Final[int] = 70
 # Cuts per chisel. Learning is free and forever, so this is the only price
 # carving has -- and it is what makes "is this the right glyph for this
 # weapon" a question every time instead of a formality.

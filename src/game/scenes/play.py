@@ -38,6 +38,7 @@ from game.items.item_kinds import (
     TWIG,
     WOOD,
     ItemKind,
+    yield_of,
 )
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
@@ -502,6 +503,7 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
+        self._draw_burning(surface)
         self._draw_raid_edge(surface)
         self._draw_hud(surface)
         # Markers last, so one is never lost behind the gauges. A ruin you
@@ -926,6 +928,11 @@ class PlayScene(Scene):
 
         The ring is red when the tool in hand cannot take it. Without that,
         being under-equipped looks exactly like the game ignoring the click.
+
+        A node that yields something OTHER than itself is drawn with a fleck of
+        what is in it. Only the obsidian stone by the lava does that today, and
+        without the fleck it reads as an ordinary dark pebble -- a poor look for
+        the one thing that opens the whole second ladder.
         """
         # An empty hand still reaches for litter, so it gets a reach too.
         tool = self.hotbar.active_tool or BARE_HAND
@@ -942,6 +949,10 @@ class PlayScene(Scene):
         for node in self.fragments:
             at = self.camera.world_to_screen(node.pos)
             pygame.draw.circle(surface, node.kind.color, at, config.FRAGMENT_RADIUS)
+            held = yield_of(node.kind)
+            if held is not node.kind:
+                pygame.draw.circle(surface, held.color, at, config.FRAGMENT_RADIUS * 0.45)
+                pygame.draw.circle(surface, config.OBSIDIAN_GLINT, at, config.FRAGMENT_RADIUS * 0.2)
             if node is aimed:
                 usable = mining.can_take(tool, node.kind)
                 ring = config.WHITE if usable else config.BLOCKED_COLOR
@@ -1063,6 +1074,23 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.WHITE, at, site.radius, 2)
             if site.in_reach(self.player.pos):
                 pygame.draw.circle(surface, config.WHITE, at, site.radius + 6, 2)
+
+    @property
+    def in_lava(self) -> bool:
+        return lava.burns(self.player.pos, self.lava)
+
+    def _draw_burning(self, surface: pygame.Surface) -> None:
+        """A hot wash over the screen while standing in lava.
+
+        The pool is already visible, but the moment of being IN it is the part
+        that costs health, and a health bar falling with no cause on screen is
+        the kind of thing a player blames on the game.
+        """
+        if not self.in_lava:
+            return
+        glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        glow.fill((*config.LAVA_COLOR, config.LAVA_WASH))
+        surface.blit(glow, (0, 0))
 
     def _draw_lava(self, surface: pygame.Surface) -> None:
         """Pools, bright enough to read before they are stepped in.

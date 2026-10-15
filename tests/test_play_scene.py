@@ -1236,3 +1236,42 @@ def test_walking_into_the_lava_hurts():
     for _ in range(30):
         scene.update(config.FIXED_DT)
     assert scene.player.hp < before
+
+
+def test_a_node_holding_something_else_shows_it():
+    # The obsidian stone is the only one, and without the fleck it reads as an
+    # ordinary dark pebble -- a poor look for the thing that opens the whole
+    # second ladder.
+    from game.items.item_kinds import OBSIDIAN
+
+    scene = PlayScene()
+    stone = next(f for f in scene.fragments if f.kind is ITEM_KINDS["obsidian_stone"])
+    scene.camera.center_on(stone.pos)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+
+    at = scene.camera.world_to_screen(stone.pos)
+    middle = surface.get_at((int(at.x), int(at.y)))[:3]
+    edge = surface.get_at((int(at.x) + int(config.FRAGMENT_RADIUS) - 1, int(at.y)))[:3]
+    assert middle == config.OBSIDIAN_GLINT
+    assert edge == ITEM_KINDS["obsidian_stone"].color
+    assert OBSIDIAN.color != ITEM_KINDS["obsidian_stone"].color
+
+
+def test_standing_in_lava_washes_the_screen():
+    scene = PlayScene()
+    pool = scene.lava[0]
+    scene.player.pos.update(pool.pos + pygame.Vector2(pool.radius + 200, 0))
+    scene.camera.center_on(scene.player.pos)
+    assert not scene.in_lava
+    dry = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(dry)
+
+    scene.player.pos.update(pool.pos)
+    scene.camera.center_on(scene.player.pos)
+    assert scene.in_lava
+    hot = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(hot)
+
+    corner = (config.SCREEN_WIDTH - 4, 4)
+    assert hot.get_at(corner)[:3] != dry.get_at(corner)[:3]
