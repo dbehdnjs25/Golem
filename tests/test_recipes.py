@@ -15,11 +15,17 @@ from game.items.item_kinds import (
     WOOD_PICK,
     ZINC_ORE,
 )
+from game.world.biomes import RING_BIOMES
 
 # What the world hands over without anything being crafted first.
 # Everything an animal leaves behind. Read off the beast table rather than
 # listed by hand, so a new drop cannot quietly go missing from this check.
 HUNTED = {kind for beast in BEAST_KINDS for kind, _ in beast.drops}
+
+# What only a ring biome yields. Read off the biome table for the same reason,
+# and kept separate from MINED because reaching it is a different problem: a
+# gold pick AND a trip out past the grassland.
+BIOME_MATERIALS = {b.material for b in RING_BIOMES if b.material is not None}
 
 MINED = {
     STONE,
@@ -117,7 +123,7 @@ def test_every_recipe_is_reachable_from_an_empty_hand():
     # The world hands out two ways, not one: what is mined and what is hunted.
     # Hide is only ever cut off an animal, so the walk has to start from both or
     # it would call the leather pack unreachable when it plainly is not.
-    have = set(MINED) | set(HUNTED)
+    have = set(MINED) | set(HUNTED) | set(BIOME_MATERIALS)
     stations = {recipes.NOWHERE}
     progress = True
     while progress:
@@ -155,3 +161,18 @@ def test_the_chisel_is_reachable_and_cheap():
     recipe = _by_output(ITEM_KINDS["chisel"])
     assert recipe.station == recipes.BENCH_S
     assert sum(n for _, n in recipe.inputs) <= 4
+
+
+def test_the_best_staff_asks_for_a_tour_of_the_ring():
+    # The one thing in the game that wants material from several biomes at
+    # once. The glyphs pull a player around the ring; this is what the trip
+    # leaves them holding.
+    recipe = _by_output(ITEM_KINDS["supreme_staff"])
+    wanted = {kind for kind, _ in recipe.inputs}
+    assert len(wanted & BIOME_MATERIALS) >= 3
+
+
+def test_each_staff_eats_the_one_below_it():
+    for better, worse in (("greater_staff", "staff"), ("supreme_staff", "greater_staff")):
+        inputs = {kind for kind, _ in _by_output(ITEM_KINDS[better]).inputs}
+        assert ITEM_KINDS[worse] in inputs

@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from game.items.item_kinds import (
     BENCH,
     BLAST_FURNACE,
+    BOG_MOSS,
     BRASS_AXE,
     BRASS_INGOT,
     BRASS_PICK,
@@ -31,11 +32,13 @@ from game.items.item_kinds import (
     COPPER_PICK,
     CRUDE_AXE,
     FINE_BENCH,
+    FROST_CRYSTAL,
     GOLD_AXE,
     GOLD_INGOT,
     GOLD_ORE,
     GOLD_PICK,
     GRASS,
+    GREATER_STAFF_ITEM,
     HEARTH,
     HIDE,
     IRON_AXE,
@@ -43,15 +46,20 @@ from game.items.item_kinds import (
     IRON_ORE,
     IRON_PICK,
     LEATHER_PACK,
+    OBSIDIAN,
     PEBBLE,
     SMELTER,
+    STAFF_ITEM,
     STEEL_AXE,
     STEEL_INGOT,
     STEEL_PICK,
     STONE,
     STONE_AXE,
     STONE_PICK,
+    SUPREME_STAFF_ITEM,
+    THUNDER_STONE,
     TWIG,
+    WEATHERED_STONE,
     WOOD,
     WOOD_AXE,
     WOOD_PICK,
@@ -101,6 +109,9 @@ RECIPES: tuple[Recipe, ...] = (
     # Hide only comes off an animal, so the bigger pack is paid for in nights
     # spent out rather than in ore.
     Recipe(LEATHER_PACK, 1, ((HIDE, 8), (WOOD, 10)), BENCH_S),
+    # The first staff is cheap; what it costs is the glyph you have to go and
+    # find before it does anything at all.
+    Recipe(STAFF_ITEM, 1, ((WOOD, 10), (GOLD_INGOT, 1)), BENCH_S),
     Recipe(FINE_BENCH, 1, ((BRASS_INGOT, 4), (GOLD_INGOT, 2), (WOOD, 20)), BENCH_S),
     _tool(STONE_PICK, STONE),
     _tool(STONE_AXE, STONE),
@@ -110,6 +121,21 @@ RECIPES: tuple[Recipe, ...] = (
     _tool(IRON_AXE, IRON_INGOT),
     _tool(GOLD_PICK, GOLD_INGOT),
     _tool(GOLD_AXE, GOLD_INGOT),
+    # Each upgrade eats the one below it and a wider spread of biome material,
+    # so the staff with the most room on it is the reward for having toured
+    # the whole ring -- which is the only thing in the game that asks for that.
+    Recipe(
+        GREATER_STAFF_ITEM,
+        1,
+        ((STAFF_ITEM, 1), (OBSIDIAN, 4), (FROST_CRYSTAL, 4)),
+        FINE_S,
+    ),
+    Recipe(
+        SUPREME_STAFF_ITEM,
+        1,
+        ((GREATER_STAFF_ITEM, 1), (WEATHERED_STONE, 6), (BOG_MOSS, 6), (THUNDER_STONE, 6)),
+        FINE_S,
+    ),
     # --- the fine bench -----------------------------------------------------
     Recipe(BLAST_FURNACE, 1, ((BRASS_INGOT, 6), (STONE, 30)), FINE_S),
     _tool(BRASS_PICK, BRASS_INGOT, FINE_S),

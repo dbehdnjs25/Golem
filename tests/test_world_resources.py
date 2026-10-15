@@ -105,3 +105,56 @@ def test_litter_keeps_turning_up_at_every_distance():
         rng = random.Random(7)
         drawn = [node_at(fraction, rng) for _ in range(2000)]
         assert sum(1 for k in drawn if k in LITTER) > 0
+
+
+def test_a_ring_biome_yields_its_own_material():
+    # The second ladder's raw end. Without this, obsidian and the rest are
+    # named in the grade table, wanted by the staff recipes, and found
+    # nowhere at all -- which is how they stood until step 7 went looking.
+    import random
+
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    for biome in biomes.RING_BIOMES:
+        rng = random.Random(3)
+        drawn = [node_at(0.8, rng, biome) for _ in range(3000)]
+        assert biome.material in drawn, biome.key
+
+
+def test_one_biome_never_yields_another_s_material():
+    import random
+
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    others = {b.material for b in biomes.RING_BIOMES}
+    for biome in biomes.RING_BIOMES:
+        rng = random.Random(1)
+        drawn = {node_at(0.8, rng, biome) for _ in range(3000)}
+        assert not (drawn & (others - {biome.material}))
+
+
+def test_the_grassland_has_no_material_of_its_own():
+    import random
+
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    rng = random.Random(1)
+    drawn = {node_at(0.3, rng, biomes.GRASSLAND) for _ in range(3000)}
+    assert not (drawn & {b.material for b in biomes.RING_BIOMES})
+
+
+def test_biome_material_is_scarce_next_to_the_ordinary_ore():
+    # It is the gate on a whole second ladder, so it should be worth the trip
+    # rather than something picked up on the way past.
+    import random
+
+    from game.world import biomes
+    from game.world.resources import node_at
+
+    rng = random.Random(8)
+    drawn = [node_at(0.8, rng, biomes.VOLCANO) for _ in range(4000)]
+    share = sum(1 for k in drawn if k is biomes.VOLCANO.material) / len(drawn)
+    assert 0.02 < share < 0.25

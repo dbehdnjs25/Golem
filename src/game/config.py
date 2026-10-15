@@ -244,6 +244,10 @@ GLYPH_POWER_BASIC: Final[float] = 6.0
 GLYPH_POWER_GREATER: Final[float] = 14.0
 GLYPH_POWER_SUPREME: Final[float] = 30.0
 GLYPH_STRAIN_PER_POWER: Final[float] = 1.6
+# How often a node in a ring biome is that biome's own material. The only
+# source of any of it, and scarce on purpose: it gates the second ladder,
+# so it should be worth the trip rather than picked up on the way past.
+BIOME_MATERIAL_SHARE: Final[float] = 0.12
 # Cuts per chisel. Learning is free and forever, so this is the only price
 # carving has -- and it is what makes "is this the right glyph for this
 # weapon" a question every time instead of a formality.
@@ -268,6 +272,17 @@ NOTE_FADE: Final[float] = 1.2  # seconds of fade at the end
 # Room on the weapon. Flat, because weapon types are an open question in the
 # spec -- the staff is where "more slots by upgrading" actually shows.
 WEAPON_SLOTS: Final[int] = 2
+
+# --- The staff ------------------------------------------------------------
+# A staff is a budget rather than a number. Strain climbs with power, so the
+# supreme cut empties it fastest and the basic cut is the only one that can be
+# thrown all night. Cooling is set so the cheapest glyph at the staff's own
+# fire rate breaks even -- something has to be sustainable or the staff is a
+# novelty.
+STAFF_FIRE_RATE: Final[float] = 2.0  # throws per second
+STAFF_STRAIN_MAX: Final[float] = 100.0
+STAFF_COOLING: Final[float] = 22.0  # strain shed per second
+STAFF_LOCKOUT: Final[float] = 4.0  # seconds out of action after an overload
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

@@ -38,7 +38,10 @@ class Spawner(TimedSpawner):
         spot = self._find_spot(fragments, core, rng, world, player_pos)
         if spot is None:
             return None
-        fragment = Fragment(pos=spot, kind=node_at(world.distance_fraction(spot), rng))
+        fragment = Fragment(
+            pos=spot,
+            kind=node_at(world.distance_fraction(spot), rng, world.biome_at(spot)),
+        )
         fragments.append(fragment)
         return fragment
 

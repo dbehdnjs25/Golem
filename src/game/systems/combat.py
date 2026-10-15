@@ -18,6 +18,7 @@ from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
 from game.items.item_kinds import ItemKind
+from game.items.staff import Staff
 from game.items.tools import WeaponTool
 from game.world.map import WorldMap
 
@@ -48,6 +49,41 @@ def fire_weapon(
         ttl=weapon.projectile_ttl,
     )
     return 1.0 / weapon.fire_rate, [shot]
+
+
+def fire_staff(
+    dt: float,
+    *,
+    staff: Staff,
+    held: bool,
+    aim_world: pygame.Vector2,
+    player_pos: pygame.Vector2,
+    fire_timer: float,
+) -> tuple[float, list[Projectile]]:
+    """Throw whatever is carved on the staff, if it will.
+
+    ``staff.update`` runs whether or not the trigger is down: strain has to
+    cool while the player runs away, which is the only thing that makes a
+    lockout survivable.
+    """
+    staff.update(dt)
+    fire_timer -= dt
+    if not held or fire_timer > 0:
+        return fire_timer, []
+    aim = aim_world - player_pos
+    if aim.length_squared() == 0:
+        return fire_timer, []
+    glyph = staff.fire()
+    if glyph is None:
+        return fire_timer, []  # empty, or locked out
+    shot = Projectile(
+        pos=pygame.Vector2(player_pos),
+        vel=aim.normalize() * config.PROJECTILE_SPEED,
+        damage=glyph.power,  # the glyph IS the attack; the staff adds nothing
+        radius=config.PROJECTILE_RADIUS,
+        ttl=config.PROJECTILE_TTL,
+    )
+    return 1.0 / config.STAFF_FIRE_RATE, [shot]
 
 
 def _first_hit(shot: Projectile, enemies: list[Golem]) -> Golem | None:

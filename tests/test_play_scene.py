@@ -1046,3 +1046,66 @@ def test_only_one_screen_at_a_time():
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c))
     assert scene.craft_open and not scene.carve_open
+
+
+# --- the staff ------------------------------------------------------------
+
+
+def _with_staff(scene, kind: str = "staff"):
+    scene.hotbar.select(3)
+    scene.hotbar.slots[3] = Stack(ITEM_KINDS[kind], 1)
+    return scene
+
+
+def test_holding_a_staff_is_read_off_the_item():
+    scene = _with_staff(PlayScene())
+    assert scene.holding_staff
+    assert scene.carve_target is scene.staff.engraved
+
+
+def test_a_better_staff_widens_the_one_you_already_own():
+    # Carried on the item, every glyph already cut in would be thrown out with
+    # the old staff. Nobody would take that upgrade.
+    scene = _with_staff(PlayScene())
+    ember = glyph_table.VOLCANO_GLYPHS[0]
+    scene.grimoire.learn(ember)
+    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
+    scene.carve(ember)
+
+    _with_staff(scene, "supreme_staff")
+    assert scene.carve_target.slots == 3
+    assert scene.staff.engraved.glyphs == [ember]  # the cut survived
+
+
+def test_a_bare_staff_fires_nothing():
+    scene = _with_staff(PlayScene())
+    scene._mouse_held = True
+    for _ in range(60):
+        scene.update(config.FIXED_DT)
+    assert scene.projectiles == []
+
+
+def test_a_carved_staff_throws_its_glyph():
+    scene = _with_staff(PlayScene())
+    ember = glyph_table.VOLCANO_GLYPHS[0]
+    scene.grimoire.learn(ember)
+    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
+    scene.carve(ember)
+
+    scene._mouse_held = True
+    scene._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT // 2)
+    for _ in range(10):
+        scene.update(config.FIXED_DT)
+    assert scene.projectiles
+    assert scene.projectiles[0].damage == ember.power
+
+
+def test_the_staff_cools_while_something_else_is_in_hand():
+    # Put away hot and drawn again hot would make the lockout a trap rather
+    # than a setback.
+    scene = _with_staff(PlayScene())
+    scene.staff.strain = 50.0
+    scene.hotbar.select(4)  # the weapon
+    for _ in range(60):
+        scene.update(config.FIXED_DT)
+    assert scene.staff.strain < 50.0

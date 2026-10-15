@@ -77,6 +77,11 @@ THUNDER_STONE = ItemKind("thunder_stone", "뇌석", _STACK, (215, 200, 120))
 # every slot at once. They do not stack: you wear one.
 # A chisel is three cuts and gone, so it stacks like a consumable, not like
 # the one-of-a-kind bag it sits next to.
+# Staves. One of each, like a pack -- what matters about yours is what is
+# carved on it, so two identical ones would be two of the same decision.
+STAFF_ITEM = ItemKind("staff", "지팡이", 1, (140, 110, 170))
+GREATER_STAFF_ITEM = ItemKind("greater_staff", "상급 지팡이", 1, (170, 130, 210))
+SUPREME_STAFF_ITEM = ItemKind("supreme_staff", "최상급 지팡이", 1, (210, 160, 250))
 CHISEL = ItemKind("chisel", "새김 도구", 8, (205, 185, 150))
 WORN_PACK = ItemKind("worn_pack", "낡은 배낭", 1, (120, 95, 70))
 LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
@@ -164,6 +169,9 @@ CATALOGUE: tuple[ItemKind, ...] = (
     FINE_BENCH,
     BLAST_FURNACE,
     CHISEL,
+    STAFF_ITEM,
+    GREATER_STAFF_ITEM,
+    SUPREME_STAFF_ITEM,
     WORN_PACK,
     LEATHER_PACK,
     HIDE,

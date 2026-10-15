@@ -25,6 +25,7 @@ from game.items.item_kinds import (
     ZINC_ORE,
     ItemKind,
 )
+from game.world.biomes import Biome
 
 _GRASSLAND_EDGE = config.GRASSLAND_RADIUS / config.MAP_RADIUS
 _INNER_GRASSLAND = _GRASSLAND_EDGE / 2
@@ -57,8 +58,13 @@ def ore_at(fraction: float, rng: random.Random) -> ItemKind:
 LITTER: tuple[ItemKind, ...] = (TWIG, PEBBLE, GRASS)
 
 
-def node_at(fraction: float, rng: random.Random) -> ItemKind:
+def node_at(fraction: float, rng: random.Random, biome: Biome | None = None) -> ItemKind:
     """What a node at ``fraction`` of the way to the map edge turns out to be.
+
+    A ring biome yields its own material some of the time, and that is the only
+    place any of it comes from. It is scarce next to the ordinary ore because
+    it gates a whole second ladder -- it should be worth the trip rather than
+    something picked up on the way past.
 
     Trees and litter are flat shares at every distance rather than rows on the
     ore table. Folding them in would make deep ground grow fewer trees, which
@@ -73,4 +79,10 @@ def node_at(fraction: float, rng: random.Random) -> ItemKind:
         return rng.choice(LITTER)
     if roll < config.LITTER_SHARE + config.TREE_SHARE:
         return WOOD
+    if (
+        biome is not None
+        and biome.material is not None
+        and rng.random() < config.BIOME_MATERIAL_SHARE
+    ):
+        return biome.material
     return ore_at(fraction, rng)

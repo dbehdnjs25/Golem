@@ -38,6 +38,7 @@ from game.items.item_kinds import (
     ItemKind,
 )
 from game.items.recipes import STATION_OF, Recipe
+from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, raids, survival
 from game.systems.beast_spawner import BeastSpawner
@@ -110,6 +111,10 @@ class PlayScene(Scene):
         # because a stack of chisels is a stack of FRESH ones -- only the one
         # actually being used is part-worn.
         self.chisel_left = config.CHISEL_USES
+        # One staff, upgraded in place. The item in a slot is a token for it, the
+        # same way the chisel's remaining cuts live here: what matters about a
+        # staff is what is carved on it, and that cannot ride in a Stack.
+        self.staff = Staff()
         self.structures = structures.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
@@ -399,14 +404,27 @@ class PlayScene(Scene):
             hotbar=self.hotbar,
         )
         self._wear_if_pack(mined)
-        self._fire_timer, shots = combat.fire_weapon(
-            dt,
-            weapon=tool,
-            held=self._mouse_held,
-            aim_world=aim_world,
-            player_pos=self.player.pos,
-            fire_timer=self._fire_timer,
-        )
+        if self.holding_staff:
+            self._fire_timer, shots = combat.fire_staff(
+                dt,
+                staff=self.staff,
+                held=self._mouse_held,
+                aim_world=aim_world,
+                player_pos=self.player.pos,
+                fire_timer=self._fire_timer,
+            )
+        else:
+            # Cooling even while slung. A staff put away to swing something
+            # else should not come back out exactly as hot as it went in.
+            self.staff.update(dt)
+            self._fire_timer, shots = combat.fire_weapon(
+                dt,
+                weapon=tool,
+                held=self._mouse_held,
+                aim_world=aim_world,
+                player_pos=self.player.pos,
+                fire_timer=self._fire_timer,
+            )
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
 
@@ -505,6 +523,17 @@ class PlayScene(Scene):
             self.craft_open = False
 
     @property
+    def holding_staff(self) -> bool:
+        held = self.hotbar.active_stack
+        return held is not None and held.kind in STAFF_KINDS
+
+    @property
+    def staff_slots(self) -> int:
+        """How much room the staff in hand has, read off the item itself."""
+        held = self.hotbar.active_stack
+        return STAFF_KINDS.get(held.kind, 0) if held is not None else 0
+
+    @property
     def carve_target(self) -> Engraved | None:
         """What is cut into the thing in hand, if it is the sort that takes it.
 
@@ -512,6 +541,12 @@ class PlayScene(Scene):
         already where tools live, and a second place to pick a weapon from
         would be a screen whose whole job is choosing between one option.
         """
+        if self.holding_staff:
+            # A better staff widens the one the player owns. Carried on the
+            # item instead, every glyph already cut in would be thrown out with
+            # the old staff -- not an upgrade anyone would take.
+            self.staff.engraved.slots = max(self.staff.engraved.slots, self.staff_slots)
+            return self.staff.engraved
         held = self.hotbar.active_tool
         piece = getattr(held, "engraved", None)
         return piece if isinstance(piece, Engraved) else None
