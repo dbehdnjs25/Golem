@@ -235,6 +235,15 @@ RAID_EDGE_WIDTH: Final[int] = 28
 RAID_PULSE_SPEED: Final[float] = 2.2  # radians/s
 RAID_PULSE_MIN: Final[int] = 40
 RAID_PULSE_MAX: Final[int] = 120
+
+# --- Glyphs ---------------------------------------------------------------
+# What a carved glyph is worth, by tier. Power is damage added to a weapon or
+# thrown by a staff; strain is what a staff pays for it, which is why the best
+# cut is not simply the right answer -- it empties the staff fastest.
+GLYPH_POWER_BASIC: Final[float] = 6.0
+GLYPH_POWER_GREATER: Final[float] = 14.0
+GLYPH_POWER_SUPREME: Final[float] = 30.0
+GLYPH_STRAIN_PER_POWER: Final[float] = 1.6
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 
