@@ -283,6 +283,14 @@ STAFF_FIRE_RATE: Final[float] = 2.0  # throws per second
 STAFF_STRAIN_MAX: Final[float] = 100.0
 STAFF_COOLING: Final[float] = 22.0  # strain shed per second
 STAFF_LOCKOUT: Final[float] = 4.0  # seconds out of action after an overload
+
+# --- Detectors ------------------------------------------------------------
+# A detector gives a bearing and a WORD, never a number. A number would make
+# the random placement pointless: the player would walk the bearing watching a
+# counter, which is a puzzle with one move in it.
+DISTANCE_WORDS: Final[tuple[str, ...]] = ("바로 앞", "가까움", "멂", "아주 멂")
+# Upper bound of each word, in world units; the last catches everything else.
+DISTANCE_BANDS: Final[tuple[float, ...]] = (900.0, 9000.0, 28000.0)
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

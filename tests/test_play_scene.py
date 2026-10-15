@@ -1,3 +1,5 @@
+import math
+
 import pygame
 import pytest
 
@@ -13,6 +15,7 @@ from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
 from game.systems import raids
 from game.systems.camera import FREE
+from game.world import biomes
 
 
 def _key_event(key):
@@ -1109,3 +1112,52 @@ def test_the_staff_cools_while_something_else_is_in_hand():
     for _ in range(60):
         scene.update(config.FIXED_DT)
     assert scene.staff.strain < 50.0
+
+
+# --- detectors ------------------------------------------------------------
+
+
+def test_a_detector_in_hand_reads_its_own_temple():
+    scene = PlayScene()
+    scene.hotbar.select(2)
+    scene.hotbar.slots[2] = Stack(ITEM_KINDS["bog_detector"], 1)
+    reading = scene.detector_reading()
+    assert reading is not None
+    _, word, biome = reading
+    assert biome is biomes.BOG
+    assert word in config.DISTANCE_WORDS
+
+
+def test_putting_the_detector_away_stops_the_reading():
+    # A reading that stayed up would be a map, which is the one thing a
+    # detector is deliberately not.
+    scene = PlayScene()
+    scene.hotbar.select(2)
+    scene.hotbar.slots[2] = Stack(ITEM_KINDS["bog_detector"], 1)
+    assert scene.detector_reading() is not None
+    scene.hotbar.select(4)
+    assert scene.detector_reading() is None
+
+
+def test_an_ordinary_item_reads_nothing():
+    scene = PlayScene()
+    scene.hotbar.select(2)
+    scene.hotbar.slots[2] = Stack(ITEM_KINDS["stone"], 4)
+    assert scene.detector_reading() is None
+
+
+def test_walking_the_bearing_actually_gets_you_there():
+    # The test that the needle is not just decorative: follow it and the word
+    # has to end up saying you have arrived.
+    scene = PlayScene()
+    scene.hotbar.select(2)
+    scene.hotbar.slots[2] = Stack(ITEM_KINDS["volcano_detector"], 1)
+    for _ in range(4000):
+        reading = scene.detector_reading()
+        assert reading is not None
+        degrees, word, _ = reading
+        if word == config.DISTANCE_WORDS[0]:
+            break
+        step = pygame.Vector2(math.cos(math.radians(degrees)), math.sin(math.radians(degrees)))
+        scene.player.pos += step * 50
+    assert scene.detector_reading()[1] == config.DISTANCE_WORDS[0]

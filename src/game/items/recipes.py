@@ -20,6 +20,7 @@ from dataclasses import dataclass
 from game.items.item_kinds import (
     BENCH,
     BLAST_FURNACE,
+    BOG_DETECTOR,
     BOG_MOSS,
     BRASS_AXE,
     BRASS_INGOT,
@@ -49,6 +50,7 @@ from game.items.item_kinds import (
     OBSIDIAN,
     PEBBLE,
     SMELTER,
+    SNOWFIELD_DETECTOR,
     STAFF_ITEM,
     STEEL_AXE,
     STEEL_INGOT,
@@ -59,7 +61,10 @@ from game.items.item_kinds import (
     SUPREME_STAFF_ITEM,
     THUNDER_STONE,
     TWIG,
+    VOLCANO_DETECTOR,
+    WASTELAND_DETECTOR,
     WEATHERED_STONE,
+    WIND_DETECTOR,
     WOOD,
     WOOD_AXE,
     WOOD_PICK,
@@ -136,6 +141,14 @@ RECIPES: tuple[Recipe, ...] = (
         ((GREATER_STAFF_ITEM, 1), (WEATHERED_STONE, 6), (BOG_MOSS, 6), (THUNDER_STONE, 6)),
         FINE_S,
     ),
+    # One per biome, out of that biome's own material. Which means the fifth
+    # temple can only be found after mining in the fifth biome -- the detectors
+    # chain the tour rather than handing out the whole map at once.
+    Recipe(VOLCANO_DETECTOR, 1, ((OBSIDIAN, 3), (GOLD_INGOT, 1)), FINE_S),
+    Recipe(SNOWFIELD_DETECTOR, 1, ((FROST_CRYSTAL, 3), (GOLD_INGOT, 1)), FINE_S),
+    Recipe(WIND_DETECTOR, 1, ((WEATHERED_STONE, 3), (GOLD_INGOT, 1)), FINE_S),
+    Recipe(BOG_DETECTOR, 1, ((BOG_MOSS, 3), (GOLD_INGOT, 1)), FINE_S),
+    Recipe(WASTELAND_DETECTOR, 1, ((THUNDER_STONE, 3), (GOLD_INGOT, 1)), FINE_S),
     # --- the fine bench -----------------------------------------------------
     Recipe(BLAST_FURNACE, 1, ((BRASS_INGOT, 6), (STONE, 30)), FINE_S),
     _tool(BRASS_PICK, BRASS_INGOT, FINE_S),

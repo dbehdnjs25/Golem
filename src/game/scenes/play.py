@@ -40,7 +40,7 @@ from game.items.item_kinds import (
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
-from game.systems import carrying, combat, crafting, mining, raids, survival
+from game.systems import carrying, combat, crafting, detector, mining, raids, survival
 from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
@@ -49,6 +49,7 @@ from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
 from game.world import biomes, structures
+from game.world.biomes import Biome
 from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
@@ -491,6 +492,7 @@ class PlayScene(Scene):
         )
         self._draw_raid_edge(surface)
         self._draw_compass(surface)
+        self._draw_detector(surface)
         self._draw_hud(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
@@ -1035,6 +1037,42 @@ class PlayScene(Scene):
         """Placeholder markers so the five sites are visible before temples exist."""
         for site in self.temple_sites:
             pygame.draw.circle(surface, config.WHITE, self.camera.world_to_screen(site), 9, 3)
+
+    def detector_reading(self) -> tuple[float, str, Biome] | None:
+        """Bearing, distance word and biome for the detector in hand.
+
+        Only while it is actually held. A reading that stayed on screen after
+        the thing was put away would be a map, which is the one thing a
+        detector is deliberately not.
+        """
+        held = self.hotbar.active_stack
+        if held is None:
+            return None
+        biome = detector.biome_of(held.kind)
+        if biome is None:
+            return None
+        site = detector.temple_for(held.kind, self.world, self.temple_sites)
+        if site is None:
+            return None
+        return (
+            detector.bearing(self.player.pos, site),
+            detector.rough_distance(self.player.pos, site),
+            biome,
+        )
+
+    def _draw_detector(self, surface: pygame.Surface) -> None:
+        """A needle and a word, low on the screen, away from the gauges."""
+        reading = self.detector_reading()
+        if reading is None:
+            return
+        degrees, word, biome = reading
+        middle = pygame.Vector2(surface.get_width() - 70, surface.get_height() - 70)
+        pygame.draw.circle(surface, (30, 30, 40), middle, 30)
+        pygame.draw.circle(surface, biome.color, middle, 30, 2)
+        way = pygame.Vector2(math.cos(math.radians(degrees)), math.sin(math.radians(degrees)))
+        pygame.draw.line(surface, biome.color, middle, middle + way * 24, 3)
+        said = _font(12).render(f"{biome.name} · {word}", True, config.WHITE)
+        surface.blit(said, said.get_rect(midtop=(int(middle.x), int(middle.y) + 34)))
 
     def _draw_compass(self, surface: pygame.Surface) -> None:
         """Point at the core when it is off screen, and say how far.
