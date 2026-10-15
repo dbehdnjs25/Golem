@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import random
 from pathlib import Path
 
 from PIL import Image
@@ -67,8 +68,34 @@ def clover(s, x, y):
     pixel(s, x, y+2, STEM)
 
 
+COLORS = [('#f2eed5', '#c9d1ac'), ('#f2d366', '#d6b151'), ('#e7a0a3', '#c57e8a'),
+          ('#8cbed2', '#709aaa'), ('#baa1d3', '#9c82b7')]
+
+
+def scatter(seed, decorations):
+    """Place each decoration independently, with room for its full sprite."""
+    rng = random.Random(seed)
+    candidates = [(x, y) for y in range(7, 24) for x in range(6, 24)]
+    rng.shuffle(candidates)
+    centers = []
+    s = base.copy()
+    for draw, args in decorations:
+        x, y = next((x, y) for x, y in candidates
+                    if all((x-px)**2 + (y-py)**2 >= 49 for px, py in centers))
+        centers.append((x, y))
+        draw(s, x, y, *args)
+    return s
+
+
+def random_meadow(variant):
+    rng = random.Random(9300 + variant)
+    petals = rng.sample(COLORS, 2)
+    return scatter(9400 + variant, [(flower, petals[0]), (flower, petals[1]),
+                                   (tuft, ()), (clover, ()), (stone, ())])
+
+
 NAMES = ['기본 잔디', '작은 풀', '풀 무리', '하얀 꽃', '노란 꽃', '분홍 꽃', '파란 꽃', '보라 꽃',
-         '작은 조약돌', '조약돌 두 개', '작은 돌무리', '클로버', '하얀 꽃 무리', '노란 꽃 무리', '혼합 들꽃', '꽃과 조약돌']
+         '작은 조약돌', '조약돌 두 개', '작은 돌무리', '클로버', '하얀 꽃 무리', '노란 꽃 무리', '혼합 들꽃', '전체 랜덤 배치']
 tiles = []
 for index in range(16):
     s = base.copy()
@@ -77,7 +104,7 @@ for index in range(16):
     elif index == 2:
         tuft(s, 10, 12); tuft(s, 23, 23)
     elif index in (3, 4, 5, 6, 7):
-        colors = [('#f2eed5', '#c9d1ac'), ('#f2d366', '#d6b151'), ('#e7a0a3', '#c57e8a'), ('#8cbed2', '#709aaa'), ('#baa1d3', '#9c82b7')]
+        colors = COLORS
         flower(s, 15, 15, *colors[index-3])
     elif index == 8:
         stone(s, 15, 16)
@@ -94,10 +121,70 @@ for index in range(16):
     elif index == 14:
         flower(s, 9, 12, '#f2eed5', '#c9d1ac'); flower(s, 22, 20, '#e7a0a3', '#c57e8a'); flower(s, 21, 9, '#8cbed2', '#709aaa')
     elif index == 15:
-        flower(s, 11, 12, '#f2eed5', '#c9d1ac'); stone(s, 20, 20)
+        s = random_meadow(0)
     tiles.append(s)
 
-sheet = pygame.Surface((128, 128), pygame.SRCALPHA)
+# Preserve IDs; the retired flower/stone family becomes the whole-meadow mix.
+categories = ['plants'] * 3 + ['flowers'] * 5 + ['stones'] * 3 + ['plants', 'clusters', 'clusters', 'mixed', 'random']
+families = list(range(16))
+positions = ['기본'] * 16
+positions[15] = '랜덤 1'
+for source in (3, 4, 5, 6, 7, 12, 13, 14, 15):
+    rng = random.Random(20260919 + source)
+    flower_colors = {
+        12: [colors[0], colors[0]],
+        13: [colors[1], colors[1]],
+        14: [colors[0], colors[2], colors[3]],
+    }.get(source, [colors[source - 3]] if source < 8 else [])
+    previous_centers = [(15, 15)]
+    for variant in range(4 if source < 8 else 3):
+        label = f'랜덤 {variant + 1}'
+        s = base.copy()
+        candidates = [(x, y) for y in range(6, 24) for x in range(6, 25)]
+        rng.shuffle(candidates)
+        centers = []
+        for _ in range(len(flower_colors)):
+            # Separate decorations and keep all pixels inside the shared border.
+            x, y = next((x, y) for x, y in candidates
+                        if all((x-px)**2 + (y-py)**2 >= 49 for px, py in centers)
+                        and (source >= 8 or all((x-px)**2 + (y-py)**2 >= 25
+                                               for px, py in previous_centers)))
+            centers.append((x, y))
+        for (x, y), palette in zip(centers, flower_colors):
+            flower(s, x, y, *palette)
+        if source == 15:
+            s = random_meadow(variant + 1)
+            label = f'랜덤 {variant + 2}'
+        previous_centers.extend(centers)
+        tiles.append(s)
+        NAMES.append(f'{NAMES[source]} · {label}')
+        categories.append(categories[source])
+        families.append(source)
+        positions.append(label)
+
+for variant, count in enumerate((1, 2, 3, 5), start=1):
+    label = f'랜덤 {variant}'
+    tiles.append(scatter(9500 + variant, [(clover, ())] * count))
+    NAMES.append(f'클로버 · {label}')
+    categories.append('plants')
+    families.append(11)
+    positions.append(label)
+
+for source, decorations in (
+        (8, [(stone, ())]),
+        (9, [(stone, ()), (stone, ())]),
+        (10, [(stone, (True,)), (stone, ()), (stone, ())])):
+    for variant in range(1, 5):
+        label = f'랜덤 {variant}'
+        tiles.append(scatter(9600 + source * 10 + variant, decorations))
+        NAMES.append(f'{NAMES[source]} · {label}')
+        categories.append('stones')
+        families.append(source)
+        positions.append(label)
+
+columns = 4
+rows = (len(tiles) + columns - 1) // columns
+sheet = pygame.Surface((columns * 32, rows * 32), pygame.SRCALPHA)
 entries = []
 
 
@@ -112,9 +199,10 @@ for i, tile in enumerate(tiles):
     filename = f'grass_{i:02}.webp'
     save_webp(tile, ROOT / filename)
     sheet.blit(tile, ((i % 4)*32, (i // 4)*32))
-    entries.append(dict(id=i, name=NAMES[i], file=filename, rect=[(i%4)*32, (i//4)*32, 32, 32]))
+    entries.append(dict(id=i, name=NAMES[i], file=filename, rect=[(i%4)*32, (i//4)*32, 32, 32],
+                        category=categories[i], family=families[i], position=positions[i]))
 save_webp(sheet, ROOT / 'grassland-32.webp')
-(ROOT / 'tileset.json').write_text(json.dumps(dict(image='grassland-32.webp', tilewidth=32, tileheight=32, columns=4, tilecount=16, margin=0, spacing=0, tiles=entries), ensure_ascii=False, indent=2), encoding='utf-8')
+(ROOT / 'tileset.json').write_text(json.dumps(dict(image='grassland-32.webp', tilewidth=32, tileheight=32, columns=columns, tilecount=len(tiles), margin=0, spacing=0, tiles=entries), ensure_ascii=False, indent=2), encoding='utf-8')
 
 # Check the deliverables and all four shared boundary strips.
 for tile in tiles:
@@ -124,11 +212,12 @@ for tile in tiles:
             assert tile.get_at((x, y)).a == 255
             if x < 4 or x >= 28 or y < 4 or y >= 28:
                 assert tile.get_at((x, y)) == base.get_at((x, y))
-assert len({pygame.image.tobytes(t, 'RGBA') for t in tiles}) == 16
+assert len({pygame.image.tobytes(t, 'RGBA') for t in tiles}) == len(tiles)
 embedded = base64.b64encode((ROOT / 'grassland-32.webp').read_bytes()).decode()
 for entry in entries:
     entry['url'] = 'data:image/webp;base64,' + base64.b64encode((ROOT / entry['file']).read_bytes()).decode()
 html = (Path(__file__).parent/'tiles32.template.html').read_text(encoding='utf-8')
 html = html.replace('__ATLAS__', embedded).replace('__TILES__', json.dumps(entries, ensure_ascii=False))
+html = html.replace('__COUNT__', str(len(tiles))).replace('__ROWS__', str(rows)).replace('__HEIGHT__', str(rows * 32))
 (ROOT/'preview.html').write_text(html, encoding='utf-8')
-print('Verified: 16 unique 32x32 opaque tiles, identical 4px boundary strips; 128x128 atlas; standalone HTML.')
+print(f'Verified: {len(tiles)} unique 32x32 opaque tiles, identical 4px boundary strips; {sheet.get_size()} atlas; standalone HTML.')

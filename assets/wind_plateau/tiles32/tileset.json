@@ -1,0 +1,235 @@
+{
+  "image": "wind_plateau-32.webp",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "columns": 4,
+  "tilecount": 16,
+  "margin": 0,
+  "spacing": 0,
+  "tiles": [
+    {
+      "id": 0,
+      "name": "바람 고원 기본 땅",
+      "file": "plateau_00.webp",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 0,
+      "position": "기본"
+    },
+    {
+      "id": 1,
+      "name": "바람에 눕는 풀 · 랜덤 1",
+      "file": "plateau_01.webp",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 1,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 2,
+      "name": "바람에 눕는 풀 · 랜덤 2",
+      "file": "plateau_02.webp",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 1,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 3,
+      "name": "바람에 눕는 풀 · 랜덤 3",
+      "file": "plateau_03.webp",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 1,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 4,
+      "name": "고원 자갈 · 랜덤 1",
+      "file": "plateau_04.webp",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 4,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 5,
+      "name": "고원 자갈 · 랜덤 2",
+      "file": "plateau_05.webp",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 4,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 6,
+      "name": "고원 자갈 · 랜덤 3",
+      "file": "plateau_06.webp",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 4,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 7,
+      "name": "풍화된 바위 · 랜덤 1",
+      "file": "plateau_07.webp",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 7,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 8,
+      "name": "풍화된 바위 · 랜덤 2",
+      "file": "plateau_08.webp",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 7,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 9,
+      "name": "풍화된 바위 · 랜덤 3",
+      "file": "plateau_09.webp",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 7,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 10,
+      "name": "바람에 깎인 땅 · 랜덤 1",
+      "file": "plateau_10.webp",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 10,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 11,
+      "name": "바람에 깎인 땅 · 랜덤 2",
+      "file": "plateau_11.webp",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 10,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 12,
+      "name": "바람에 깎인 땅 · 랜덤 3",
+      "file": "plateau_12.webp",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 10,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 13,
+      "name": "고원 풀과 자갈 · 랜덤 1",
+      "file": "plateau_13.webp",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 13,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 14,
+      "name": "고원 풀과 자갈 · 랜덤 2",
+      "file": "plateau_14.webp",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 13,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 15,
+      "name": "고원 풀과 자갈 · 랜덤 3",
+      "file": "plateau_15.webp",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 13,
+      "position": "랜덤 3"
+    }
+  ]
+}

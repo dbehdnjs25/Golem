@@ -1,0 +1,325 @@
+{
+  "image": "burnt-forest-32.webp",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "columns": 4,
+  "tilecount": 22,
+  "margin": 0,
+  "spacing": 0,
+  "tiles": [
+    {
+      "id": 0,
+      "name": "재가 덮인 숲 바닥",
+      "file": "burnt_00.webp",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 0,
+      "position": "기본"
+    },
+    {
+      "id": 1,
+      "name": "탄 나뭇가지 · 랜덤 1",
+      "file": "burnt_01.webp",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 2,
+      "name": "탄 나뭇가지 · 랜덤 2",
+      "file": "burnt_02.webp",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 3,
+      "name": "탄 나뭇가지 · 랜덤 3",
+      "file": "burnt_03.webp",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 4,
+      "name": "탄 나뭇가지 · 랜덤 4",
+      "file": "burnt_04.webp",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 5,
+      "name": "탄 나뭇가지 · 랜덤 5",
+      "file": "burnt_05.webp",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 5"
+    },
+    {
+      "id": 6,
+      "name": "탄 나뭇가지 · 랜덤 6",
+      "file": "burnt_06.webp",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ],
+      "category": "wood",
+      "family": 1,
+      "position": "랜덤 6"
+    },
+    {
+      "id": 7,
+      "name": "숯 조각 · 랜덤 1",
+      "file": "burnt_07.webp",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ],
+      "category": "charcoal",
+      "family": 7,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 8,
+      "name": "숯 조각 · 랜덤 2",
+      "file": "burnt_08.webp",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ],
+      "category": "charcoal",
+      "family": 7,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 9,
+      "name": "숯 조각 · 랜덤 3",
+      "file": "burnt_09.webp",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ],
+      "category": "charcoal",
+      "family": 7,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 10,
+      "file": "burnt_10.webp",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ],
+      "hidden": true,
+      "name": "불씨 2개 · 랜덤 1",
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 1",
+      "replacement": 16
+    },
+    {
+      "id": 11,
+      "file": "burnt_11.webp",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ],
+      "hidden": true,
+      "name": "불씨 2개 · 랜덤 2",
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 2",
+      "replacement": 17
+    },
+    {
+      "id": 12,
+      "file": "burnt_12.webp",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "hidden": true,
+      "name": "불씨 2개 · 랜덤 3",
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 3",
+      "replacement": 18
+    },
+    {
+      "id": 13,
+      "name": "불씨 1개 · 랜덤 1",
+      "file": "burnt_13.webp",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 13,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 14,
+      "name": "불씨 1개 · 랜덤 2",
+      "file": "burnt_14.webp",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 13,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 15,
+      "name": "불씨 1개 · 랜덤 3",
+      "file": "burnt_15.webp",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 13,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 16,
+      "name": "불씨 2개 · 랜덤 1",
+      "file": "burnt_16.webp",
+      "rect": [
+        0,
+        128,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 17,
+      "name": "불씨 2개 · 랜덤 2",
+      "file": "burnt_17.webp",
+      "rect": [
+        32,
+        128,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 18,
+      "name": "불씨 2개 · 랜덤 3",
+      "file": "burnt_18.webp",
+      "rect": [
+        64,
+        128,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 19,
+      "name": "불씨 2개 · 랜덤 4",
+      "file": "burnt_19.webp",
+      "rect": [
+        96,
+        128,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 20,
+      "name": "불씨 2개 · 랜덤 5",
+      "file": "burnt_20.webp",
+      "rect": [
+        0,
+        160,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 5"
+    },
+    {
+      "id": 21,
+      "name": "불씨 2개 · 랜덤 6",
+      "file": "burnt_21.webp",
+      "rect": [
+        32,
+        160,
+        32,
+        32
+      ],
+      "category": "embers",
+      "family": 16,
+      "position": "랜덤 6"
+    }
+  ]
+}

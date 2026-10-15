@@ -1,0 +1,235 @@
+{
+  "image": "bog-32.webp",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "columns": 4,
+  "tilecount": 16,
+  "margin": 0,
+  "spacing": 0,
+  "tiles": [
+    {
+      "id": 0,
+      "name": "늪지 기본 땅",
+      "file": "bog_00.webp",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 0,
+      "position": "기본"
+    },
+    {
+      "id": 1,
+      "name": "잔물결 · 랜덤 1",
+      "file": "bog_01.webp",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "category": "water",
+      "family": 1,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 2,
+      "name": "잔물결 · 랜덤 2",
+      "file": "bog_02.webp",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "category": "water",
+      "family": 1,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 3,
+      "name": "잔물결 · 랜덤 3",
+      "file": "bog_03.webp",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "category": "water",
+      "family": 1,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 4,
+      "name": "물 위 이끼 · 랜덤 1",
+      "file": "bog_04.webp",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 4,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 5,
+      "name": "물 위 이끼 · 랜덤 2",
+      "file": "bog_05.webp",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 4,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 6,
+      "name": "물 위 이끼 · 랜덤 3",
+      "file": "bog_06.webp",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 4,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 7,
+      "name": "개구리밥 · 랜덤 1",
+      "file": "bog_07.webp",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 7,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 8,
+      "name": "개구리밥 · 랜덤 2",
+      "file": "bog_08.webp",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 7,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 9,
+      "name": "개구리밥 · 랜덤 3",
+      "file": "bog_09.webp",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 7,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 10,
+      "name": "갈대 · 랜덤 1",
+      "file": "bog_10.webp",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 10,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 11,
+      "name": "갈대 · 랜덤 2",
+      "file": "bog_11.webp",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 10,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 12,
+      "name": "갈대 · 랜덤 3",
+      "file": "bog_12.webp",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 10,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 13,
+      "name": "떠 있는 나뭇가지 · 랜덤 1",
+      "file": "bog_13.webp",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ],
+      "category": "debris",
+      "family": 13,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 14,
+      "name": "떠 있는 나뭇가지 · 랜덤 2",
+      "file": "bog_14.webp",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ],
+      "category": "debris",
+      "family": 13,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 15,
+      "name": "떠 있는 나뭇가지 · 랜덤 3",
+      "file": "bog_15.webp",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ],
+      "category": "debris",
+      "family": 13,
+      "position": "랜덤 3"
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "tilewidth": 32,
   "tileheight": 32,
   "columns": 4,
-  "tilecount": 16,
+  "tilecount": 64,
   "margin": 0,
   "spacing": 0,
   "tiles": [
@@ -16,7 +16,10 @@
         0,
         32,
         32
-      ]
+      ],
+      "category": "plants",
+      "family": 0,
+      "position": "기본"
     },
     {
       "id": 1,
@@ -27,7 +30,10 @@
         0,
         32,
         32
-      ]
+      ],
+      "category": "plants",
+      "family": 1,
+      "position": "기본"
     },
     {
       "id": 2,
@@ -38,7 +44,10 @@
         0,
         32,
         32
-      ]
+      ],
+      "category": "plants",
+      "family": 2,
+      "position": "기본"
     },
     {
       "id": 3,
@@ -49,7 +58,10 @@
         0,
         32,
         32
-      ]
+      ],
+      "category": "flowers",
+      "family": 3,
+      "position": "기본"
     },
     {
       "id": 4,
@@ -60,7 +72,10 @@
         32,
         32,
         32
-      ]
+      ],
+      "category": "flowers",
+      "family": 4,
+      "position": "기본"
     },
     {
       "id": 5,
@@ -71,7 +86,10 @@
         32,
         32,
         32
-      ]
+      ],
+      "category": "flowers",
+      "family": 5,
+      "position": "기본"
     },
     {
       "id": 6,
@@ -82,7 +100,10 @@
         32,
         32,
         32
-      ]
+      ],
+      "category": "flowers",
+      "family": 6,
+      "position": "기본"
     },
     {
       "id": 7,
@@ -93,7 +114,10 @@
         32,
         32,
         32
-      ]
+      ],
+      "category": "flowers",
+      "family": 7,
+      "position": "기본"
     },
     {
       "id": 8,
@@ -104,7 +128,10 @@
         64,
         32,
         32
-      ]
+      ],
+      "category": "stones",
+      "family": 8,
+      "position": "기본"
     },
     {
       "id": 9,
@@ -115,7 +142,10 @@
         64,
         32,
         32
-      ]
+      ],
+      "category": "stones",
+      "family": 9,
+      "position": "기본"
     },
     {
       "id": 10,
@@ -126,7 +156,10 @@
         64,
         32,
         32
-      ]
+      ],
+      "category": "stones",
+      "family": 10,
+      "position": "기본"
     },
     {
       "id": 11,
@@ -137,7 +170,10 @@
         64,
         32,
         32
-      ]
+      ],
+      "category": "plants",
+      "family": 11,
+      "position": "기본"
     },
     {
       "id": 12,
@@ -148,7 +184,10 @@
         96,
         32,
         32
-      ]
+      ],
+      "category": "clusters",
+      "family": 12,
+      "position": "기본"
     },
     {
       "id": 13,
@@ -159,7 +198,10 @@
         96,
         32,
         32
-      ]
+      ],
+      "category": "clusters",
+      "family": 13,
+      "position": "기본"
     },
     {
       "id": 14,
@@ -170,18 +212,696 @@
         96,
         32,
         32
-      ]
+      ],
+      "category": "mixed",
+      "family": 14,
+      "position": "기본"
     },
     {
       "id": 15,
-      "name": "꽃과 조약돌",
+      "name": "전체 랜덤 배치",
       "file": "grass_15.webp",
       "rect": [
         96,
         96,
         32,
         32
-      ]
+      ],
+      "category": "random",
+      "family": 15,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 16,
+      "name": "하얀 꽃 · 랜덤 1",
+      "file": "grass_16.webp",
+      "rect": [
+        0,
+        128,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 3,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 17,
+      "name": "하얀 꽃 · 랜덤 2",
+      "file": "grass_17.webp",
+      "rect": [
+        32,
+        128,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 3,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 18,
+      "name": "하얀 꽃 · 랜덤 3",
+      "file": "grass_18.webp",
+      "rect": [
+        64,
+        128,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 3,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 19,
+      "name": "하얀 꽃 · 랜덤 4",
+      "file": "grass_19.webp",
+      "rect": [
+        96,
+        128,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 3,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 20,
+      "name": "노란 꽃 · 랜덤 1",
+      "file": "grass_20.webp",
+      "rect": [
+        0,
+        160,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 4,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 21,
+      "name": "노란 꽃 · 랜덤 2",
+      "file": "grass_21.webp",
+      "rect": [
+        32,
+        160,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 4,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 22,
+      "name": "노란 꽃 · 랜덤 3",
+      "file": "grass_22.webp",
+      "rect": [
+        64,
+        160,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 4,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 23,
+      "name": "노란 꽃 · 랜덤 4",
+      "file": "grass_23.webp",
+      "rect": [
+        96,
+        160,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 4,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 24,
+      "name": "분홍 꽃 · 랜덤 1",
+      "file": "grass_24.webp",
+      "rect": [
+        0,
+        192,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 5,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 25,
+      "name": "분홍 꽃 · 랜덤 2",
+      "file": "grass_25.webp",
+      "rect": [
+        32,
+        192,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 5,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 26,
+      "name": "분홍 꽃 · 랜덤 3",
+      "file": "grass_26.webp",
+      "rect": [
+        64,
+        192,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 5,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 27,
+      "name": "분홍 꽃 · 랜덤 4",
+      "file": "grass_27.webp",
+      "rect": [
+        96,
+        192,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 5,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 28,
+      "name": "파란 꽃 · 랜덤 1",
+      "file": "grass_28.webp",
+      "rect": [
+        0,
+        224,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 6,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 29,
+      "name": "파란 꽃 · 랜덤 2",
+      "file": "grass_29.webp",
+      "rect": [
+        32,
+        224,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 6,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 30,
+      "name": "파란 꽃 · 랜덤 3",
+      "file": "grass_30.webp",
+      "rect": [
+        64,
+        224,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 6,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 31,
+      "name": "파란 꽃 · 랜덤 4",
+      "file": "grass_31.webp",
+      "rect": [
+        96,
+        224,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 6,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 32,
+      "name": "보라 꽃 · 랜덤 1",
+      "file": "grass_32.webp",
+      "rect": [
+        0,
+        256,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 7,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 33,
+      "name": "보라 꽃 · 랜덤 2",
+      "file": "grass_33.webp",
+      "rect": [
+        32,
+        256,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 7,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 34,
+      "name": "보라 꽃 · 랜덤 3",
+      "file": "grass_34.webp",
+      "rect": [
+        64,
+        256,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 7,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 35,
+      "name": "보라 꽃 · 랜덤 4",
+      "file": "grass_35.webp",
+      "rect": [
+        96,
+        256,
+        32,
+        32
+      ],
+      "category": "flowers",
+      "family": 7,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 36,
+      "name": "하얀 꽃 무리 · 랜덤 1",
+      "file": "grass_36.webp",
+      "rect": [
+        0,
+        288,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 12,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 37,
+      "name": "하얀 꽃 무리 · 랜덤 2",
+      "file": "grass_37.webp",
+      "rect": [
+        32,
+        288,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 12,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 38,
+      "name": "하얀 꽃 무리 · 랜덤 3",
+      "file": "grass_38.webp",
+      "rect": [
+        64,
+        288,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 12,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 39,
+      "name": "노란 꽃 무리 · 랜덤 1",
+      "file": "grass_39.webp",
+      "rect": [
+        96,
+        288,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 13,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 40,
+      "name": "노란 꽃 무리 · 랜덤 2",
+      "file": "grass_40.webp",
+      "rect": [
+        0,
+        320,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 13,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 41,
+      "name": "노란 꽃 무리 · 랜덤 3",
+      "file": "grass_41.webp",
+      "rect": [
+        32,
+        320,
+        32,
+        32
+      ],
+      "category": "clusters",
+      "family": 13,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 42,
+      "name": "혼합 들꽃 · 랜덤 1",
+      "file": "grass_42.webp",
+      "rect": [
+        64,
+        320,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 14,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 43,
+      "name": "혼합 들꽃 · 랜덤 2",
+      "file": "grass_43.webp",
+      "rect": [
+        96,
+        320,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 14,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 44,
+      "name": "혼합 들꽃 · 랜덤 3",
+      "file": "grass_44.webp",
+      "rect": [
+        0,
+        352,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 14,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 45,
+      "name": "전체 랜덤 배치 · 랜덤 2",
+      "file": "grass_45.webp",
+      "rect": [
+        32,
+        352,
+        32,
+        32
+      ],
+      "category": "random",
+      "family": 15,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 46,
+      "name": "전체 랜덤 배치 · 랜덤 3",
+      "file": "grass_46.webp",
+      "rect": [
+        64,
+        352,
+        32,
+        32
+      ],
+      "category": "random",
+      "family": 15,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 47,
+      "name": "전체 랜덤 배치 · 랜덤 4",
+      "file": "grass_47.webp",
+      "rect": [
+        96,
+        352,
+        32,
+        32
+      ],
+      "category": "random",
+      "family": 15,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 48,
+      "name": "클로버 · 랜덤 1",
+      "file": "grass_48.webp",
+      "rect": [
+        0,
+        384,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 11,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 49,
+      "name": "클로버 · 랜덤 2",
+      "file": "grass_49.webp",
+      "rect": [
+        32,
+        384,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 11,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 50,
+      "name": "클로버 · 랜덤 3",
+      "file": "grass_50.webp",
+      "rect": [
+        64,
+        384,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 11,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 51,
+      "name": "클로버 · 랜덤 4",
+      "file": "grass_51.webp",
+      "rect": [
+        96,
+        384,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 11,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 52,
+      "name": "작은 조약돌 · 랜덤 1",
+      "file": "grass_52.webp",
+      "rect": [
+        0,
+        416,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 8,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 53,
+      "name": "작은 조약돌 · 랜덤 2",
+      "file": "grass_53.webp",
+      "rect": [
+        32,
+        416,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 8,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 54,
+      "name": "작은 조약돌 · 랜덤 3",
+      "file": "grass_54.webp",
+      "rect": [
+        64,
+        416,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 8,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 55,
+      "name": "작은 조약돌 · 랜덤 4",
+      "file": "grass_55.webp",
+      "rect": [
+        96,
+        416,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 8,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 56,
+      "name": "조약돌 두 개 · 랜덤 1",
+      "file": "grass_56.webp",
+      "rect": [
+        0,
+        448,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 9,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 57,
+      "name": "조약돌 두 개 · 랜덤 2",
+      "file": "grass_57.webp",
+      "rect": [
+        32,
+        448,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 9,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 58,
+      "name": "조약돌 두 개 · 랜덤 3",
+      "file": "grass_58.webp",
+      "rect": [
+        64,
+        448,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 9,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 59,
+      "name": "조약돌 두 개 · 랜덤 4",
+      "file": "grass_59.webp",
+      "rect": [
+        96,
+        448,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 9,
+      "position": "랜덤 4"
+    },
+    {
+      "id": 60,
+      "name": "작은 돌무리 · 랜덤 1",
+      "file": "grass_60.webp",
+      "rect": [
+        0,
+        480,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 10,
+      "position": "랜덤 1"
+    },
+    {
+      "id": 61,
+      "name": "작은 돌무리 · 랜덤 2",
+      "file": "grass_61.webp",
+      "rect": [
+        32,
+        480,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 10,
+      "position": "랜덤 2"
+    },
+    {
+      "id": 62,
+      "name": "작은 돌무리 · 랜덤 3",
+      "file": "grass_62.webp",
+      "rect": [
+        64,
+        480,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 10,
+      "position": "랜덤 3"
+    },
+    {
+      "id": 63,
+      "name": "작은 돌무리 · 랜덤 4",
+      "file": "grass_63.webp",
+      "rect": [
+        96,
+        480,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 10,
+      "position": "랜덤 4"
     }
   ]
 }
