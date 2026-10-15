@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import pygame
 
-from game import config
 from game.entities.core import Core
 from game.entities.enemy import Golem
 from game.entities.loot import LootPile
@@ -89,7 +88,7 @@ def update_enemies(
         if player.invulnerable or player.hp <= 0:
             continue  # i-frames, or already down -- a corpse takes no more
         if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
-            player.hp -= config.GOLEM_CONTACT_DPS * dt
+            player.hp -= enemy.contact_dps * dt  # from its kind, not a global
 
 
 _WARD_MARGIN = 0.5  # px clear of the rim; invisible, but keeps the check honest

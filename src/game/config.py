@@ -186,6 +186,9 @@ GOLEM_RADIUS: Final[float] = 11.0
 GOLEM_CONTACT_DPS: Final[float] = 20.0  # hp/s while touching the player
 GOLEM_SPAWN_INTERVAL: Final[float] = 3.0
 GOLEM_SPAWN_MAX: Final[int] = 15
+# Health scales with distance in full; speed only partly. A golem twice as
+# tough that also moves twice as fast is not harder, it is unfightable.
+GOLEM_SPEED_SCALING: Final[float] = 0.25
 
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0

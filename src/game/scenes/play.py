@@ -355,7 +355,7 @@ class PlayScene(Scene):
         for enemy in self.enemies:
             pygame.draw.circle(
                 surface,
-                config.GOLEM_COLOR,
+                enemy.color,  # from its kind, so biome golems look different
                 self.camera.world_to_screen(enemy.pos),
                 enemy.radius,
             )

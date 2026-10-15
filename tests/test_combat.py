@@ -161,3 +161,24 @@ def test_the_penalty_cannot_reach_the_hotbar():
     import inspect
 
     assert "hotbar" not in inspect.signature(combat.apply_death_penalty).parameters
+
+
+def test_contact_damage_comes_from_the_golem_s_kind():
+    # Not from a global. Biome golems in step 8 hit for their own numbers.
+    from game.entities.enemy import PLAIN_GOLEM, TARGET_CORE, EnemyKind
+
+    gentle = EnemyKind(
+        key="gentle",
+        name="순한 골렘",
+        target=TARGET_CORE,
+        hp=PLAIN_GOLEM.hp,
+        speed=0.0,
+        radius=PLAIN_GOLEM.radius,
+        contact_dps=PLAIN_GOLEM.contact_dps / 4,
+        color=(1, 2, 3),
+    )
+    player = Player(pos=pygame.Vector2(CENTRE))
+    combat.update_enemies(
+        1.0, [Golem(pos=pygame.Vector2(CENTRE), kind=gentle)], player, WORLD, UNLIT
+    )
+    assert player.hp == config.PLAYER_MAX_HP - gentle.contact_dps

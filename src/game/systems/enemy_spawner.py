@@ -18,7 +18,7 @@ import pygame
 
 from game import config
 from game.entities.core import Core
-from game.entities.enemy import Golem
+from game.entities.enemy import PLAIN_GOLEM, Golem
 from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, near_player
 from game.world.map import WorldMap
 
@@ -65,7 +65,7 @@ class EnemySpawner(TimedSpawner):
                 continue
             if core.is_in_ward(point):
                 continue  # the ward is what the core buys
-            if core.pos.distance_to(point) < core.sync_radius + config.GOLEM_RADIUS:
+            if core.pos.distance_to(point) < core.sync_radius + PLAIN_GOLEM.radius:
                 continue
             if player_pos.distance_to(point) < _MIN_PLAYER_DIST:
                 continue
