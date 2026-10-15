@@ -265,6 +265,9 @@ RUIN_SPENT_COLOR: Final[tuple[int, int, int]] = (96, 92, 104)
 # the ruin dims and nothing else happens, which reads as a bug, not a reward.
 NOTE_SECONDS: Final[float] = 3.5
 NOTE_FADE: Final[float] = 1.2  # seconds of fade at the end
+# Room on the weapon. Flat, because weapon types are an open question in the
+# spec -- the staff is where "more slots by upgrading" actually shows.
+WEAPON_SLOTS: Final[int] = 2
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

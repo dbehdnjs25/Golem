@@ -24,8 +24,19 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items import grades
-from game.items.item_kinds import CORE_SHARD, GRASS, PEBBLE, STONE, TWIG, WOOD, ItemKind
+from game.items import engraving, grades
+from game.items.engraving import Engraved
+from game.items.glyphs import Glyph
+from game.items.item_kinds import (
+    CHISEL,
+    CORE_SHARD,
+    GRASS,
+    PEBBLE,
+    STONE,
+    TWIG,
+    WOOD,
+    ItemKind,
+)
 from game.items.recipes import STATION_OF, Recipe
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import carrying, combat, crafting, mining, raids, survival
@@ -95,6 +106,10 @@ class PlayScene(Scene):
         self.grimoire = Grimoire()
         self.note = ""  # a line that fades; see _say
         self.note_left = 0.0
+        # Cuts left on the chisel in hand. On the scene rather than on the item
+        # because a stack of chisels is a stack of FRESH ones -- only the one
+        # actually being used is part-worn.
+        self.chisel_left = config.CHISEL_USES
         self.structures = structures.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
@@ -112,6 +127,7 @@ class PlayScene(Scene):
         self.grid = Grid()
         self.grid_open = False
         self.craft_open = False
+        self.carve_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # Nothing but the weapon. Wood comes off a tree with bare hands, and the
@@ -230,6 +246,8 @@ class PlayScene(Scene):
                 self._toggle_grid()
             elif event.key == pygame.K_c:
                 self._toggle_craft()
+            elif event.key == pygame.K_g:
+                self._toggle_carve()
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -242,6 +260,9 @@ class PlayScene(Scene):
                 return
             if self.craft_open:
                 self._click_craft(pygame.Vector2(event.pos))
+                return
+            if self.carve_open:
+                self._click_carve(pygame.Vector2(event.pos))
                 return
             if self._try_place(pygame.Vector2(event.pos)):
                 return
@@ -279,7 +300,7 @@ class PlayScene(Scene):
         for station in self.stations:
             station.update(dt)
 
-        if self.grid_open or self.craft_open:
+        if self.grid_open or self.craft_open or self.carve_open:
             return  # the world waits while a screen is open
 
         down = self._respawn_timer > 0
@@ -455,6 +476,7 @@ class PlayScene(Scene):
         self._draw_hud(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
+        self._draw_carve(surface)
 
     # --- the belongings screen -------------------------------------------
     def _toggle_grid(self) -> None:
@@ -471,6 +493,118 @@ class PlayScene(Scene):
             if self.grid_open:
                 self.grid.close(self.backpack, self.hotbar)
             self.grid_open = False
+            self.carve_open = False
+
+    # --- the carving screen -----------------------------------------------
+    def _toggle_carve(self) -> None:
+        self.carve_open = not self.carve_open
+        if self.carve_open:
+            if self.grid_open:
+                self.grid.close(self.backpack, self.hotbar)
+            self.grid_open = False
+            self.craft_open = False
+
+    @property
+    def carve_target(self) -> Engraved | None:
+        """What is cut into the thing in hand, if it is the sort that takes it.
+
+        The held item rather than a separate equipment screen: the hotbar is
+        already where tools live, and a second place to pick a weapon from
+        would be a screen whose whole job is choosing between one option.
+        """
+        held = self.hotbar.active_tool
+        piece = getattr(held, "engraved", None)
+        return piece if isinstance(piece, Engraved) else None
+
+    def carve_rows(self) -> list[tuple[Glyph, str | None]]:
+        """Every learned glyph, each with the reason it cannot go on, or None.
+
+        Refused ones are listed too. A list that quietly hid what does not fit
+        would leave the player wondering whether they had lost a drawing or
+        were simply holding the wrong thing.
+        """
+        piece = self.carve_target
+        if piece is None:
+            return []
+        return [
+            (glyph, engraving.can_engrave(piece, glyph, self.grimoire))
+            for glyph in self.grimoire.known()
+        ]
+
+    def _click_carve(self, at: pygame.Vector2) -> None:
+        for index, (glyph, refusal) in enumerate(self.carve_rows()):
+            if not self._carve_row_rect(index).collidepoint(at):
+                continue
+            if refusal is not None:
+                self._say(refusal)
+            else:
+                self.carve(glyph)
+            return
+
+    def carve(self, glyph: Glyph) -> None:
+        """Cut it in, wearing the chisel down by one."""
+        piece = self.carve_target
+        if piece is None:
+            return
+        if engraving.can_engrave(piece, glyph, self.grimoire) is not None:
+            return
+        if self._carried(CHISEL) <= 0:
+            self._say("새김 도구가 없다")
+            return
+        engraving.engrave(piece, glyph, self.grimoire)
+        self.chisel_left -= 1
+        if self.chisel_left <= 0:
+            self._spend(CHISEL, 1)
+            self.chisel_left = config.CHISEL_USES
+            self._say(f"{glyph.name} 을(를) 새겼다 · 도구가 부서졌다")
+        else:
+            self._say(f"{glyph.name} 을(를) 새겼다 · {self.chisel_left}회 남음")
+
+    def _carve_panel(self) -> pygame.Rect:
+        rows = max(1, min(len(self.carve_rows()), config.CRAFT_ROWS_VISIBLE))
+        panel = pygame.Rect(0, 0, 520, rows * config.CRAFT_ROW_HEIGHT + 48)
+        panel.center = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
+        return panel
+
+    def _carve_row_rect(self, index: int) -> pygame.Rect:
+        panel = self._carve_panel()
+        return pygame.Rect(
+            panel.left + 10,
+            panel.top + 36 + index * config.CRAFT_ROW_HEIGHT,
+            panel.width - 20,
+            config.CRAFT_ROW_HEIGHT - 2,
+        )
+
+    def carve_header(self) -> str:
+        piece = self.carve_target
+        if piece is None:
+            return "손에 든 것엔 새길 수 없다"
+        left = self.chisel_left if self._carried(CHISEL) else 0
+        return f"칸 {len(piece.glyphs)}/{piece.slots} · 새김 도구 {left}회"
+
+    def _draw_carve(self, surface: pygame.Surface) -> None:
+        if not self.carve_open:
+            return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 140))
+        surface.blit(overlay, (0, 0))
+        panel = self._carve_panel()
+        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
+        surface.blit(
+            _font(14).render(self.carve_header(), True, config.WHITE),
+            (panel.left + 12, panel.top + 12),
+        )
+        for index, (glyph, refusal) in enumerate(self.carve_rows()):
+            rect = self._carve_row_rect(index)
+            pygame.draw.rect(surface, (48, 48, 62), rect, border_radius=3)
+            ink = config.WHITE if refusal is None else (132, 128, 145)
+            swatch = pygame.Rect(rect.left + 6, rect.top + 5, 14, 14)
+            colour = glyph.biome.color if glyph.biome is not None else (150, 150, 165)
+            pygame.draw.rect(surface, colour, swatch, border_radius=2)
+            surface.blit(_font(14).render(glyph.name, True, ink), (swatch.right + 8, rect.top + 4))
+            tail = refusal.split(": ")[-1] if refusal else f"+{glyph.power:.0f}"
+            label = _font(12).render(tail, True, ink)
+            surface.blit(label, (rect.right - label.get_width() - 8, rect.top + 6))
 
     def _craft_rows(self) -> list[tuple[Recipe, bool]]:
         """What is offered where the player is standing, affordable first.

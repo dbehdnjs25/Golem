@@ -43,7 +43,7 @@ def fire_weapon(
     shot = Projectile(
         pos=pygame.Vector2(player_pos),
         vel=velocity,
-        damage=weapon.damage,
+        damage=weapon.total_damage,  # base plus whatever is carved on it
         radius=weapon.projectile_radius,
         ttl=weapon.projectile_ttl,
     )

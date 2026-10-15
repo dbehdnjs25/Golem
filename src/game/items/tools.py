@@ -13,9 +13,11 @@ The weapon is still a single flat thing; grading weapons belongs with combat.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from game import config
+from game.items.engraving import Engraved
+from game.items.glyphs import WEAPON
 from game.items.grades import AXE, GRADES, HAND, PICKAXE, TOOL_ITEMS, WOOD_G, Grade
 from game.items.item_kinds import ItemKind
 
@@ -50,14 +52,34 @@ def axe(grade: Grade) -> MiningTool:
     return MiningTool(family=AXE, grade=grade)
 
 
-@dataclass(frozen=True)
+@dataclass
 class WeaponTool:
+    """The weapon, plus whatever has been carved into it.
+
+    Not frozen any more: an engraved weapon carries state, and what is cut
+    into this particular one is the whole point of the glyph ladder.
+
+    Its slot count is flat because weapon TYPES are still undecided -- the
+    spec lists daggers, spears and bows as open questions. The staff is where
+    "more slots by upgrading" actually shows.
+    """
+
     damage: float = config.WEAPON_DAMAGE
     fire_rate: float = config.WEAPON_FIRE_RATE  # shots per second
     projectile_speed: float = config.PROJECTILE_SPEED
     projectile_ttl: float = config.PROJECTILE_TTL
     projectile_radius: float = config.PROJECTILE_RADIUS
     name: str = "Pulse Gun"
+    engraved: Engraved = field(
+        default_factory=lambda: Engraved(kind=WEAPON, slots=config.WEAPON_SLOTS)
+    )
+
+    @property
+    def total_damage(self) -> float:
+        """What a shot actually lands for. Carved power is added, never scaled:
+        a multiplier would make the late glyphs silly and the early ones a
+        rounding error."""
+        return self.damage + self.engraved.power
 
 
 def tool_for(kind: ItemKind) -> MiningTool | None:

@@ -8,7 +8,7 @@ from game.inventory import grid
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import glyphs as glyph_table
-from game.items.item_kinds import CORE_SHARD, STONE, WORN_PACK
+from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
 from game.systems import raids
@@ -950,3 +950,99 @@ def test_the_world_puts_out_a_ruin_for_every_basic_glyph():
     held = {s.glyph.key for s in scene.structures}
     for glyph in glyph_table.basic_glyphs():
         assert glyph.key in held
+
+
+# --- carving --------------------------------------------------------------
+
+
+def _ready_to_carve(scene) -> None:
+    """Hold the weapon, know a glyph, have a chisel."""
+    scene.hotbar.select(4)
+    scene.grimoire.learn(glyph_table.VOLCANO_GLYPHS[0])
+    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
+
+
+def test_carving_adds_its_power_to_what_the_weapon_lands_for():
+    # The whole point. Without this the glyphs are a collection and nothing
+    # else -- an engraved weapon has to actually hit harder.
+    scene = PlayScene()
+    _ready_to_carve(scene)
+    fire = glyph_table.VOLCANO_GLYPHS[0]
+    weapon = scene.hotbar.active_tool
+    before = weapon.total_damage
+
+    scene.carve(fire)
+
+    assert weapon.engraved.glyphs == [fire]
+    assert weapon.total_damage == before + fire.power
+
+
+def test_three_cuts_and_the_chisel_is_gone():
+    scene = PlayScene()
+    _ready_to_carve(scene)
+    for glyph in glyph_table.GLYPHS[:3]:
+        scene.grimoire.learn(glyph)
+    scene.hotbar.slots[4].engraved.slots = 9  # room enough to spend the tool
+
+    for n, glyph in enumerate(glyph_table.GLYPHS[:3], start=1):
+        assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 1, f"gone after {n - 1}"
+        scene.carve(glyph)
+    assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 0
+    assert scene.chisel_left == config.CHISEL_USES  # the next one starts fresh
+
+
+def test_carving_without_a_chisel_does_nothing_and_says_so():
+    scene = PlayScene()
+    scene.hotbar.select(4)
+    fire = glyph_table.VOLCANO_GLYPHS[0]
+    scene.grimoire.learn(fire)
+
+    scene.carve(fire)
+
+    assert scene.hotbar.active_tool.engraved.glyphs == []
+    assert "새김 도구" in scene.note
+
+
+def test_an_unknown_glyph_cannot_be_carved_even_by_calling_straight_in():
+    scene = PlayScene()
+    _ready_to_carve(scene)
+    unknown = glyph_table.SNOWFIELD_GLYPHS[0]
+    scene.carve(unknown)
+    assert scene.hotbar.active_tool.engraved.glyphs == []
+    assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 1  # nothing spent either
+
+
+def test_the_rows_list_refusals_rather_than_hiding_them():
+    # Hidden, the player cannot tell a lost drawing from a wrong thing held.
+    scene = PlayScene()
+    _ready_to_carve(scene)
+    swift = glyph_table.LESSER_SWIFT
+    scene.grimoire.learn(swift)
+    assert len(scene.carve_rows()) == 2
+
+
+def test_holding_a_pickaxe_offers_nothing_to_carve():
+    scene = PlayScene()
+    scene.grimoire.learn(glyph_table.VOLCANO_GLYPHS[0])
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["stone_pick"], 1)
+    assert scene.carve_target is None
+    assert scene.carve_rows() == []
+    assert "새길 수 없" in scene.carve_header()
+
+
+def test_the_carving_screen_pauses_the_world_like_the_others():
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
+    assert scene.carve_open
+    where = pygame.Vector2(scene.player.pos)
+    scene.update(config.FIXED_DT)
+    assert scene.player.pos == where
+
+
+def test_only_one_screen_at_a_time():
+    scene = PlayScene()
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c))
+    assert scene.craft_open and not scene.carve_open
