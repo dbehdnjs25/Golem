@@ -189,6 +189,9 @@ GOLEM_SPAWN_MAX: Final[int] = 15
 # Health scales with distance in full; speed only partly. A golem twice as
 # tough that also moves twice as fast is not harder, it is unfightable.
 GOLEM_SPEED_SCALING: Final[float] = 0.25
+# What a golem at the map's edge is worth against one beside the ward. The
+# ore out there is better for exactly this reason: distance is the danger.
+GOLEM_SCALE_AT_EDGE: Final[float] = 4.0
 
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0

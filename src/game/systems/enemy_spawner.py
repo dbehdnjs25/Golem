@@ -48,7 +48,7 @@ class EnemySpawner(TimedSpawner):
         spot = self._find_spot(player_pos, core, rng, world)
         if spot is None:
             return None
-        golem = Golem(pos=spot)
+        golem = Golem(pos=spot, scale=scale_at(world.distance_fraction(spot)))
         enemies.append(golem)
         return golem
 
@@ -71,3 +71,13 @@ class EnemySpawner(TimedSpawner):
                 continue
             return point
         return None
+
+
+def scale_at(fraction: float) -> float:
+    """How much tougher a golem is at ``fraction`` of the way to the map edge.
+
+    One beside the ward is the table's own numbers; one at the rim is
+    ``GOLEM_SCALE_AT_EDGE`` times that. Straight-line, so the player can feel
+    the trade as they walk rather than meeting a cliff.
+    """
+    return 1.0 + (config.GOLEM_SCALE_AT_EDGE - 1.0) * max(0.0, min(1.0, fraction))

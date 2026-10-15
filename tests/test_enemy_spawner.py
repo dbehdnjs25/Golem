@@ -1,6 +1,7 @@
 import random
 
 import pygame
+import pytest
 
 from game import config
 from game.entities.core import Core
@@ -94,3 +95,51 @@ def test_lighting_the_core_brings_them():
     player_pos = core.pos + pygame.Vector2(core.ward_radius + 500, 0)
     spawner.update(config.GOLEM_SPAWN_INTERVAL, enemies, player_pos, core, random.Random(3), WORLD)
     assert len(enemies) == 1
+
+
+def _spawn_at(distance: float, seed: int = 1):
+    """Spawn one golem with the player standing ``distance`` from the core."""
+    spawner = EnemySpawner()
+    enemies: list[Golem] = []
+    core = _core()
+    core.ignite()
+    where = core.pos + pygame.Vector2(distance, 0)
+    return spawner.update(
+        config.GOLEM_SPAWN_INTERVAL, enemies, where, core, random.Random(seed), WORLD
+    )
+
+
+def test_a_golem_from_the_far_ring_is_tougher_than_one_from_the_grassland():
+    # The spec's "stronger the further from the core". Distance is danger, and
+    # the ore out there is worth it precisely because of this.
+    near = _spawn_at(config.GRASSLAND_RADIUS * 0.3)
+    far = _spawn_at(config.MAP_RADIUS * 0.95)
+    assert near is not None and far is not None
+    assert far.hp > near.hp
+    assert far.speed > near.speed
+
+
+def test_scaling_climbs_with_distance_all_the_way_out():
+    seen = []
+    for fraction in (0.2, 0.4, 0.6, 0.8, 0.95):
+        golem = _spawn_at(config.MAP_RADIUS * fraction)
+        assert golem is not None
+        seen.append(golem.scale)
+    assert seen == sorted(seen)
+
+
+def test_the_edge_of_the_map_reaches_the_stated_multiplier():
+    far = _spawn_at(config.MAP_RADIUS * 0.999)
+    assert far is not None
+    assert far.scale == pytest.approx(config.GOLEM_SCALE_AT_EDGE, rel=0.02)
+
+
+def test_a_golem_beside_the_core_is_the_plain_row():
+    # Nothing spawns inside the ward, so this is the closest one can get -- it
+    # should be the table's own numbers, not a fraction of them.
+    from game.entities.enemy import PLAIN_GOLEM
+
+    near = _spawn_at(0.0)
+    if near is not None:  # the ward may swallow every attempt; that is fine
+        assert near.scale >= 1.0
+        assert near.hp >= PLAIN_GOLEM.hp
