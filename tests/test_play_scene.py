@@ -7,6 +7,7 @@ from game.entities.projectile import Projectile
 from game.inventory import grid
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
+from game.items import glyphs as glyph_table
 from game.items.item_kinds import CORE_SHARD, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
@@ -896,3 +897,56 @@ def test_a_raid_night_leaves_no_safe_circle_in_the_dark():
     raid_day = next(d for d in range(3, 40) if raids.is_raid_night(d, 0))
     _wind_to(scene, raid_day, night=True)
     assert sum(_shot(scene).get_at(probe)[:3]) < sum(calm)
+
+
+# --- structures and glyphs ------------------------------------------------
+
+
+def test_standing_at_a_ruin_and_pressing_the_key_teaches_its_drawing():
+    scene = PlayScene()
+    site = scene.structures[0]
+    scene.player.pos.update(site.pos)
+    assert not scene.grimoire.knows(site.glyph)
+
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+
+    assert scene.grimoire.knows(site.glyph)
+    assert site.opened
+    assert site.glyph.name in scene.note
+
+
+def test_a_looted_ruin_gives_nothing_the_second_time():
+    scene = PlayScene()
+    site = scene.structures[0]
+    scene.player.pos.update(site.pos)
+    for _ in range(2):
+        scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+        scene.update(config.FIXED_DT)
+    assert len(scene.grimoire.learned) == 1
+
+
+def test_a_ruin_across_the_map_cannot_be_read():
+    scene = PlayScene()
+    scene.player.pos.update(scene.core.pos)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+    assert scene.grimoire.learned == set()
+
+
+def test_the_note_fades_on_its_own():
+    scene = PlayScene()
+    scene._say("아무 말")
+    assert scene.note_left > 0
+    for _ in range(int(config.NOTE_SECONDS / config.FIXED_DT) + 2):
+        scene.update(config.FIXED_DT)
+    assert scene.note_left == 0
+
+
+def test_the_world_puts_out_a_ruin_for_every_basic_glyph():
+    # Belt and braces over the placement test: this is the one that would
+    # catch the scene seeding it wrong rather than the placer.
+    scene = PlayScene()
+    held = {s.glyph.key for s in scene.structures}
+    for glyph in glyph_table.basic_glyphs():
+        assert glyph.key in held

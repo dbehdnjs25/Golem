@@ -248,6 +248,23 @@ GLYPH_STRAIN_PER_POWER: Final[float] = 1.6
 # carving has -- and it is what makes "is this the right glyph for this
 # weapon" a question every time instead of a formality.
 CHISEL_USES: Final[int] = 3
+
+# --- Structures -----------------------------------------------------------
+# The ruins that hold the drawings. Placement walks the glyph list rather than
+# a count, so every basic glyph is guaranteed a home -- a count-first world
+# would eventually roll with no frost glyph in it and nothing would show it.
+STRUCTURE_RADIUS: Final[float] = 26.0
+STRUCTURE_REACH: Final[float] = 90.0  # how close to stand to open one
+STRUCTURE_MIN_FROM_CORE: Final[float] = 2200.0  # never right on the doorstep
+STRUCTURE_SPACING: Final[float] = 1500.0  # never stacked on each other
+STRUCTURES_PER_BIOME: Final[int] = 2  # two chances, so one bad sector is not fatal
+RUIN_COLOR: Final[tuple[int, int, int]] = (178, 160, 196)
+VAULT_COLOR: Final[tuple[int, int, int]] = (206, 170, 110)
+RUIN_SPENT_COLOR: Final[tuple[int, int, int]] = (96, 92, 104)
+# How long a line stays on screen. Learning a glyph is otherwise invisible --
+# the ruin dims and nothing else happens, which reads as a bug, not a reward.
+NOTE_SECONDS: Final[float] = 3.5
+NOTE_FADE: Final[float] = 1.2  # seconds of fade at the end
 # How far out they walk in from, as a share of the ward's reach beyond its rim.
 GOLEM_APPROACH: Final[float] = 0.45
 

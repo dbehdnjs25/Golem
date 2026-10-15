@@ -33,9 +33,10 @@ from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
+from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes
+from game.world import biomes, structures
 from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
@@ -91,6 +92,10 @@ class PlayScene(Scene):
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
         self.defeated = False
+        self.grimoire = Grimoire()
+        self.note = ""  # a line that fades; see _say
+        self.note_left = 0.0
+        self.structures = structures.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -266,6 +271,7 @@ class PlayScene(Scene):
         self._sync_pressed = False
 
         self.clock.update(dt)
+        self.note_left = max(0.0, self.note_left - dt)
         # A signal and nothing more. What a run does about losing its core is
         # the ending's business, and the ending is still being designed.
         self.defeated = self.defeated or self.core.is_destroyed
@@ -383,6 +389,8 @@ class PlayScene(Scene):
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
 
+        if sync:
+            self._open_structure()
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
                 # Mending first. The same key already means "deal with the
@@ -403,6 +411,7 @@ class PlayScene(Scene):
         self._draw_world(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
+        self._draw_structures(surface)
         self._draw_stations(surface)
         self._draw_nodes(surface)
         # Night falls on the GROUND. Everything alive, everything in flight and
@@ -811,6 +820,48 @@ class PlayScene(Scene):
                 max(4.0, config.LOOT_RADIUS * left),
             )
 
+    def _say(self, line: str) -> None:
+        """Put a line on screen for a few seconds.
+
+        Learning a glyph is otherwise invisible: the ruin dims and nothing
+        else happens, which reads as a bug rather than as a reward.
+        """
+        self.note = line
+        self.note_left = config.NOTE_SECONDS
+
+    def _open_structure(self) -> None:
+        """Read whatever ruin the player is standing at.
+
+        The same key that deals with the core. There is nowhere both a ruin and
+        the core can be reached from, so the two never argue over the press.
+        """
+        for site in self.structures:
+            if site.opened or not site.in_reach(self.player.pos):
+                continue
+            glyph = site.open()
+            if glyph is None:
+                continue
+            fresh = self.grimoire.learn(glyph)
+            self._say(f"{glyph.name} 을(를) 배웠다" if fresh else f"{glyph.name} — 이미 아는 그림")
+            return
+
+    def _draw_structures(self, surface: pygame.Surface) -> None:
+        """Ruins, drawn so an unopened one is worth walking to.
+
+        An opened one keeps its outline and loses its fill: still a landmark,
+        plainly finished with.
+        """
+        for site in self.structures:
+            at = self.camera.world_to_screen(site.pos)
+            colour = config.VAULT_COLOR if site.guarded else config.RUIN_COLOR
+            if site.opened:
+                pygame.draw.circle(surface, config.RUIN_SPENT_COLOR, at, site.radius, 2)
+                continue
+            pygame.draw.circle(surface, colour, at, site.radius)
+            pygame.draw.circle(surface, config.WHITE, at, site.radius, 2)
+            if site.in_reach(self.player.pos):
+                pygame.draw.circle(surface, config.WHITE, at, site.radius + 6, 2)
+
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """Placeholder markers so the five sites are visible before temples exist."""
         for site in self.temple_sites:
@@ -874,6 +925,12 @@ class PlayScene(Scene):
             _draw_bar(surface, 74, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
         line = _font(13).render(self.calendar_line, True, config.WHITE)
         surface.blit(line, (10, 88))
+        if self.note_left > 0:
+            # Fades out rather than vanishing, so a glance that catches the
+            # tail of it still reads as "something just happened".
+            said = _font(16).render(self.note, True, config.WHITE)
+            said.set_alpha(int(255 * min(1.0, self.note_left / config.NOTE_FADE)))
+            surface.blit(said, said.get_rect(midtop=(surface.get_width() // 2, 24)))
         # hotbar (bottom-left). Hidden while the belongings screen is open,
         # which draws its own -- two hotbars on screen reads as two hotbars.
         if self.grid_open:
