@@ -420,6 +420,7 @@ class PlayScene(Scene):
             fragments=self.fragments,
             backpack=self.backpack,
             hotbar=self.hotbar,
+            player=self.player,
         )
         self._wear_if_pack(mined)
         if self.holding_staff:

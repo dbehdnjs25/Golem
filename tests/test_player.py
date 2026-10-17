@@ -213,3 +213,27 @@ def test_a_dodge_is_not_slowed_down_by_running_out():
 def test_running_is_slower_than_dodging():
     # Otherwise the dodge would be a worse sprint, and nobody would dodge.
     assert config.PLAYER_SPRINT_MULT < config.DODGE_SPEED_MULT
+
+
+def test_a_dodge_costs_wind():
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.update(0.01, pygame.Vector2(1, 0), WORLD, dodge_pressed=True)
+    assert player.stamina == player.max_stamina - config.DODGE_COST
+
+
+def test_a_dodge_with_nothing_left_simply_does_not_happen():
+    # Not a slow dodge and not a free one. The i-frames are the whole value of
+    # the move, so a half-priced version would be a half-priced escape.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = config.DODGE_COST / 2
+    player.update(0.01, pygame.Vector2(1, 0), WORLD, dodge_pressed=True)
+    assert not player.invulnerable
+    assert player.dodge_timer == 0
+    assert player.stamina == config.DODGE_COST / 2  # nothing taken either
+
+
+def test_the_dodge_cooldown_is_not_burned_by_a_refused_dodge():
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    player.update(0.01, pygame.Vector2(1, 0), WORLD, dodge_pressed=True)
+    assert player.dodge_cooldown_timer == 0

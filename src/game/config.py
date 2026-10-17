@@ -182,6 +182,10 @@ STAMINA_DELAY: Final[float] = 1.1  # seconds of no recovery after spending
 # dash would make the dodge a worse sprint and nobody would dodge.
 PLAYER_SPRINT_MULT: Final[float] = 1.7
 SPRINT_DRAIN: Final[float] = 18.0  # per second, while actually moving
+DODGE_COST: Final[float] = 22.0  # four and a half dodges from full
+MINING_DRAIN: Final[float] = 7.0  # per second of digging
+# Digging on empty. Slower, never stopped -- see systems/mining.
+WINDED_MINING_RATE: Final[float] = 0.45
 
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash

@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import pygame
 
+from game import config
 from game.entities.fragment import Fragment
+from game.entities.player import Player
 from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items import grades
@@ -57,6 +59,7 @@ def update_mining(
     fragments: list[Fragment],
     backpack: Container | None,
     hotbar: Hotbar,
+    player: Player | None = None,
 ) -> tuple[str, ItemKind | None]:
     if not held:
         return IDLE, None
@@ -80,7 +83,15 @@ def update_mining(
     got = yield_of(target.kind)
     if carrying.room_for(got, backpack, hotbar) == 0:
         return FULL, None  # block before damaging -> the node is preserved
-    if target.damage(active_tool.dps * dt):
+    # Digging costs wind, and running out slows it rather than stopping it.
+    # Blocked outright, someone who came out for one bagful would be left
+    # standing still -- this should be pressure, never punishment.
+    rate = active_tool.dps
+    if player is not None:
+        if player.winded:
+            rate *= config.WINDED_MINING_RATE
+        player.drain(config.MINING_DRAIN * dt)
+    if target.damage(rate * dt):
         carrying.store(got, 1, backpack, hotbar)
         fragments.remove(target)
         return COLLECTED, got

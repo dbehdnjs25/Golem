@@ -72,7 +72,10 @@ class Player:
         is for distance, not for a key being held. With nothing left the player
         simply walks -- not a stutter and not a refusal to move.
         """
-        if dodge_pressed and self.dodge_cooldown_timer <= 0:
+        # A dodge with nothing left simply does not happen: not a slow one and
+        # not a cheap one. The i-frames ARE the move, so a half-priced version
+        # would be a half-priced escape. The cooldown is not burned either.
+        if dodge_pressed and self.dodge_cooldown_timer <= 0 and self.spend(config.DODGE_COST):
             self.dodge_timer = config.DODGE_DURATION
             self.iframe_timer = config.DODGE_IFRAMES
             self.dodge_cooldown_timer = config.DODGE_COOLDOWN

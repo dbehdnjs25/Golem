@@ -215,3 +215,66 @@ def test_an_empty_hand_cannot_fell_a_tree():
 
 def test_an_empty_hand_cannot_mine():
     assert _swing(None, STONE)[0] == mining.WRONG_TOOL
+
+
+def _digger():
+    from game.entities.player import Player
+
+    return Player(pos=pygame.Vector2(PLAYER))
+
+
+def test_digging_costs_wind():
+    player = _digger()
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE)
+    mining.update_mining(
+        1.0,
+        active_tool=tools.pickaxe(grades.STONE_G),
+        held=True,
+        aim_world=node.pos,
+        player_pos=player.pos,
+        fragments=[node],
+        backpack=None,
+        hotbar=Hotbar.create(),
+        player=player,
+    )
+    assert player.stamina < player.max_stamina
+
+
+def test_running_dry_slows_digging_but_never_stops_it():
+    # Blocking it outright leaves someone who came out for one bagful standing
+    # still. Pressure, not punishment.
+    def dug(stamina: float) -> float:
+        player = _digger()
+        player.stamina = stamina
+        node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+        mining.update_mining(
+            1.0,
+            active_tool=tools.pickaxe(grades.STONE_G),
+            held=True,
+            aim_world=node.pos,
+            player_pos=player.pos,
+            fragments=[node],
+            backpack=None,
+            hotbar=Hotbar.create(),
+            player=player,
+        )
+        return 9999.0 - node.hp
+
+    assert 0 < dug(0.0) < dug(100.0)
+
+
+def test_digging_still_works_with_nobody_holding_the_pick():
+    # The player is optional: plenty of tests and tools swing without one, and
+    # a stamina rule must not make the whole call need a body.
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE)
+    status, _ = mining.update_mining(
+        0.01,
+        active_tool=tools.pickaxe(grades.STONE_G),
+        held=True,
+        aim_world=node.pos,
+        player_pos=pygame.Vector2(PLAYER),
+        fragments=[node],
+        backpack=None,
+        hotbar=Hotbar.create(),
+    )
+    assert status == mining.MINING
