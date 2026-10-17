@@ -171,6 +171,14 @@ CRAFT_ROWS_VISIBLE: Final[int] = 14
 # --- Combat: player -----------------------------------------------------------
 PLAYER_MAX_HP: Final[float] = 100.0
 
+# --- Stamina --------------------------------------------------------------
+# Spent on dodging, running and digging; bought back with meat. There is no
+# hunger system -- the spec rules one out -- so this is purely a limit on how
+# much a body can do at once, never a clock counting down.
+PLAYER_MAX_STAMINA: Final[float] = 100.0
+STAMINA_REGEN: Final[float] = 14.0  # per second, once the hold has run out
+STAMINA_DELAY: Final[float] = 1.1  # seconds of no recovery after spending
+
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash
 DODGE_DURATION: Final[float] = 0.18  # seconds of dash movement

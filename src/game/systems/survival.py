@@ -42,3 +42,15 @@ def update_lava(dt: float, player: Player, pools: list[LavaPool]) -> None:
         return
     if lava.burns(player.pos, pools):
         player.hp -= config.LAVA_DPS * dt
+
+
+def update_stamina(dt: float, player: Player) -> None:
+    """Let wind come back, once the player has stopped spending it.
+
+    The hold is what makes the cost real: without it a dodge would be paid for
+    and refunded inside the same second.
+    """
+    if player.stamina_hold > 0:
+        player.stamina_hold = max(0.0, player.stamina_hold - dt)
+        return
+    player.stamina = min(player.max_stamina, player.stamina + config.STAMINA_REGEN * dt)

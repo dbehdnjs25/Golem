@@ -23,6 +23,33 @@ class Player:
     iframe_timer: float = 0.0  # invulnerability remaining
     dodge_cooldown_timer: float = 0.0  # time until dodge is available again
     ward_time: float = 0.0  # seconds spent inside the ward; resets on leaving
+    stamina: float = config.PLAYER_MAX_STAMINA
+    max_stamina: float = config.PLAYER_MAX_STAMINA
+    # Seconds before wind starts coming back. Without it, mashing dodge would
+    # recover between presses and the cost would never be felt.
+    stamina_hold: float = 0.0
+
+    @property
+    def winded(self) -> bool:
+        return self.stamina <= 0
+
+    def spend(self, amount: float) -> bool:
+        """Pay for a move outright. False, and nothing taken, if short.
+
+        All or nothing: there is no half a dodge, and a partial charge would
+        leave the player paying for something they did not get. Trickles --
+        digging, the bog -- use ``drain`` instead.
+        """
+        if amount > self.stamina:
+            return False
+        self.stamina -= amount
+        self.stamina_hold = config.STAMINA_DELAY
+        return True
+
+    def drain(self, amount: float) -> None:
+        """Take what is there, down to nothing, and refuse nothing."""
+        self.stamina = max(0.0, self.stamina - amount)
+        self.stamina_hold = config.STAMINA_DELAY
 
     @property
     def invulnerable(self) -> bool:

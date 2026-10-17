@@ -82,3 +82,83 @@ def test_dodge_blocked_during_cooldown():
     assert p.invulnerable is False
     p.update(0.0, pygame.Vector2(0, 0), WORLD, dodge_pressed=True)  # re-press mid-cooldown
     assert p.invulnerable is False  # blocked
+
+
+# --- stamina --------------------------------------------------------------
+
+
+def test_a_fresh_player_is_full_of_wind():
+    player = Player(pos=pygame.Vector2(0, 0))
+    assert player.stamina == player.max_stamina
+    assert not player.winded
+
+
+def test_spending_takes_it():
+    player = Player(pos=pygame.Vector2(0, 0))
+    assert player.spend(30) is True
+    assert player.stamina == player.max_stamina - 30
+
+
+def test_spending_more_than_there_is_takes_nothing_at_all():
+    # No half a dodge. Either the move happens or it does not, and a partial
+    # charge would leave the player paying for something they did not get.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 10
+    assert player.spend(30) is False
+    assert player.stamina == 10
+
+
+def test_spending_exactly_what_is_left_works_and_leaves_nothing():
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 30
+    assert player.spend(30) is True
+    assert player.stamina == 0
+    assert player.winded
+
+
+def test_draining_is_allowed_to_run_dry():
+    # Unlike spend, a drain is a trickle -- it takes whatever is there and does
+    # not refuse. Digging and the bog work this way.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 5
+    player.drain(40)
+    assert player.stamina == 0
+
+
+def test_wind_comes_back_on_its_own():
+    from game.systems import survival
+
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    survival.update_stamina(config.STAMINA_DELAY + 1.0, player)
+    assert player.stamina > 0
+
+
+def test_it_does_not_come_back_the_instant_it_is_spent():
+    # Without the pause, mashing dodge would recover between presses and the
+    # cost would never be felt.
+    from game.systems import survival
+
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.spend(50)
+    before = player.stamina
+    survival.update_stamina(config.STAMINA_DELAY / 2, player)
+    assert player.stamina == before
+
+
+def test_a_drain_also_holds_the_recovery_off():
+    from game.systems import survival
+
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.drain(50)
+    before = player.stamina
+    survival.update_stamina(config.STAMINA_DELAY / 2, player)
+    assert player.stamina == before
+
+
+def test_it_never_climbs_past_full():
+    from game.systems import survival
+
+    player = Player(pos=pygame.Vector2(0, 0))
+    survival.update_stamina(600.0, player)
+    assert player.stamina == player.max_stamina
