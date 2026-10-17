@@ -74,6 +74,23 @@ _FONT_NAMES = ("malgungothic", "gulim", "arial")
 _fonts: dict[int, pygame.font.Font] = {}
 
 
+def _object_particle(word: str) -> str:
+    """Korean's object marker: 을 after a final consonant, 를 after a vowel.
+
+    Picked from the last syllable rather than written as "을(를)", which is
+    how a form looks, not how anyone speaks. Hangul syllables are laid out so
+    that the remainder tells you whether there is a final consonant; anything
+    that is not a syllable gets the vowel form, which is the safer guess for
+    a loanword read aloud.
+    """
+    if not word:
+        return "를"
+    last = word.strip()[-1]
+    if not ("가" <= last <= "힣"):
+        return "를"
+    return "를" if (ord(last) - 0xAC00) % 28 == 0 else "을"
+
+
 def _font(size: int) -> pygame.font.Font:
     """A cached font. Built on first use so importing this module needs no display."""
     cached = _fonts.get(size)
@@ -316,7 +333,24 @@ class PlayScene(Scene):
             self._say(f"{kind.name} — 지금은 필요 없다")
             return
         self._spend(kind, 1)
-        self._say(f"{kind.name} 을(를) 먹었다")
+        self._say(f"{kind.name}{_object_particle(kind.name)} 먹었다")
+
+    @property
+    def in_bog(self) -> bool:
+        return self.world.biome_at(self.player.pos) is biomes.BOG
+
+    @property
+    def wind_colour(self) -> tuple[int, int, int]:
+        """Green normally; the bog's own colour while it is being taken.
+
+        Empty reads differently again, because a bar that merely sits at zero
+        does not say WHY nothing is happening when the dodge key stops working.
+        """
+        if self.player.winded:
+            return config.WIND_EMPTY_COLOR
+        if self.in_bog:
+            return config.WIND_BOG_COLOR
+        return config.WIND_COLOR
 
     @property
     def sprinting(self) -> bool:
@@ -664,9 +698,11 @@ class PlayScene(Scene):
         if self.chisel_left <= 0:
             self._spend(CHISEL, 1)
             self.chisel_left = config.CHISEL_USES
-            self._say(f"{glyph.name} 을(를) 새겼다 · 도구가 부서졌다")
+            self._say(f"{glyph.name}{_object_particle(glyph.name)} 새겼다 · 도구가 부서졌다")
         else:
-            self._say(f"{glyph.name} 을(를) 새겼다 · {self.chisel_left}회 남음")
+            self._say(
+                f"{glyph.name}{_object_particle(glyph.name)} 새겼다 · {self.chisel_left}회 남음"
+            )
 
     def _carve_panel(self) -> pygame.Rect:
         rows = max(1, min(len(self.carve_rows()), config.CRAFT_ROWS_VISIBLE))
@@ -1093,7 +1129,11 @@ class PlayScene(Scene):
             if glyph is None:
                 continue
             fresh = self.grimoire.learn(glyph)
-            self._say(f"{glyph.name} 을(를) 배웠다" if fresh else f"{glyph.name} — 이미 아는 그림")
+            self._say(
+                f"{glyph.name}{_object_particle(glyph.name)} 배웠다"
+                if fresh
+                else f"{glyph.name} — 이미 아는 그림"
+            )
             return
 
     def _draw_structures(self, surface: pygame.Surface) -> None:
@@ -1242,25 +1282,28 @@ class PlayScene(Scene):
         # hp bar
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0
         _draw_bar(surface, 30, 14, hp_frac, config.HP_COLOR)
+        # stamina, directly under health: the two things a body runs out of
+        wind = self.player.stamina / self.player.max_stamina
+        _draw_bar(surface, 46, 9, wind, self.wind_colour)
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
-        _draw_bar(surface, 48, 5, ready, (120, 160, 220), bg=(40, 40, 55))
+        _draw_bar(surface, 58, 5, ready, (120, 160, 220), bg=(40, 40, 55))
         # day/night progress: warm across the day, cold across the night, and
         # red while the ward is open, so the hour and the danger are one gauge.
         if self.is_raid:
             phase_color = config.WARD_BROKEN_COLOR
         else:
             phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
-        _draw_bar(surface, 62, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
+        _draw_bar(surface, 68, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
         # the core's own health, below the clock -- only once it can be hurt
         if self.core.ignited:
-            _draw_bar(surface, 74, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
+            _draw_bar(surface, 78, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
         # the staff's strain, but only while it is the thing in hand: a gauge
         # for something slung on your back is a gauge nobody reads
         if self.holding_staff:
             hot = self.staff.strain / config.STAFF_STRAIN_MAX
             colour = config.STRAIN_LOCKED_COLOR if self.staff.overloaded else config.STRAIN_COLOR
-            _draw_bar(surface, 88, 6, hot, colour, bg=(40, 40, 55))
+            _draw_bar(surface, 90, 6, hot, colour, bg=(40, 40, 55))
         # The written lines sit low, just above the hotbar. Up beside the
         # gauges they shared the corner with the compass markers, which pin
         # themselves to the screen's edge and land there often -- two unrelated

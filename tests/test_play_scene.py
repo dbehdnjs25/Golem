@@ -1357,3 +1357,67 @@ def test_a_wolf_finally_pays_for_itself():
 
     assert ITEM_KINDS["raw_meat"] in {k for k, _ in WOLF.drops}
     assert ITEM_KINDS["raw_meat"] in consume.EDIBLE
+
+
+# --- the wind gauge -------------------------------------------------------
+
+
+def test_the_wind_bar_changes_colour_when_it_is_empty():
+    # A bar sitting at zero does not say WHY the dodge key stopped working.
+    scene = PlayScene()
+    assert scene.wind_colour == config.WIND_COLOR
+    scene.player.stamina = 0
+    assert scene.wind_colour == config.WIND_EMPTY_COLOR
+
+
+def test_the_wind_bar_wears_the_bog_s_colour_in_the_bog():
+    import math
+
+    scene = PlayScene()
+    world = scene.world
+    index = biomes.RING_BIOMES.index(biomes.BOG)
+    radians = math.radians(world.rotation + (index + 0.5) * world.sector_degrees)
+    reach = world.grassland_radius + world.ring_width * 0.5
+    scene.player.pos.update(
+        world.center.x + math.cos(radians) * reach,
+        world.center.y + math.sin(radians) * reach,
+    )
+    assert scene.in_bog
+    assert scene.wind_colour == config.WIND_BOG_COLOR
+
+
+def test_the_gauges_do_not_sit_on_top_of_each_other():
+    # Four bars and two lines share that corner now; one covering another
+    # would be the kind of thing nobody notices until a fight.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.hotbar.select(3)
+    scene.hotbar.slots[3] = Stack(ITEM_KINDS["staff"], 1)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    # The stamina bar's own row must still be its own colour.
+    assert surface.get_at((12, 50))[:3] == config.WIND_COLOR
+
+
+def test_the_object_particle_follows_the_word():
+    # "을(를)" is how a form looks, not how anyone speaks.
+    from game.scenes.play import _object_particle
+
+    assert _object_particle("익힌 고기") == "를"  # 기 — no final consonant
+    assert _object_particle("불씨") == "를"
+    assert _object_particle("서리") == "를"
+    assert _object_particle("흑요석") == "을"  # 석 — ends in one
+    assert _object_particle("물약") == "을"
+    assert _object_particle("잿불심") == "을"
+    assert _object_particle("Pulse Gun") == "를"  # not hangul; the safer guess
+    assert _object_particle("") == "를"
+
+
+def test_what_the_notes_actually_say():
+    scene = PlayScene()
+    scene.player.stamina = 0
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["cooked_meat"], 1)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
+    assert scene.note == "익힌 고기를 먹었다"
+    assert "(" not in scene.note

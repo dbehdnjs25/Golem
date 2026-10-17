@@ -202,6 +202,11 @@ POTION_HEAL: Final[float] = 45.0
 # it a nuisance to a stocked player and a trap to an unstocked one, with
 # no damage number to balance.
 BOG_DRAIN: Final[float] = 11.0
+WIND_COLOR: Final[tuple[int, int, int]] = (120, 205, 150)
+WIND_BOG_COLOR: Final[tuple[int, int, int]] = (138, 160, 92)
+# Empty reads differently again: a bar merely sitting at zero does not
+# say WHY the dodge key has stopped working.
+WIND_EMPTY_COLOR: Final[tuple[int, int, int]] = (196, 120, 92)
 
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash
