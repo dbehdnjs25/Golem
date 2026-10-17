@@ -181,9 +181,9 @@ STAMINA_DELAY: Final[float] = 1.1  # seconds of no recovery after spending
 # Running. Below the dodge's multiplier on purpose -- a sprint that outran a
 # dash would make the dodge a worse sprint and nobody would dodge.
 PLAYER_SPRINT_MULT: Final[float] = 1.7
-SPRINT_DRAIN: Final[float] = 18.0  # per second, while actually moving
-DODGE_COST: Final[float] = 22.0  # four and a half dodges from full
-MINING_DRAIN: Final[float] = 7.0  # per second of digging
+SPRINT_DRAIN: Final[float] = 5.0  # per second, while actually moving
+DODGE_COST: Final[float] = 15.0  # six and a half dodges from full
+MINING_DRAIN: Final[float] = 5.0  # per second of digging
 # Digging on empty. Slower, never stopped -- see systems/mining.
 WINDED_MINING_RATE: Final[float] = 0.45
 
@@ -198,10 +198,22 @@ RAW_MEAT_HP_COST: Final[float] = 16.0
 # because its drain is unfair "before cooking and potions exist", so a
 # potion gated behind bog moss would be a circle.
 POTION_HEAL: Final[float] = 45.0
-# What the bog takes per second. Breath, never blood -- which is what makes
-# it a nuisance to a stocked player and a trap to an unstocked one, with
-# no damage number to balance.
-BOG_DRAIN: Final[float] = 11.0
+# --- Mires ----------------------------------------------------------------
+# Patches of standing mire, lying in the bog the way lava lies in the burnt
+# forest. The biome around them is ordinary walking; these are what the spec's
+# drain actually means.
+#
+# Breath, never blood, and only from someone MOVING. A still player pays
+# nothing and starts recovering, which makes a mire somewhere to stop rather
+# than somewhere to flee: the cost is the wading, not the being there.
+MIRES_MIN: Final[int] = 8
+MIRES_MAX: Final[int] = 14
+MIRE_RADIUS_MIN: Final[float] = 320.0
+MIRE_RADIUS_MAX: Final[float] = 780.0
+MIRE_DRAIN: Final[float] = 10.0  # per second of wading
+# Against the bog's own dark green, so the edge reads before a player is in it.
+MIRE_COLOR: Final[tuple[int, int, int]] = (40, 52, 40)
+MIRE_RIM_COLOR: Final[tuple[int, int, int]] = (118, 142, 88)
 WIND_COLOR: Final[tuple[int, int, int]] = (120, 205, 150)
 WIND_BOG_COLOR: Final[tuple[int, int, int]] = (138, 160, 92)
 # Empty reads differently again: a bar merely sitting at zero does not

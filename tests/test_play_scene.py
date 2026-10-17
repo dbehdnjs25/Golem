@@ -15,7 +15,7 @@ from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
 from game.systems import consume, raids
 from game.systems.camera import FREE
-from game.world import biomes
+from game.world import biomes, mires
 
 
 def _key_event(key):
@@ -1370,7 +1370,34 @@ def test_the_wind_bar_changes_colour_when_it_is_empty():
     assert scene.wind_colour == config.WIND_EMPTY_COLOR
 
 
-def test_the_wind_bar_wears_the_bog_s_colour_in_the_bog():
+def test_the_wind_bar_wears_the_mire_s_colour_while_wading():
+    scene = PlayScene()
+    assert scene.mires
+    scene.player.pos.update(scene.mires[0].pos)
+    assert scene.in_mire
+    assert scene.wind_colour == config.WIND_BOG_COLOR
+
+
+def test_wading_a_mire_costs_breath_but_standing_in_it_does_not():
+    # The patch taxes the wading, not the being there -- so it is somewhere to
+    # stop and catch your breath rather than somewhere to run from.
+    scene = PlayScene()
+    scene.player.pos.update(scene.mires[0].pos)
+
+    for _ in range(60):
+        scene.update(config.FIXED_DT)
+    assert scene.player.stamina == scene.player.max_stamina  # standing still
+
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    scene.player.pos.update(scene.mires[0].pos)
+    for _ in range(30):
+        scene.player.pos.update(scene.mires[0].pos)  # pinned, so it stays inside
+        scene.update(config.FIXED_DT)
+    assert scene.player.stamina < scene.player.max_stamina
+
+
+def test_walking_the_bog_between_its_mires_is_free():
+    # The drain belongs to the patches, not to the biome.
     import math
 
     scene = PlayScene()
@@ -1378,12 +1405,18 @@ def test_the_wind_bar_wears_the_bog_s_colour_in_the_bog():
     index = biomes.RING_BIOMES.index(biomes.BOG)
     radians = math.radians(world.rotation + (index + 0.5) * world.sector_degrees)
     reach = world.grassland_radius + world.ring_width * 0.5
-    scene.player.pos.update(
+    spot = pygame.Vector2(
         world.center.x + math.cos(radians) * reach,
         world.center.y + math.sin(radians) * reach,
     )
-    assert scene.in_bog
-    assert scene.wind_colour == config.WIND_BOG_COLOR
+    if mires.holds(spot, scene.mires):
+        return  # this seed put one right there; nothing to prove
+    scene.player.pos.update(spot)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    for _ in range(60):
+        scene.player.pos.update(spot)
+        scene.update(config.FIXED_DT)
+    assert scene.player.stamina == scene.player.max_stamina
 
 
 def test_the_gauges_do_not_sit_on_top_of_each_other():

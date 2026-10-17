@@ -14,10 +14,9 @@ from __future__ import annotations
 from game import config
 from game.entities.core import Core
 from game.entities.lava import LavaPool
+from game.entities.mire import Mire
 from game.entities.player import Player
-from game.world import lava
-from game.world.biomes import BOG
-from game.world.map import WorldMap
+from game.world import lava, mires
 
 
 def update_regen(dt: float, player: Player, core: Core) -> None:
@@ -58,20 +57,18 @@ def update_stamina(dt: float, player: Player) -> None:
     player.stamina = min(player.max_stamina, player.stamina + config.STAMINA_REGEN * dt)
 
 
-def update_bog(dt: float, player: Player, world: WorldMap) -> None:
-    """Wading drains wind, nowhere else does.
+def update_mire(dt: float, player: Player, pools: list[Mire], moving: bool) -> None:
+    """Wading a mire takes breath. Standing in one takes nothing.
 
-    This is why the bog sits fourth. It takes BREATH rather than blood, which
+    This is the bog's gimmick, and it takes BREATH rather than blood -- which
     makes it a nuisance to a player who has cooked and stocked up and a trap
-    to one who has not -- exactly the gate the spec wanted, with no damage
-    number to balance.
+    to one who has not, with no damage number to balance.
 
-    Because draining holds the recovery off, there is no resting in a bog:
-    standing still does not help and nine seconds empties a full tank. Meat is
-    the only way to get breath back in there, which is where the spec's
-    "recovered with meat" stops being a convenience and becomes the rule.
+    Only while moving. A still player is not fighting the mud, so the drain
+    stops, the recovery hold expires, and the patch becomes somewhere to catch
+    your breath rather than somewhere to run from.
     """
-    if player.hp <= 0:
+    if player.hp <= 0 or not moving:
         return
-    if world.biome_at(player.pos) is BOG:
-        player.drain(config.BOG_DRAIN * dt)
+    if mires.holds(player.pos, pools):
+        player.drain(config.MIRE_DRAIN * dt)

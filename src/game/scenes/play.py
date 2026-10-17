@@ -60,7 +60,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, lava, structures
+from game.world import biomes, lava, mires, structures
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -149,6 +149,7 @@ class PlayScene(Scene):
         self.staff = Staff()
         self.structures = structures.place(self.world, self.rng)
         self.lava = lava.place(self.world, self.rng)
+        self.mires = mires.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -336,8 +337,8 @@ class PlayScene(Scene):
         self._say(f"{kind.name}{_object_particle(kind.name)} 먹었다")
 
     @property
-    def in_bog(self) -> bool:
-        return self.world.biome_at(self.player.pos) is biomes.BOG
+    def in_mire(self) -> bool:
+        return mires.holds(self.player.pos, self.mires)
 
     @property
     def wind_colour(self) -> tuple[int, int, int]:
@@ -348,7 +349,7 @@ class PlayScene(Scene):
         """
         if self.player.winded:
             return config.WIND_EMPTY_COLOR
-        if self.in_bog:
+        if self.in_mire:
             return config.WIND_BOG_COLOR
         return config.WIND_COLOR
 
@@ -509,7 +510,9 @@ class PlayScene(Scene):
             )
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
-        survival.update_bog(dt, self.player, self.world)
+        survival.update_mire(
+            dt, self.player, self.mires, moving=self._move_dir().length_squared() > 0
+        )
         survival.update_stamina(dt, self.player)
         survival.update_lava(dt, self.player, self.lava)
 
@@ -534,6 +537,7 @@ class PlayScene(Scene):
     def draw(self, surface: pygame.Surface) -> None:
         self._draw_world(surface)
         self._draw_lava(surface)  # ground, so under everything that stands on it
+        self._draw_mires(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_structures(surface)
@@ -1169,6 +1173,18 @@ class PlayScene(Scene):
         glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         glow.fill((*config.LAVA_COLOR, config.LAVA_WASH))
         surface.blit(glow, (0, 0))
+
+    def _draw_mires(self, surface: pygame.Surface) -> None:
+        """Patches of mire, drawn like the lava: a fill and a lit rim.
+
+        The edge is what matters -- crossing one is the whole decision -- and
+        it has to read against the bog's own dark green before a player is
+        already in it.
+        """
+        for mire in self.mires:
+            at = self.camera.world_to_screen(mire.pos)
+            pygame.draw.circle(surface, config.MIRE_COLOR, at, mire.radius)
+            pygame.draw.circle(surface, config.MIRE_RIM_COLOR, at, mire.radius, 4)
 
     def _draw_lava(self, surface: pygame.Surface) -> None:
         """Pools, bright enough to read before they are stepped in.
