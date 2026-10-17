@@ -30,6 +30,7 @@ from game.items.item_kinds import (
     COPPER_PICK,
     CRUDE_AXE,
     FROST_CRYSTAL,
+    FROZEN_WOOD,
     GOLD_AXE,
     GOLD_ORE,
     GOLD_PICK,
@@ -38,7 +39,9 @@ from game.items.item_kinds import (
     IRON_ORE,
     IRON_PICK,
     OBSIDIAN_STONE,
+    PARCHED_WOOD,
     PEBBLE,
+    SODDEN_WOOD,
     STEEL_AXE,
     STEEL_PICK,
     STONE,
@@ -46,6 +49,7 @@ from game.items.item_kinds import (
     STONE_PICK,
     THUNDER_STONE,
     TWIG,
+    TWISTED_WOOD,
     WEATHERED_STONE,
     WOOD,
     WOOD_AXE,
@@ -116,9 +120,14 @@ NEEDS: dict[ItemKind, Need] = {
     IRON_ORE: Need(PICKAXE, COPPER_G),
     GOLD_ORE: Need(PICKAXE, IRON_G),
     ZINC_ORE: Need(PICKAXE, IRON_G),
-    # Burnt wood is still wood: an axe fells it, at the same grade as any
-    # other tree. The fire did the hard part already.
+    # Each biome's timber takes a different axe, which is the whole of what
+    # separates them at the stump. Burnt wood is the easiest -- the fire did
+    # the hard part -- and frozen wood the worst, being a tree with ice in it.
     CHARRED_WOOD: Need(AXE, CRUDE_G),
+    SODDEN_WOOD: Need(AXE, CRUDE_G),
+    PARCHED_WOOD: Need(AXE, WOOD_G),
+    TWISTED_WOOD: Need(AXE, STONE_G),
+    FROZEN_WOOD: Need(AXE, COPPER_G),
     # The stone by the lava, not the glass. Obsidian is never lying about to be
     # picked up -- it is chipped out of this, beside the pool.
     OBSIDIAN_STONE: Need(PICKAXE, GOLD_G),

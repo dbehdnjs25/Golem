@@ -65,9 +65,15 @@ STEEL_INGOT = ItemKind("steel_ingot", "강철 주괴", _STACK, (120, 130, 150))
 # --- Biome materials ----------------------------------------------------------
 # These never raise a grade. They feed magic and temple locators instead -- grade
 # and attribute are two ladders that do not mix.
-# The burnt forest's timber. Already half charcoal, which is the whole point
-# of it -- see recipes.
+# One timber per ring biome, because a forest that burned and a forest that
+# froze are not the same wood. All of them cut down to ordinary WOOD bare
+# handed, so none is ever a dead end; what differs is the axe it takes to
+# fell one, and -- for the burnt forest's -- what else it can become.
 CHARRED_WOOD = ItemKind("charred_wood", "불탄 나무", _STACK, (72, 58, 50))
+FROZEN_WOOD = ItemKind("frozen_wood", "서리목", _STACK, (168, 196, 212))
+TWISTED_WOOD = ItemKind("twisted_wood", "뒤틀린 나무", _STACK, (150, 140, 118))
+SODDEN_WOOD = ItemKind("sodden_wood", "젖은 나무", _STACK, (86, 100, 72))
+PARCHED_WOOD = ItemKind("parched_wood", "마른 나무", _STACK, (178, 146, 96))
 OBSIDIAN = ItemKind("obsidian", "흑요석", _STACK, (45, 35, 55))
 # What stands around a lava pool. Swinging at it is what yields obsidian --
 # the glass itself is never lying on the ground.
@@ -157,6 +163,10 @@ CATALOGUE: tuple[ItemKind, ...] = (
     BRASS_INGOT,
     STEEL_INGOT,
     CHARRED_WOOD,
+    FROZEN_WOOD,
+    TWISTED_WOOD,
+    SODDEN_WOOD,
+    PARCHED_WOOD,
     OBSIDIAN,
     OBSIDIAN_STONE,
     FROST_CRYSTAL,

@@ -214,3 +214,19 @@ def test_obsidian_is_still_reachable_now_that_it_lives_by_the_lava():
 
     assert OBSIDIAN in FROM_THE_LAVA
     assert OBSIDIAN not in {b.material for b in RING_BIOMES if b.material}
+
+
+def test_every_biome_timber_trims_down_to_ordinary_wood():
+    # No biome's tree is ever a dead end. What one costs is the axe it takes
+    # to fell, not the risk of hauling home something unusable.
+    from game.items.item_kinds import WOOD
+    from game.world.biomes import RING_BIOMES
+
+    for biome in RING_BIOMES:
+        trim = next(
+            r
+            for r in recipes.RECIPES
+            if r.output is WOOD and biome.timber in {k for k, _ in r.inputs}
+        )
+        assert trim.station == recipes.BENCH_S
+        assert trim.seconds == 0

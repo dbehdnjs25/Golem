@@ -11,6 +11,7 @@ from game.items.item_kinds import (
     WOOD,
     ZINC_ORE,
 )
+from game.world.biomes import BIOMES
 
 
 def test_the_ladder_runs_from_wood_to_steel():
@@ -75,8 +76,10 @@ def test_every_ore_wants_a_pickaxe():
     # Everything that is dug rather than gathered or felled.
     from game.items.item_kinds import GRASS, PEBBLE
 
-    # Charred wood is a tree, not ore -- burnt or not, an axe is what fells it.
-    gathered = {TWIG, PEBBLE, GRASS, WOOD, ITEM_KINDS["charred_wood"]}
+    # Trees are not ore. Every biome grows its own and an axe is what fells
+    # them all, whatever the fire or the frost did to the trunk.
+    timber = {b.timber for b in BIOMES}
+    gathered = {TWIG, PEBBLE, GRASS, WOOD} | timber
     for kind, need in grades.NEEDS.items():
         if kind not in gathered:
             assert need.family == PICKAXE
@@ -119,3 +122,18 @@ def test_tool_items_are_real_catalogue_rows_that_do_not_stack():
     for item in grades.TOOL_ITEMS:
         assert ITEM_KINDS[item.key] is item
         assert item.stack_max == 1  # you hold one, you do not hoard them
+
+
+def test_each_biome_s_timber_asks_for_its_own_axe():
+    # What separates the five at the stump. A frozen trunk is not a burnt one.
+    from game.world.biomes import RING_BIOMES
+
+    wanted = {grades.need_for(b.timber).grade.rank for b in RING_BIOMES}
+    assert len(wanted) >= 4  # at least four distinct rungs across the five
+
+
+def test_every_timber_takes_an_axe_and_none_takes_a_pickaxe():
+    from game.world.biomes import BIOMES
+
+    for biome in BIOMES:
+        assert grades.need_for(biome.timber).family == grades.AXE, biome.key

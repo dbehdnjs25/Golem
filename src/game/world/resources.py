@@ -14,7 +14,6 @@ import random
 
 from game import config
 from game.items.item_kinds import (
-    CHARRED_WOOD,
     COPPER_ORE,
     GOLD_ORE,
     GRASS,
@@ -26,7 +25,7 @@ from game.items.item_kinds import (
     ZINC_ORE,
     ItemKind,
 )
-from game.world.biomes import BURNT_FOREST, Biome
+from game.world.biomes import Biome
 
 _GRASSLAND_EDGE = config.GRASSLAND_RADIUS / config.MAP_RADIUS
 _INNER_GRASSLAND = _GRASSLAND_EDGE / 2
@@ -46,13 +45,44 @@ _BANDS: tuple[tuple[float, tuple[tuple[ItemKind, int], ...]], ...] = (
 )
 
 
-def ore_at(fraction: float, rng: random.Random) -> ItemKind:
-    """What a node at ``fraction`` of the way to the map edge yields."""
+# Out in the ring, the biome decides rather than the distance. Every sector of
+# the ring is equally far from home, so a distance band there would be the same
+# table five times over -- and then the only thing separating four of the
+# biomes would be the name of a six-percent rock.
+#
+# What each is FOR:
+#   burnt forest  gold and iron, and obsidian from the lava's rim
+#   snowfield     the place to come for iron
+#   wind plateau  the place to come for gold
+#   bog           copper by the bucket, which the first smelting eats
+#   wasteland     poor ground, and the thunder stone that pays for the trip
+_RING_ORE: dict[str, tuple[tuple[ItemKind, int], ...]] = {
+    "burnt_forest": ((STONE, 10), (COPPER_ORE, 15), (IRON_ORE, 35), (GOLD_ORE, 40)),
+    "snowfield": ((STONE, 10), (COPPER_ORE, 15), (IRON_ORE, 55), (GOLD_ORE, 20)),
+    "wind_plateau": ((STONE, 10), (COPPER_ORE, 10), (IRON_ORE, 20), (GOLD_ORE, 60)),
+    "bog": ((STONE, 15), (COPPER_ORE, 50), (IRON_ORE, 25), (GOLD_ORE, 10)),
+    "wasteland": ((STONE, 35), (COPPER_ORE, 20), (IRON_ORE, 25), (GOLD_ORE, 20)),
+}
+
+
+def _draw(table: tuple[tuple[ItemKind, int], ...], rng: random.Random) -> ItemKind:
+    kinds = [kind for kind, _ in table]
+    weights = [weight for _, weight in table]
+    return rng.choices(kinds, weights=weights, k=1)[0]
+
+
+def ore_at(fraction: float, rng: random.Random, biome: Biome | None = None) -> ItemKind:
+    """What a node yields: the biome's own table out in the ring, bands at home.
+
+    The grassland keeps its distance bands, which is where "further out is
+    better" still means something -- gold does not appear there at all, and
+    zinc only on its rim.
+    """
+    if biome is not None and biome.key in _RING_ORE:
+        return _draw(_RING_ORE[biome.key], rng)
     for bound, table in _BANDS:
         if fraction < bound:
-            kinds = [kind for kind, _ in table]
-            weights = [weight for _, weight in table]
-            return rng.choices(kinds, weights=weights, k=1)[0]
+            return _draw(table, rng)
     raise AssertionError(f"no ore band covers {fraction}")  # pragma: no cover
 
 
@@ -76,22 +106,23 @@ def node_at(fraction: float, rng: random.Random, biome: Biome | None = None) -> 
     can always start again from what is lying on the ground.
     """
     roll = rng.random()
-    timber = CHARRED_WOOD if biome is BURNT_FOREST else WOOD
+    timber = biome.timber if biome is not None else WOOD
     if roll < config.LITTER_SHARE:
         return rng.choice(LITTER)
     if roll < config.LITTER_SHARE + config.TREE_SHARE:
-        # A burnt forest grows no sound timber. Same share of trees as
-        # anywhere -- burnt is not barren -- but what they are is different.
+        # Every biome grows its own. The same share of nodes are trees
+        # everywhere -- a burnt forest is not barren, nor a frozen one --
+        # but what they turn out to be differs.
         return timber
     # The scattered-material roll is skipped where the trees already ARE the
     # material. Rolling it as well would hand the burnt forest nearly twice the
     # charred wood of any other biome's material, for no reason anyone asked for.
     if biome is not None and biome.material is timber:
-        return ore_at(fraction, rng)
+        return ore_at(fraction, rng, biome)
     if (
         biome is not None
         and biome.material is not None
         and rng.random() < config.BIOME_MATERIAL_SHARE
     ):
         return biome.material
-    return ore_at(fraction, rng)
+    return ore_at(fraction, rng, biome)

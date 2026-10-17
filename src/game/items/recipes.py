@@ -37,6 +37,7 @@ from game.items.item_kinds import (
     CRUDE_AXE,
     FINE_BENCH,
     FROST_CRYSTAL,
+    FROZEN_WOOD,
     GOLD_AXE,
     GOLD_INGOT,
     GOLD_ORE,
@@ -51,11 +52,13 @@ from game.items.item_kinds import (
     IRON_PICK,
     LEATHER_PACK,
     OBSIDIAN,
+    PARCHED_WOOD,
     PEBBLE,
     POTION,
     RAW_MEAT,
     SMELTER,
     SNOWFIELD_DETECTOR,
+    SODDEN_WOOD,
     STAFF_ITEM,
     STEEL_AXE,
     STEEL_INGOT,
@@ -66,6 +69,7 @@ from game.items.item_kinds import (
     SUPREME_STAFF_ITEM,
     THUNDER_STONE,
     TWIG,
+    TWISTED_WOOD,
     WASTELAND_DETECTOR,
     WEATHERED_STONE,
     WIND_DETECTOR,
@@ -174,6 +178,20 @@ RECIPES: tuple[Recipe, ...] = (
     # being told about charcoal.
     # The hearth's other job. Cooking is free where burning raw meat in the
     # field costs blood, and a hearth only ever stands inside the ward.
+    # Every biome timber trims down to ordinary wood at a bench. None of them
+    # is ever a dead end -- what a biome's tree costs is the axe it takes to
+    # fell, not the risk of carrying home something unusable.
+    #
+    # At a bench rather than bare handed: the empty-handed list is the
+    # bootstrap and nothing else, and five conversions would bury the four
+    # rows a player with nothing actually needs to see. No wait on it --
+    # trimming a log is bench work, and bench work is not something to stand
+    # and watch.
+    Recipe(WOOD, 1, ((CHARRED_WOOD, 1),), BENCH_S),
+    Recipe(WOOD, 1, ((FROZEN_WOOD, 1),), BENCH_S),
+    Recipe(WOOD, 1, ((TWISTED_WOOD, 1),), BENCH_S),
+    Recipe(WOOD, 1, ((SODDEN_WOOD, 1),), BENCH_S),
+    Recipe(WOOD, 1, ((PARCHED_WOOD, 1),), BENCH_S),
     Recipe(COOKED_MEAT, 1, ((RAW_MEAT, 1),), HEARTH_S, 6.0),
     # Herbs boiled down over a frost crystal. The snowfield is the second
     # biome and the bog the fourth, which is the order the spec needs: the

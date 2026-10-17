@@ -192,20 +192,122 @@ def test_charred_wood_grows_nowhere_else():
         assert CHARRED_WOOD not in drawn, biome
 
 
-def test_the_burnt_forest_still_grows_as_many_trees_as_anywhere():
-    # Burnt is not barren. The share of nodes that are trees should not move
-    # just because of what the trees turn out to be.
+def test_every_biome_grows_as_many_trees_as_every_other():
+    # Burnt is not barren, nor is frozen. The share of nodes that are trees
+    # must not move just because of what the trees turn out to be.
     import random
 
-    from game.items.item_kinds import CHARRED_WOOD, WOOD
     from game.world import biomes
     from game.world.resources import node_at
 
-    def tree_share(biome, want):
+    def tree_share(biome) -> float:
         rng = random.Random(11)
         drawn = [node_at(0.8, rng, biome) for _ in range(4000)]
-        return sum(1 for k in drawn if k is want) / len(drawn)
+        return sum(1 for k in drawn if k is biome.timber) / len(drawn)
 
-    burnt = tree_share(biomes.BURNT_FOREST, CHARRED_WOOD)
-    plain = tree_share(biomes.SNOWFIELD, WOOD)
-    assert abs(burnt - plain) < 0.03
+    shares = [tree_share(b) for b in biomes.RING_BIOMES]
+    assert max(shares) - min(shares) < 0.03
+
+
+# --- each biome yields its own ---------------------------------------------
+
+
+def _yield_of(biome, n: int = 4000):
+    import random
+    from collections import Counter
+
+    from game.world.resources import node_at
+
+    rng = random.Random(5)
+    fraction = 0.3 if biome.material is None else 0.8
+    return Counter(node_at(fraction, rng, biome) for _ in range(n))
+
+
+def test_every_biome_grows_a_different_tree():
+    from game.world import biomes
+
+    timber = [b.timber for b in biomes.BIOMES]
+    assert len(set(timber)) == len(timber)
+
+
+def test_a_biome_only_ever_grows_its_own():
+    from game.world import biomes
+
+    everyone = {b.timber for b in biomes.BIOMES}
+    for biome in biomes.BIOMES:
+        drawn = set(_yield_of(biome))
+        assert drawn & everyone == {biome.timber}, biome.key
+
+
+def test_the_snowfield_is_where_iron_is():
+    from game.items.item_kinds import GOLD_ORE, IRON_ORE
+    from game.world import biomes
+
+    snow = _yield_of(biomes.SNOWFIELD)
+    assert snow[IRON_ORE] > snow[GOLD_ORE] * 2
+    for other in biomes.RING_BIOMES:
+        if other is not biomes.SNOWFIELD:
+            assert snow[IRON_ORE] > _yield_of(other)[IRON_ORE], other.key
+
+
+def test_the_plateau_is_where_gold_is():
+    from game.items.item_kinds import GOLD_ORE
+    from game.world import biomes
+
+    plateau = _yield_of(biomes.WIND_PLATEAU)
+    for other in biomes.RING_BIOMES:
+        if other is not biomes.WIND_PLATEAU:
+            assert plateau[GOLD_ORE] > _yield_of(other)[GOLD_ORE], other.key
+
+
+def test_the_bog_is_where_copper_is():
+    from game.items.item_kinds import COPPER_ORE
+    from game.world import biomes
+
+    bog = _yield_of(biomes.BOG)
+    for other in biomes.RING_BIOMES:
+        if other is not biomes.BOG:
+            assert bog[COPPER_ORE] > _yield_of(other)[COPPER_ORE], other.key
+
+
+def test_the_wasteland_is_bare_rock():
+    # Its pull is the thunder stone, not the ore. Somewhere has to be the
+    # place you go only for what it alone has, and what the ground gives up
+    # otherwise is plain stone.
+    from game.items.item_kinds import STONE
+    from game.world import biomes
+
+    waste = _yield_of(biomes.WASTELAND)
+    for other in biomes.RING_BIOMES:
+        if other is not biomes.WASTELAND:
+            assert waste[STONE] > _yield_of(other)[STONE], other.key
+
+
+def test_the_bog_trades_the_good_ore_away_for_its_copper():
+    # Its character is one metal in quantity, which is what the first smelting
+    # eats -- not a little of everything.
+    from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE
+    from game.world import biomes
+
+    bog = _yield_of(biomes.BOG)
+    assert bog[COPPER_ORE] > bog[IRON_ORE] + bog[GOLD_ORE]
+
+
+def test_no_two_ring_biomes_mine_the_same():
+    from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE
+    from game.world import biomes
+
+    seen = set()
+    for biome in biomes.RING_BIOMES:
+        got = _yield_of(biome)
+        seen.add(tuple(got[ore] for ore in (COPPER_ORE, IRON_ORE, GOLD_ORE)))
+    assert len(seen) == len(biomes.RING_BIOMES)
+
+
+def test_gold_still_never_turns_up_in_the_grassland():
+    # The one thing distance still decides. Out in the ring the biome decides
+    # instead, and every sector of the ring is equally far from home.
+    from game.items.item_kinds import GOLD_ORE
+    from game.world import biomes
+
+    assert GOLD_ORE not in _yield_of(biomes.GRASSLAND)
