@@ -21,14 +21,19 @@ def ignite(player: Player, seconds: float = config.BURN_SECONDS) -> None:
     player.burn_timer = max(player.burn_timer, seconds)
 
 
-def update_burn(dt: float, player: Player) -> None:
+def update_burn(dt: float, player: Player, at_source: bool = False) -> None:
     """Tick the fire down and bill for the time it was alight.
 
     Billed for the burn's own remaining time rather than for ``dt``: handed a
     step longer than the fire has left, charging the whole step would cost
     more than the fire ever did.
+
+    ``at_source`` is True while standing in whatever lit the fire. Then the
+    source charges its own rate and this must not add to it -- being in lava
+    AND on fire is one fire, not two -- and the clock does not run down either,
+    which is what makes the five seconds start from leaving.
     """
-    if player.burn_timer <= 0 or player.hp <= 0:
+    if player.burn_timer <= 0 or player.hp <= 0 or at_source:
         return
     alight = min(dt, player.burn_timer)
     player.burn_timer -= alight

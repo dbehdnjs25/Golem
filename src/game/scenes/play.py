@@ -541,7 +541,7 @@ class PlayScene(Scene):
             self._say("발을 헛디뎠다")
         survival.update_stamina(dt, self.player, regen_mult=weather.regen_mult(self.sandstorm))
         survival.update_lava(dt, self.player, self.lava)
-        status.update_burn(dt, self.player)
+        status.update_burn(dt, self.player, at_source=self.in_lava)
 
         if sync:
             self._open_structure()

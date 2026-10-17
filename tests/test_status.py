@@ -76,3 +76,26 @@ def test_the_total_of_one_burn_is_small_next_to_the_lava_itself():
     # pool would make the pool the lesser hazard.
     whole = config.BURN_DPS * config.BURN_SECONDS
     assert whole < config.LAVA_DPS
+
+
+def test_standing_in_the_fire_does_not_bill_twice():
+    # Being in lava AND on fire is one fire, not two. The pool charges its own
+    # rate; the burn must not stack on top of the thing that lit it.
+    player = _lit()
+    status.update_burn(1.0, player, at_source=True)
+    assert player.hp == config.PLAYER_MAX_HP
+
+
+def test_the_clock_does_not_run_down_at_the_source_either():
+    # Otherwise a long wade would burn the five seconds off before the player
+    # ever got out, and stepping clear would cost nothing at all.
+    player = _lit()
+    status.update_burn(4.0, player, at_source=True)
+    assert player.burn_timer == config.BURN_SECONDS
+
+
+def test_it_starts_charging_the_moment_you_are_clear():
+    player = _lit()
+    status.update_burn(3.0, player, at_source=True)
+    status.update_burn(1.0, player)
+    assert player.hp == config.PLAYER_MAX_HP - config.BURN_DPS

@@ -1743,3 +1743,14 @@ def test_still_burning_still_shows_on_screen():
 
     spot = (config.SCREEN_WIDTH - 40, 200)
     assert alight.get_at(spot)[:3] != out.get_at(spot)[:3]
+
+
+def test_lava_charges_its_own_rate_and_not_the_fire_on_top():
+    scene = PlayScene()
+    scene.player.pos.update(scene.lava[0].pos)
+    before = scene.player.hp
+    for _ in range(int(1.0 / config.FIXED_DT)):
+        scene.update(config.FIXED_DT)
+    lost = before - scene.player.hp
+    assert lost == pytest.approx(config.LAVA_DPS, abs=0.5)
+    assert scene.player.burning  # alight, just not billed for it yet
