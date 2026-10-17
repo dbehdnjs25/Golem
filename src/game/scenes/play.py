@@ -342,15 +342,6 @@ class PlayScene(Scene):
         self._say(f"{kind.name}{_object_particle(kind.name)} 먹었다")
 
     @property
-    def in_snow(self) -> bool:
-        return self.world.biome_at(self.player.pos) is biomes.SNOWFIELD
-
-    @property
-    def blizzard(self) -> float:
-        """How hard it is blowing here, 0 outside the snowfield."""
-        return weather.blizzard_at(self.clock.elapsed) if self.in_snow else 0.0
-
-    @property
     def on_ice(self) -> bool:
         return ice.holds(self.player.pos, self.ice)
 
@@ -615,7 +606,6 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
-        self._draw_blizzard(surface)
         self._draw_sandstorm(surface)
         self._draw_burning(surface)
         self._draw_raid_edge(surface)
@@ -1240,37 +1230,6 @@ class PlayScene(Scene):
         grit = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         grit.fill((*config.SAND_COLOR, int(config.SAND_ALPHA * strength)))
         surface.blit(grit, (0, 0))
-
-    def _draw_blizzard(self, surface: pygame.Surface) -> None:
-        """White out everything past arm's reach while it is blowing.
-
-        Drawn over the ground and over whatever is standing on it, because the
-        point is not seeing a golem until it is close. The edge compass is
-        drawn later and survives, which is the answer to a whiteout: you can
-        still find your way home, you just cannot see what is beside you.
-        """
-        strength = self.blizzard
-        if strength <= 0.01:
-            return
-        reach = weather.sight_radius(strength)
-        full = int(config.BLIZZARD_ALPHA * strength)
-        snow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        snow.fill((*config.BLIZZARD_COLOR, full))
-        # Rings from the outside in, each overwriting the last with a lower
-        # alpha, so what can be seen fades out instead of ending at a drawn
-        # circle. Punching them all fully transparent -- the first attempt --
-        # just cut one hard-edged hole, because each wrote over the one before.
-        middle = self.camera.world_to_screen(self.player.pos)
-        rings = config.BLIZZARD_RINGS
-        for step in range(rings):
-            share = (rings - step) / rings
-            pygame.draw.circle(
-                snow,
-                (*config.BLIZZARD_COLOR, int(full * share * share)),
-                middle,
-                reach * share,
-            )
-        surface.blit(snow, (0, 0))
 
     def _draw_ice(self, surface: pygame.Surface) -> None:
         """Sheets of bare ice, paler than the drifts and ringed in blue.

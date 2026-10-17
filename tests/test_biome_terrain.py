@@ -13,8 +13,8 @@ import pytest
 
 from game import config
 from game.entities.player import Player
-from game.systems import falling, survival, weather
-from game.world import biomes, chasms, lava, mires
+from game.systems import falling, survival
+from game.world import biomes, chasms, ice, lava, mires
 from game.world.map import WorldMap
 
 WORLD = WorldMap(rotation=41.0)
@@ -23,9 +23,11 @@ RNG = random.Random(7)
 LAVA = lava.place(WORLD, random.Random(7))
 MIRES = mires.place(WORLD, random.Random(7))
 CHASMS = chasms.place(WORLD, random.Random(7))
+ICE = ice.place(WORLD, random.Random(7))
 
 TERRAIN = {
     biomes.BURNT_FOREST: LAVA,
+    biomes.SNOWFIELD: ICE,
     biomes.BOG: MIRES,
     biomes.WIND_PLATEAU: CHASMS,
 }
@@ -98,12 +100,29 @@ def test_only_the_plateau_has_ground_that_is_not_there():
         assert not falling.update_fall(1.0, player, CHASMS), biome.key
 
 
-def test_only_the_snowfield_shortens_what_can_be_seen():
-    # The weather itself is blind to place; the scene is what asks for it
-    # only in the right biome. What this holds is that the two storms are
-    # separate functions, not one dressed twice.
-    moments = [i * 0.25 for i in range(400)]
-    assert any(abs(weather.blizzard_at(t) - weather.sandstorm_at(t)) > 0.5 for t in moments)
+def test_only_the_snowfield_takes_your_grip():
+    # The biome itself is ordinary ground; the sheets are the hazard. Standing
+    # between them anywhere on the ring, letting go stops you dead.
+    def skid(biome) -> float:
+        player = _player_in(biome)
+        for _ in range(120):
+            player.update(config.FIXED_DT, pygame.Vector2(1, 0), WORLD)
+        was = pygame.Vector2(player.pos)
+        for _ in range(60):
+            player.update(config.FIXED_DT, pygame.Vector2(0, 0), WORLD)
+        return player.pos.distance_to(was)
+
+    for biome in biomes.RING_BIOMES:
+        assert skid(biome) == 0.0, biome.key
+
+    # On a sheet, it does not.
+    skater = Player(pos=pygame.Vector2(ICE[0].pos))
+    for _ in range(120):
+        skater.update(config.FIXED_DT, pygame.Vector2(1, 0), WORLD, slippery=True)
+    was = pygame.Vector2(skater.pos)
+    for _ in range(60):
+        skater.update(config.FIXED_DT, pygame.Vector2(0, 0), WORLD, slippery=True)
+    assert skater.pos.distance_to(was) > 10
 
 
 def test_only_the_wasteland_blunts_a_run():
@@ -134,6 +153,7 @@ def test_the_safe_land_stays_safe():
     survival.update_lava(5.0, player, LAVA)
     survival.update_mire(5.0, player, MIRES, moving=True)
     assert not falling.update_fall(5.0, player, CHASMS)
+    assert not ice.holds(player.pos, ICE)
 
     start = pygame.Vector2(player.pos)
     player.update(1.0, pygame.Vector2(1, 0), WORLD, sprinting=True)
@@ -151,6 +171,7 @@ def test_all_five_terrains_are_reproducible_together():
             [(p.pos, p.radius) for p in lava.place(WORLD, random.Random(seed))],
             [(m.pos, m.radius) for m in mires.place(WORLD, random.Random(seed))],
             [(c.pos, c.radius) for c in chasms.place(WORLD, random.Random(seed))],
+            [(i.pos, i.radius) for i in ice.place(WORLD, random.Random(seed))],
         )
 
     assert world_from(3) == world_from(3)

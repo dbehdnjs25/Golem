@@ -254,16 +254,10 @@ ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
 ICE_RIM_COLOR: Final[tuple[int, int, int]] = (122, 176, 214)
 
 # --- Weather --------------------------------------------------------------
-# Read off the clock, never rolled: a gust rolled every frame flickers instead
-# of gusting. Different periods, and the sandstorm offset, so the two storms
-# never march in lockstep -- that would read as one effect in two coats.
-BLIZZARD_PERIOD: Final[float] = 47.0  # seconds from calm to calm
+# Read off the clock, never rolled: a gust rolled every frame flickers
+# instead of gusting.
 SANDSTORM_PERIOD: Final[float] = 71.0
 SANDSTORM_OFFSET: Final[float] = 23.0
-# How far can be seen in the snowfield. Never zero: blind is not a mechanic,
-# it is a black screen -- and the edge compass is the answer to a whiteout.
-BLIZZARD_SIGHT_MAX: Final[float] = 430.0
-BLIZZARD_SIGHT_MIN: Final[float] = 130.0
 # How far the wasteland's sandstorm slows the breath coming back, at its
 # worst. Never zero: the bog is already the place where nothing comes
 # back, and two places doing that would leave one of them spare.
@@ -272,11 +266,6 @@ SAND_COLOR: Final[tuple[int, int, int]] = (196, 162, 96)
 SAND_ALPHA: Final[int] = 110  # at full strength
 SAND_NOTICEABLE: Final[float] = 0.25  # when the gauge starts saying so
 WIND_SAND_COLOR: Final[tuple[int, int, int]] = (198, 170, 110)
-# Near-white, and brighter than the snowfield's own ground: white snow over
-# white ground is a storm nobody can see. What it really hides is the
-# things standing on the ground, which are all coloured.
-BLIZZARD_COLOR: Final[tuple[int, int, int]] = (247, 250, 253)
-BLIZZARD_ALPHA: Final[int] = 235  # at full strength
 
 # --- Chasms ---------------------------------------------------------------
 # Breaks in the wind plateau's ridges. A fall costs health and sets the player
@@ -292,8 +281,7 @@ FALL_CLEARANCE: Final[float] = 40.0  # how far outside the rim to set them down
 FALL_SET_DOWN_TRIES: Final[int] = 6
 CHASM_COLOR: Final[tuple[int, int, int]] = (26, 26, 32)
 CHASM_RIM_COLOR: Final[tuple[int, int, int]] = (196, 196, 184)
-BLIZZARD_RINGS: Final[int] = 14  # steps in the fade at the edge of sight
-# Dark enough to read against a whiteout, not only against grass.
+# Dark enough to read against bare ice and sand, not only against grass.
 HUD_BACKING: Final[int] = 165
 WIND_COLOR: Final[tuple[int, int, int]] = (120, 205, 150)
 WIND_BOG_COLOR: Final[tuple[int, int, int]] = (138, 160, 92)
