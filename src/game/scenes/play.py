@@ -475,6 +475,7 @@ class PlayScene(Scene):
             )
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
+        survival.update_bog(dt, self.player, self.world)
         survival.update_stamina(dt, self.player)
         survival.update_lava(dt, self.player, self.lava)
 

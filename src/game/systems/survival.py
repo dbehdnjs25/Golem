@@ -16,6 +16,8 @@ from game.entities.core import Core
 from game.entities.lava import LavaPool
 from game.entities.player import Player
 from game.world import lava
+from game.world.biomes import BOG
+from game.world.map import WorldMap
 
 
 def update_regen(dt: float, player: Player, core: Core) -> None:
@@ -54,3 +56,17 @@ def update_stamina(dt: float, player: Player) -> None:
         player.stamina_hold = max(0.0, player.stamina_hold - dt)
         return
     player.stamina = min(player.max_stamina, player.stamina + config.STAMINA_REGEN * dt)
+
+
+def update_bog(dt: float, player: Player, world: WorldMap) -> None:
+    """Wading drains wind, nowhere else does.
+
+    This is why the bog sits fourth. It takes BREATH rather than blood, which
+    makes it a nuisance to a player who has cooked and stocked up and a trap
+    to one who has not -- exactly the gate the spec wanted, with no damage
+    number to balance.
+    """
+    if player.hp <= 0:
+        return
+    if world.biome_at(player.pos) is BOG:
+        player.drain(config.BOG_DRAIN * dt)

@@ -4,6 +4,8 @@ from game import config
 from game.entities.core import Core
 from game.entities.player import Player
 from game.systems import survival
+from game.world import biomes
+from game.world.map import WorldMap
 
 CENTRE = pygame.Vector2(0, 0)
 
@@ -91,3 +93,73 @@ def test_a_dead_player_is_not_healed():
     player = Player(pos=pygame.Vector2(CENTRE), hp=0.0)
     survival.update_regen(10.0, player, core)
     assert player.hp == 0.0
+
+
+# --- the bog --------------------------------------------------------------
+
+
+def _at(world, biome):
+    """A point out in ``biome``'s sector."""
+    import math
+
+    index = biomes.RING_BIOMES.index(biome)
+    degrees = world.rotation + (index + 0.5) * world.sector_degrees
+    reach = world.grassland_radius + world.ring_width * 0.5
+    radians = math.radians(degrees)
+    return pygame.Vector2(
+        world.center.x + math.cos(radians) * reach,
+        world.center.y + math.sin(radians) * reach,
+    )
+
+
+def test_the_bog_takes_the_breath_out_of_you():
+    # This is why it sits fourth. It takes wind rather than blood, so it is a
+    # nuisance to a player who has cooked and a trap to one who has not.
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    assert world.biome_at(player.pos) is biomes.BOG
+    survival.update_bog(1.0, player, world)
+    assert player.stamina < player.max_stamina
+
+
+def test_no_other_biome_does_that():
+    world = WorldMap(rotation=17.0)
+    for biome in biomes.RING_BIOMES:
+        if biome is biomes.BOG:
+            continue
+        player = Player(pos=_at(world, biome))
+        survival.update_bog(1.0, player, world)
+        assert player.stamina == player.max_stamina, biome.key
+
+
+def test_the_grassland_is_clear_of_it():
+    world = WorldMap()
+    player = Player(pos=pygame.Vector2(world.center))
+    survival.update_bog(1.0, player, world)
+    assert player.stamina == player.max_stamina
+
+
+def test_it_drains_rather_than_refusing():
+    # A drain takes what is there. Nothing about standing in a bog should be
+    # all-or-nothing.
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    player.stamina = 1.0
+    survival.update_bog(5.0, player, world)
+    assert player.stamina == 0
+
+
+def test_it_never_touches_health():
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    survival.update_bog(10.0, player, world)
+    assert player.hp == player.max_hp
+
+
+def test_a_corpse_is_left_alone():
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    player.hp = 0
+    player.stamina = 50
+    survival.update_bog(1.0, player, world)
+    assert player.stamina == 50

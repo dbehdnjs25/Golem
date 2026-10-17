@@ -198,6 +198,10 @@ RAW_MEAT_HP_COST: Final[float] = 16.0
 # because its drain is unfair "before cooking and potions exist", so a
 # potion gated behind bog moss would be a circle.
 POTION_HEAL: Final[float] = 45.0
+# What the bog takes per second. Breath, never blood -- which is what makes
+# it a nuisance to a stocked player and a trap to an unstocked one, with
+# no damage number to balance.
+BOG_DRAIN: Final[float] = 11.0
 
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash
