@@ -65,6 +65,11 @@ def update_bog(dt: float, player: Player, world: WorldMap) -> None:
     makes it a nuisance to a player who has cooked and stocked up and a trap
     to one who has not -- exactly the gate the spec wanted, with no damage
     number to balance.
+
+    Because draining holds the recovery off, there is no resting in a bog:
+    standing still does not help and nine seconds empties a full tank. Meat is
+    the only way to get breath back in there, which is where the spec's
+    "recovered with meat" stops being a convenience and becomes the rule.
     """
     if player.hp <= 0:
         return

@@ -163,3 +163,38 @@ def test_a_corpse_is_left_alone():
     player.stamina = 50
     survival.update_bog(1.0, player, world)
     assert player.stamina == 50
+
+
+def test_there_is_no_resting_in_the_bog():
+    # The drain holds the recovery off every frame, so standing still does not
+    # help. Meat is the only way to get breath back in there, which is exactly
+    # what the spec means by "recovered with meat" -- the bog is where that
+    # stops being a convenience.
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    for _ in range(12 * 60):
+        survival.update_bog(config.FIXED_DT, player, world)
+        survival.update_stamina(config.FIXED_DT, player)
+    assert player.stamina == 0
+
+
+def test_stepping_out_lets_you_breathe_again():
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    player.stamina = 0
+    player.pos.update(world.center)  # back on the grassland
+    for _ in range(int((config.STAMINA_DELAY + 2.0) / config.FIXED_DT)):
+        survival.update_bog(config.FIXED_DT, player, world)
+        survival.update_stamina(config.FIXED_DT, player)
+    assert player.stamina > 0
+
+
+def test_meat_works_in_the_bog_even_though_resting_does_not():
+    from game.items.item_kinds import COOKED_MEAT
+    from game.systems import consume
+
+    world = WorldMap(rotation=17.0)
+    player = Player(pos=_at(world, biomes.BOG))
+    player.stamina = 0
+    assert consume.eat(COOKED_MEAT, player) is True
+    assert player.stamina > 0
