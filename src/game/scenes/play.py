@@ -49,6 +49,7 @@ from game.systems import (
     consume,
     crafting,
     detector,
+    falling,
     mining,
     raids,
     survival,
@@ -61,7 +62,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, lava, mires, structures
+from game.world import biomes, chasms, lava, mires, structures
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -151,6 +152,7 @@ class PlayScene(Scene):
         self.structures = structures.place(self.world, self.rng)
         self.lava = lava.place(self.world, self.rng)
         self.mires = mires.place(self.world, self.rng)
+        self.chasms = chasms.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -523,6 +525,8 @@ class PlayScene(Scene):
         survival.update_mire(
             dt, self.player, self.mires, moving=self._move_dir().length_squared() > 0
         )
+        if falling.update_fall(dt, self.player, self.chasms):
+            self._say("발을 헛디뎠다")
         survival.update_stamina(dt, self.player)
         survival.update_lava(dt, self.player, self.lava)
 
@@ -548,6 +552,7 @@ class PlayScene(Scene):
         self._draw_world(surface)
         self._draw_lava(surface)  # ground, so under everything that stands on it
         self._draw_mires(surface)
+        self._draw_chasms(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_structures(surface)
@@ -1225,6 +1230,18 @@ class PlayScene(Scene):
                 reach * share,
             )
         surface.blit(snow, (0, 0))
+
+    def _draw_chasms(self, surface: pygame.Surface) -> None:
+        """Holes, drawn dark with a lit rim.
+
+        Darker than anything else on the plateau and ringed in pale stone: the
+        rim is the whole of what a player reads here, and it has to be read
+        from across a ridge rather than at the edge of it.
+        """
+        for hole in self.chasms:
+            at = self.camera.world_to_screen(hole.pos)
+            pygame.draw.circle(surface, config.CHASM_COLOR, at, hole.radius)
+            pygame.draw.circle(surface, config.CHASM_RIM_COLOR, at, hole.radius, 5)
 
     def _draw_mires(self, surface: pygame.Surface) -> None:
         """Patches of mire, drawn like the lava: a fill and a lit rim.

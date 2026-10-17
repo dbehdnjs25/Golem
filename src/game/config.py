@@ -238,6 +238,21 @@ BLIZZARD_SIGHT_MIN: Final[float] = 130.0
 # things standing on the ground, which are all coloured.
 BLIZZARD_COLOR: Final[tuple[int, int, int]] = (247, 250, 253)
 BLIZZARD_ALPHA: Final[int] = 235  # at full strength
+
+# --- Chasms ---------------------------------------------------------------
+# Breaks in the wind plateau's ridges. A fall costs health and sets the player
+# back on the rim; it never keeps them, because the point of a hole is being
+# pushed into one -- which is what the wind boss's shove will do -- and a death
+# pit would simply make the biome unvisitable.
+CHASMS_MIN: Final[int] = 10
+CHASMS_MAX: Final[int] = 16
+CHASM_RADIUS_MIN: Final[float] = 300.0
+CHASM_RADIUS_MAX: Final[float] = 820.0
+FALL_DAMAGE: Final[float] = 22.0  # well under full health; a stumble, not an end
+FALL_CLEARANCE: Final[float] = 40.0  # how far outside the rim to set them down
+FALL_SET_DOWN_TRIES: Final[int] = 6
+CHASM_COLOR: Final[tuple[int, int, int]] = (26, 26, 32)
+CHASM_RIM_COLOR: Final[tuple[int, int, int]] = (196, 196, 184)
 BLIZZARD_RINGS: Final[int] = 14  # steps in the fade at the edge of sight
 # Dark enough to read against a whiteout, not only against grass.
 HUD_BACKING: Final[int] = 165

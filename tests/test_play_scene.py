@@ -1592,3 +1592,42 @@ def test_the_lull_lets_you_see_again():
         scene.clock.update(0.25)
     far = _node_at(scene, pygame.Vector2(380, 0))
     assert _looks_like(_pixel_at(scene, far.pos), far.kind.color)
+
+
+# --- chasms ---------------------------------------------------------------
+
+
+def test_the_world_opens_chasms_in_the_plateau():
+    scene = PlayScene()
+    assert scene.chasms
+    for hole in scene.chasms:
+        assert scene.world.biome_at(hole.pos) is biomes.WIND_PLATEAU
+
+
+def test_walking_over_an_edge_costs_health_and_puts_you_back():
+    scene = PlayScene()
+    hole = scene.chasms[0]
+    scene.player.pos.update(hole.pos)
+    scene.update(config.FIXED_DT)
+    assert scene.player.hp < scene.player.max_hp
+    assert not hole.holds(scene.player.pos)
+    assert "헛디뎠다" in scene.note
+
+
+def test_standing_on_the_rim_does_not_shake_you_to_death():
+    scene = PlayScene()
+    hole = scene.chasms[0]
+    scene.player.pos.update(hole.pos)
+    scene.update(config.FIXED_DT)
+    after_one = scene.player.hp
+    for _ in range(300):
+        scene.update(config.FIXED_DT)
+    assert scene.player.hp >= after_one  # the ward may even heal it back
+
+
+def test_a_fall_keeps_your_pack():
+    scene = PlayScene()
+    scene.hotbar.add(ITEM_KINDS["stone"], 5)
+    scene.player.pos.update(scene.chasms[0].pos)
+    scene.update(config.FIXED_DT)
+    assert scene.hotbar.count(ITEM_KINDS["stone"]) == 5
