@@ -1631,3 +1631,58 @@ def test_a_fall_keeps_your_pack():
     scene.player.pos.update(scene.chasms[0].pos)
     scene.update(config.FIXED_DT)
     assert scene.hotbar.count(ITEM_KINDS["stone"]) == 5
+
+
+# --- the wasteland --------------------------------------------------------
+
+
+def test_the_sandstorm_only_blows_out_on_the_wasteland():
+    scene = PlayScene()
+    assert scene.sandstorm == 0.0
+    for biome in biomes.RING_BIOMES:
+        _stand_in(scene, biome)
+        if biome is not biomes.WASTELAND:
+            assert scene.sandstorm == 0.0, biome.key
+
+
+def test_a_storm_slows_the_breath_without_stopping_it():
+    def back(in_storm: bool) -> float:
+        scene = PlayScene()
+        _stand_in(scene, biomes.WASTELAND if in_storm else biomes.SNOWFIELD)
+        if in_storm:
+            while scene.sandstorm < 0.9:
+                scene.clock.update(0.5)
+        scene.player.stamina = 0
+        for _ in range(int(4.0 / config.FIXED_DT)):
+            scene.update(config.FIXED_DT)
+        return scene.player.stamina
+
+    assert 0 < back(True) < back(False)
+
+
+def test_the_gauge_says_which_weather_is_slowing_it():
+    scene = PlayScene()
+    _stand_in(scene, biomes.WASTELAND)
+    while scene.sandstorm < 0.9:
+        scene.clock.update(0.5)
+    assert scene.wind_colour == config.WIND_SAND_COLOR
+    while scene.sandstorm > 0.05:
+        scene.clock.update(0.5)
+    assert scene.wind_colour == config.WIND_COLOR
+
+
+def test_the_grit_shows_on_screen():
+    scene = PlayScene()
+    _stand_in(scene, biomes.WASTELAND)
+    while scene.sandstorm > 0.05:
+        scene.clock.update(0.5)
+    calm = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(calm)
+
+    while scene.sandstorm < 0.9:
+        scene.clock.update(0.5)
+    blowing = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(blowing)
+
+    spot = (config.SCREEN_WIDTH - 40, 200)
+    assert blowing.get_at(spot)[:3] != calm.get_at(spot)[:3]

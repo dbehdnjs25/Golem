@@ -91,3 +91,29 @@ def test_a_dead_player_is_not_healed():
     player = Player(pos=pygame.Vector2(CENTRE), hp=0.0)
     survival.update_regen(10.0, player, core)
     assert player.hp == 0.0
+
+
+# --- the sandstorm --------------------------------------------------------
+
+
+def test_a_regen_multiplier_slows_the_breath_without_stopping_it():
+    def back(mult: float) -> float:
+        player = Player(pos=pygame.Vector2(0, 0))
+        player.stamina = 0
+        for _ in range(int(4.0 / config.FIXED_DT)):
+            survival.update_stamina(config.FIXED_DT, player, regen_mult=mult)
+        return player.stamina
+
+    assert 0 < back(0.3) < back(1.0)
+
+
+def test_the_multiplier_defaults_to_no_change():
+    # Everywhere but the wasteland simply does not pass one.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    other = Player(pos=pygame.Vector2(0, 0))
+    other.stamina = 0
+    for _ in range(int(3.0 / config.FIXED_DT)):
+        survival.update_stamina(config.FIXED_DT, player)
+        survival.update_stamina(config.FIXED_DT, other, regen_mult=1.0)
+    assert player.stamina == other.stamina

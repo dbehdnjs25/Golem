@@ -45,3 +45,15 @@ def sight_radius(strength: float) -> float:
     strength = max(0.0, min(1.0, strength))
     span = config.BLIZZARD_SIGHT_MAX - config.BLIZZARD_SIGHT_MIN
     return config.BLIZZARD_SIGHT_MAX - span * strength
+
+
+def regen_mult(strength: float) -> float:
+    """How fast breath comes back in a sandstorm of ``strength``.
+
+    Never zero. The bog is already the place where nothing comes back at all,
+    and two places doing the same thing would leave one of them spare -- the
+    wasteland slows the recovery rather than stopping it.
+    """
+    strength = max(0.0, min(1.0, strength))
+    span = 1.0 - config.WASTELAND_REGEN_FLOOR
+    return 1.0 - span * strength

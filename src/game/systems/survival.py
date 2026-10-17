@@ -45,16 +45,20 @@ def update_lava(dt: float, player: Player, pools: list[LavaPool]) -> None:
         player.hp -= config.LAVA_DPS * dt
 
 
-def update_stamina(dt: float, player: Player) -> None:
+def update_stamina(dt: float, player: Player, regen_mult: float = 1.0) -> None:
     """Let wind come back, once the player has stopped spending it.
 
     The hold is what makes the cost real: without it a dodge would be paid for
     and refunded inside the same second.
+
+    ``regen_mult`` is how the wasteland's sandstorm slows the breath without
+    stopping it. Everywhere else simply leaves it alone.
     """
     if player.stamina_hold > 0:
         player.stamina_hold = max(0.0, player.stamina_hold - dt)
         return
-    player.stamina = min(player.max_stamina, player.stamina + config.STAMINA_REGEN * dt)
+    gain = config.STAMINA_REGEN * regen_mult * dt
+    player.stamina = min(player.max_stamina, player.stamina + gain)
 
 
 def update_mire(dt: float, player: Player, pools: list[Mire], moving: bool) -> None:

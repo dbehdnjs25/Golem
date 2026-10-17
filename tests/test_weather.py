@@ -56,3 +56,23 @@ def test_you_can_always_see_something():
     # Blind is not a mechanic, it is a black screen.
     for strength in (0.0, 0.5, 1.0):
         assert weather.sight_radius(strength) > 0
+
+
+# --- what a sandstorm does to the breath ----------------------------------
+
+
+def test_a_storm_slows_the_breath_coming_back():
+    assert weather.regen_mult(1.0) < weather.regen_mult(0.0)
+    assert weather.regen_mult(0.0) == 1.0
+
+
+def test_even_the_worst_of_it_never_stops_recovery():
+    # The bog is already the place where nothing comes back. Two places doing
+    # the same thing would leave one of them spare.
+    assert weather.regen_mult(1.0) == config.WASTELAND_REGEN_FLOOR
+    assert config.WASTELAND_REGEN_FLOOR > 0
+
+
+def test_it_is_steady_between_the_ends():
+    seen = [weather.regen_mult(i / 10) for i in range(11)]
+    assert seen == sorted(seen, reverse=True)

@@ -182,6 +182,10 @@ STAMINA_DELAY: Final[float] = 1.1  # seconds of no recovery after spending
 # dash would make the dodge a worse sprint and nobody would dodge.
 PLAYER_SPRINT_MULT: Final[float] = 1.7
 SPRINT_DRAIN: Final[float] = 5.0  # per second, while actually moving
+# Running on the wasteland. Blunted, never cancelled: flat open ground you
+# cannot outrun what is on, which is what "nowhere to hide" means somewhere
+# this bare. Still faster than walking, or the key may as well do nothing.
+WASTELAND_SPRINT_MULT: Final[float] = 1.2
 DODGE_COST: Final[float] = 15.0  # six and a half dodges from full
 MINING_DRAIN: Final[float] = 5.0  # per second of digging
 # Digging on empty. Slower, never stopped -- see systems/mining.
@@ -233,6 +237,14 @@ SANDSTORM_OFFSET: Final[float] = 23.0
 # it is a black screen -- and the edge compass is the answer to a whiteout.
 BLIZZARD_SIGHT_MAX: Final[float] = 430.0
 BLIZZARD_SIGHT_MIN: Final[float] = 130.0
+# How far the wasteland's sandstorm slows the breath coming back, at its
+# worst. Never zero: the bog is already the place where nothing comes
+# back, and two places doing that would leave one of them spare.
+WASTELAND_REGEN_FLOOR: Final[float] = 0.25
+SAND_COLOR: Final[tuple[int, int, int]] = (196, 162, 96)
+SAND_ALPHA: Final[int] = 110  # at full strength
+SAND_NOTICEABLE: Final[float] = 0.25  # when the gauge starts saying so
+WIND_SAND_COLOR: Final[tuple[int, int, int]] = (198, 170, 110)
 # Near-white, and brighter than the snowfield's own ground: white snow over
 # white ground is a storm nobody can see. What it really hides is the
 # things standing on the ground, which are all coloured.

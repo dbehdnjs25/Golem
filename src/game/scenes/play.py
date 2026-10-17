@@ -349,6 +349,15 @@ class PlayScene(Scene):
         return weather.blizzard_at(self.clock.elapsed) if self.in_snow else 0.0
 
     @property
+    def in_waste(self) -> bool:
+        return self.world.biome_at(self.player.pos) is biomes.WASTELAND
+
+    @property
+    def sandstorm(self) -> float:
+        """How hard the grit is blowing here, 0 outside the wasteland."""
+        return weather.sandstorm_at(self.clock.elapsed) if self.in_waste else 0.0
+
+    @property
     def in_mire(self) -> bool:
         return mires.holds(self.player.pos, self.mires)
 
@@ -363,6 +372,8 @@ class PlayScene(Scene):
             return config.WIND_EMPTY_COLOR
         if self.in_mire:
             return config.WIND_BOG_COLOR
+        if self.sandstorm > config.SAND_NOTICEABLE:
+            return config.WIND_SAND_COLOR
         return config.WIND_COLOR
 
     @property
@@ -527,7 +538,7 @@ class PlayScene(Scene):
         )
         if falling.update_fall(dt, self.player, self.chasms):
             self._say("발을 헛디뎠다")
-        survival.update_stamina(dt, self.player)
+        survival.update_stamina(dt, self.player, regen_mult=weather.regen_mult(self.sandstorm))
         survival.update_lava(dt, self.player, self.lava)
 
         if sync:
@@ -595,6 +606,7 @@ class PlayScene(Scene):
             self.player.radius,
         )
         self._draw_blizzard(surface)
+        self._draw_sandstorm(surface)
         self._draw_burning(surface)
         self._draw_raid_edge(surface)
         self._draw_hud(surface)
@@ -1199,6 +1211,21 @@ class PlayScene(Scene):
         glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         glow.fill((*colour, alpha))
         surface.blit(glow, (0, 0))
+
+    def _draw_sandstorm(self, surface: pygame.Surface) -> None:
+        """A wash of grit while it is blowing out on the wasteland.
+
+        It hides nothing -- the wasteland's whole point is that there is
+        nothing to hide behind -- so this only has to say that the breath is
+        coming back slowly, which is otherwise a gauge moving at a speed
+        nobody can account for.
+        """
+        strength = self.sandstorm
+        if strength <= 0.01:
+            return
+        grit = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        grit.fill((*config.SAND_COLOR, int(config.SAND_ALPHA * strength)))
+        surface.blit(grit, (0, 0))
 
     def _draw_blizzard(self, surface: pygame.Surface) -> None:
         """White out everything past arm's reach while it is blowing.

@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
+from game.world.biomes import WASTELAND
 from game.world.map import WorldMap
 
 
@@ -55,6 +56,19 @@ class Player:
     def invulnerable(self) -> bool:
         return self.iframe_timer > 0
 
+    def _sprint_mult(self, world: WorldMap) -> float:
+        """How much running is worth under the player's feet.
+
+        Blunted on the wasteland: flat open ground you cannot simply outrun
+        what is on. Only the RUNNING -- the walk is the same everywhere, or
+        the biome would be a chore to cross rather than a place that is hard
+        to leave. The wind costs the same either way: it is the ground that
+        is poor, not the legs.
+        """
+        if world.biome_at(self.pos) is WASTELAND:
+            return config.WASTELAND_SPRINT_MULT
+        return config.PLAYER_SPRINT_MULT
+
     def update(
         self,
         dt: float,
@@ -85,7 +99,7 @@ class Player:
         if self.dodge_timer > 0:
             speed = self.speed * config.DODGE_SPEED_MULT
         elif sprinting and moving and self.spend(config.SPRINT_DRAIN * dt):
-            speed = self.speed * config.PLAYER_SPRINT_MULT
+            speed = self.speed * self._sprint_mult(world)
         else:
             speed = self.speed
         if moving:

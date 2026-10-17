@@ -3,6 +3,7 @@ import pytest
 
 from game import config
 from game.entities.player import Player
+from game.world import biomes
 from game.world.map import WorldMap
 
 WORLD = WorldMap()
@@ -237,3 +238,67 @@ def test_the_dodge_cooldown_is_not_burned_by_a_refused_dodge():
     player.stamina = 0
     player.update(0.01, pygame.Vector2(1, 0), WORLD, dodge_pressed=True)
     assert player.dodge_cooldown_timer == 0
+
+
+# --- the wasteland ---------------------------------------------------------
+
+
+def _out_in(biome) -> pygame.Vector2:
+    import math
+
+    index = biomes.RING_BIOMES.index(biome)
+    radians = math.radians(WORLD.rotation + (index + 0.5) * WORLD.sector_degrees)
+    reach = WORLD.grassland_radius + WORLD.ring_width * 0.5
+    return pygame.Vector2(
+        WORLD.center.x + math.cos(radians) * reach,
+        WORLD.center.y + math.sin(radians) * reach,
+    )
+
+
+def _ran(biome) -> float:
+    """How far a second of running covers out in ``biome``."""
+    start = _out_in(biome)
+    player = Player(pos=pygame.Vector2(start))
+    player.update(1.0, pygame.Vector2(1, 0), WORLD, sprinting=True)
+    return player.pos.distance_to(start)
+
+
+def _walked(biome) -> float:
+    start = _out_in(biome)
+    player = Player(pos=pygame.Vector2(start))
+    player.update(1.0, pygame.Vector2(1, 0), WORLD)
+    return player.pos.distance_to(start)
+
+
+def test_running_is_blunted_out_on_the_wasteland():
+    # Open ground that is hard to LEAVE: you cannot simply outrun what is out
+    # there, which is what "nowhere to hide" has to mean somewhere this flat.
+    assert _ran(biomes.WASTELAND) < _ran(biomes.SNOWFIELD)
+
+
+def test_walking_is_exactly_the_same_out_there():
+    # Only the running is blunted. Slowing the walk would make the biome a
+    # chore to cross rather than a place you cannot escape.
+    assert _walked(biomes.WASTELAND) == pytest.approx(_walked(biomes.SNOWFIELD))
+
+
+def test_running_out_there_is_still_faster_than_walking():
+    # Blunted, not cancelled -- otherwise the key may as well do nothing.
+    assert _ran(biomes.WASTELAND) > _walked(biomes.WASTELAND)
+
+
+def test_it_still_costs_the_same_wind():
+    # The ground is what is poor, not the legs.
+    def spent(biome):
+        player = Player(pos=_out_in(biome))
+        player.update(1.0, pygame.Vector2(1, 0), WORLD, sprinting=True)
+        return player.max_stamina - player.stamina
+
+    assert spent(biomes.WASTELAND) == pytest.approx(spent(biomes.SNOWFIELD))
+
+
+def test_every_other_biome_runs_at_full_speed():
+    for biome in biomes.RING_BIOMES:
+        if biome is biomes.WASTELAND:
+            continue
+        assert _ran(biome) == pytest.approx(_ran(biomes.SNOWFIELD)), biome.key
