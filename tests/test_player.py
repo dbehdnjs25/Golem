@@ -162,3 +162,54 @@ def test_it_never_climbs_past_full():
     player = Player(pos=pygame.Vector2(0, 0))
     survival.update_stamina(600.0, player)
     assert player.stamina == player.max_stamina
+
+
+# --- running --------------------------------------------------------------
+
+
+def test_running_covers_more_ground():
+    # The map is a six-minute walk across. Running trades the wind you would
+    # have fought with for the distance you would have walked.
+    walked, ran = Player(pos=pygame.Vector2(0, 0)), Player(pos=pygame.Vector2(0, 0))
+    east = pygame.Vector2(1, 0)
+    walked.update(1.0, east, WORLD)
+    ran.update(1.0, east, WORLD, sprinting=True)
+    assert ran.pos.x > walked.pos.x
+
+
+def test_running_costs_wind():
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.update(1.0, pygame.Vector2(1, 0), WORLD, sprinting=True)
+    assert player.stamina < player.max_stamina
+
+
+def test_standing_still_and_holding_run_costs_nothing():
+    # Wind pays for ground covered, not for a key being down.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.update(1.0, pygame.Vector2(0, 0), WORLD, sprinting=True)
+    assert player.stamina == player.max_stamina
+
+
+def test_an_empty_player_simply_walks():
+    # Not a stutter, not a refusal to move -- just no longer fast.
+    winded, walking = Player(pos=pygame.Vector2(0, 0)), Player(pos=pygame.Vector2(0, 0))
+    winded.stamina = 0
+    east = pygame.Vector2(1, 0)
+    winded.update(1.0, east, WORLD, sprinting=True)
+    walking.update(1.0, east, WORLD)
+    assert winded.pos.x == pytest.approx(walking.pos.x)
+
+
+def test_a_dodge_is_not_slowed_down_by_running_out():
+    # The dash is already paid for; having no wind left must not cut it short.
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.update(0.01, pygame.Vector2(1, 0), WORLD, dodge_pressed=True)
+    player.stamina = 0
+    before = player.pos.x
+    player.update(0.05, pygame.Vector2(1, 0), WORLD, sprinting=True)
+    assert player.pos.x - before > config.PLAYER_SPEED * 0.05
+
+
+def test_running_is_slower_than_dodging():
+    # Otherwise the dodge would be a worse sprint, and nobody would dodge.
+    assert config.PLAYER_SPRINT_MULT < config.DODGE_SPEED_MULT

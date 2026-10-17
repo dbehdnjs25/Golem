@@ -178,6 +178,10 @@ PLAYER_MAX_HP: Final[float] = 100.0
 PLAYER_MAX_STAMINA: Final[float] = 100.0
 STAMINA_REGEN: Final[float] = 14.0  # per second, once the hold has run out
 STAMINA_DELAY: Final[float] = 1.1  # seconds of no recovery after spending
+# Running. Below the dodge's multiplier on purpose -- a sprint that outran a
+# dash would make the dodge a worse sprint and nobody would dodge.
+PLAYER_SPRINT_MULT: Final[float] = 1.7
+SPRINT_DRAIN: Final[float] = 18.0  # per second, while actually moving
 
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash

@@ -56,6 +56,8 @@ from game.world.biomes import Biome
 from game.world.map import WorldMap
 
 _MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
+# Held, not tapped, so it rides in the same set as the movement keys.
+_SPRINT_KEYS = {pygame.K_LSHIFT, pygame.K_RSHIFT}
 
 # Korean first, since every item name is Korean; the fallbacks are only so a
 # machine without these still draws something rather than raising.
@@ -241,7 +243,7 @@ class PlayScene(Scene):
     # --- input (event-driven, no polling) --------------------------------
     def handle_event(self, event: pygame.event.Event) -> None:
         if event.type == pygame.KEYDOWN:
-            if event.key in _MOVE_KEYS:
+            if event.key in _MOVE_KEYS or event.key in _SPRINT_KEYS:
                 self._held_keys.add(event.key)
             elif event.key == pygame.K_1:
                 self.hotbar.select(0)
@@ -286,6 +288,10 @@ class PlayScene(Scene):
             self._mouse_held = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._mouse_held = False
+
+    @property
+    def sprinting(self) -> bool:
+        return bool(self._held_keys & _SPRINT_KEYS)
 
     def _move_dir(self) -> pygame.Vector2:
         direction = pygame.Vector2(0, 0)
@@ -401,7 +407,7 @@ class PlayScene(Scene):
 
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
-        self.player.update(dt, self._move_dir(), self.world, dodge)
+        self.player.update(dt, self._move_dir(), self.world, dodge, self.sprinting)
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
         tool = self.hotbar.active_tool

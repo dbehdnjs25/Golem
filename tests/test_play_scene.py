@@ -1275,3 +1275,21 @@ def test_standing_in_lava_washes_the_screen():
 
     corner = (config.SCREEN_WIDTH - 4, 4)
     assert hot.get_at(corner)[:3] != dry.get_at(corner)[:3]
+
+
+def test_holding_shift_makes_the_scene_run():
+    scene = PlayScene()
+    assert not scene.sprinting
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_LSHIFT))
+    assert scene.sprinting
+    scene.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_LSHIFT))
+    assert not scene.sprinting
+
+
+def test_running_across_the_field_spends_wind():
+    scene = PlayScene()
+    for key in (pygame.K_d, pygame.K_LSHIFT):
+        scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
+    for _ in range(60):
+        scene.update(config.FIXED_DT)
+    assert scene.player.stamina < scene.player.max_stamina

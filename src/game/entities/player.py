@@ -61,17 +61,31 @@ class Player:
         move_dir: pygame.Vector2,
         world: WorldMap,
         dodge_pressed: bool = False,
+        sprinting: bool = False,
     ) -> None:
         """Advance by ``dt`` along ``move_dir`` (unnormalized), clamped to the map circle.
+
         A dodge grants i-frames immediately (even when standing still) and a
-        speed boost while the dash lasts."""
+        speed boost while the dash lasts.
+
+        Running costs wind, but only while actually covering ground: the charge
+        is for distance, not for a key being held. With nothing left the player
+        simply walks -- not a stutter and not a refusal to move.
+        """
         if dodge_pressed and self.dodge_cooldown_timer <= 0:
             self.dodge_timer = config.DODGE_DURATION
             self.iframe_timer = config.DODGE_IFRAMES
             self.dodge_cooldown_timer = config.DODGE_COOLDOWN
 
-        speed = self.speed * (config.DODGE_SPEED_MULT if self.dodge_timer > 0 else 1.0)
-        if move_dir.length_squared() > 0:
+        moving = move_dir.length_squared() > 0
+        # A dash is already paid for; running out mid-dodge must not cut it short.
+        if self.dodge_timer > 0:
+            speed = self.speed * config.DODGE_SPEED_MULT
+        elif sprinting and moving and self.spend(config.SPRINT_DRAIN * dt):
+            speed = self.speed * config.PLAYER_SPRINT_MULT
+        else:
+            speed = self.speed
+        if moving:
             self.pos += move_dir.normalize() * speed * dt
         world.clamp(self.pos, self.radius)
 
