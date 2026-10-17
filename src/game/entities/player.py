@@ -29,6 +29,11 @@ class Player:
     # Seconds before wind starts coming back. Without it, mashing dodge would
     # recover between presses and the cost would never be felt.
     stamina_hold: float = 0.0
+    burn_timer: float = 0.0  # seconds of fire still on them; see systems/status
+
+    @property
+    def burning(self) -> bool:
+        return self.burn_timer > 0
 
     @property
     def winded(self) -> bool:

@@ -226,6 +226,16 @@ MIRE_RIM_COLOR: Final[tuple[int, int, int]] = (118, 142, 88)
 # Darker than the lava's wash: going under is a slower, quieter emergency.
 MIRE_WASH: Final[int] = 95
 
+# --- Burning --------------------------------------------------------------
+# What lava leaves on you, and what the burnt forest's supreme glyph will set.
+# The whole of one burn is worth less than a second in the pool: the lingering
+# is the point, not the damage, and a tail heavier than its cause would make
+# the pool the lesser hazard.
+BURN_DPS: Final[float] = 2.0
+BURN_SECONDS: Final[float] = 5.0
+# Fainter than the lava's wash: still alight, no longer standing in it.
+BURN_WASH: Final[int] = 34
+
 # --- Weather --------------------------------------------------------------
 # Read off the clock, never rolled: a gust rolled every frame flickers instead
 # of gusting. Different periods, and the sandstorm offset, so the two storms
@@ -363,7 +373,10 @@ LAVA_RADIUS_MAX: Final[float] = 620.0
 # Hot enough that wading is a real cost, slow enough that a dash across the
 # narrow end is a choice. Instant death would make it a wall, and a wall is not
 # a decision.
-LAVA_DPS: Final[float] = 26.0
+#
+# Lava also sets the player alight, and the fire outlasts the pool -- see
+# BURN_DPS. Stepping out is a relief rather than an off switch.
+LAVA_DPS: Final[float] = 15.0
 OBSIDIAN_BELT: Final[float] = 420.0  # how far the studded stone reaches out
 OBSIDIAN_PER_POOL_MIN: Final[int] = 3  # never a pool worth no walk
 OBSIDIAN_PER_POOL_MAX: Final[int] = 6

@@ -16,6 +16,7 @@ from game.entities.core import Core
 from game.entities.lava import LavaPool
 from game.entities.mire import Mire
 from game.entities.player import Player
+from game.systems import status
 from game.world import lava, mires
 
 
@@ -43,6 +44,9 @@ def update_lava(dt: float, player: Player, pools: list[LavaPool]) -> None:
         return
     if lava.burns(player.pos, pools):
         player.hp -= config.LAVA_DPS * dt
+        # And it stays alight after. Relit every frame while in it, so the
+        # clock starts over from the moment of stepping out.
+        status.ignite(player)
 
 
 def update_stamina(dt: float, player: Player, regen_mult: float = 1.0) -> None:

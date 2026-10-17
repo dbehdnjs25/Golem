@@ -1686,3 +1686,60 @@ def test_the_grit_shows_on_screen():
 
     spot = (config.SCREEN_WIDTH - 40, 200)
     assert blowing.get_at(spot)[:3] != calm.get_at(spot)[:3]
+
+
+# --- burning --------------------------------------------------------------
+
+
+def test_lava_sets_you_alight():
+    scene = PlayScene()
+    scene.player.pos.update(scene.lava[0].pos)
+    scene.update(config.FIXED_DT)
+    assert scene.player.burning
+
+
+def test_the_fire_outlasts_the_pool():
+    # Stepping out is a relief, not an off switch.
+    scene = PlayScene()
+    pool = scene.lava[0]
+    scene.player.pos.update(pool.pos)
+    scene.update(config.FIXED_DT)
+
+    scene.player.pos.update(pool.pos + pygame.Vector2(pool.radius + 500, 0))
+    assert not scene.in_lava
+    hp = scene.player.hp
+    for _ in range(int(2.0 / config.FIXED_DT)):
+        scene.update(config.FIXED_DT)
+    assert scene.player.hp < hp
+    assert scene.player.burning
+
+
+def test_it_does_go_out_eventually():
+    scene = PlayScene()
+    pool = scene.lava[0]
+    scene.player.pos.update(pool.pos)
+    scene.update(config.FIXED_DT)
+    scene.player.pos.update(pool.pos + pygame.Vector2(pool.radius + 500, 0))
+    for _ in range(int((config.BURN_SECONDS + 1.0) / config.FIXED_DT)):
+        scene.update(config.FIXED_DT)
+    assert not scene.player.burning
+
+
+def test_still_burning_still_shows_on_screen():
+    scene = PlayScene()
+    pool = scene.lava[0]
+    scene.player.pos.update(pool.pos)
+    scene.camera.center_on(scene.player.pos)
+    scene.update(config.FIXED_DT)
+    scene.player.pos.update(pool.pos + pygame.Vector2(pool.radius + 600, 0))
+    scene.camera.center_on(scene.player.pos)
+    assert not scene.in_lava and scene.player.burning
+
+    alight = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(alight)
+    scene.player.burn_timer = 0.0
+    out = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(out)
+
+    spot = (config.SCREEN_WIDTH - 40, 200)
+    assert alight.get_at(spot)[:3] != out.get_at(spot)[:3]

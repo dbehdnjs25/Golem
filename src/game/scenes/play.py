@@ -52,6 +52,7 @@ from game.systems import (
     falling,
     mining,
     raids,
+    status,
     survival,
     weather,
 )
@@ -540,6 +541,7 @@ class PlayScene(Scene):
             self._say("발을 헛디뎠다")
         survival.update_stamina(dt, self.player, regen_mult=weather.regen_mult(self.sandstorm))
         survival.update_lava(dt, self.player, self.lava)
+        status.update_burn(dt, self.player)
 
         if sync:
             self._open_structure()
@@ -1197,15 +1199,19 @@ class PlayScene(Scene):
     def _draw_burning(self, surface: pygame.Surface) -> None:
         """A wash over the screen while the ground itself is costing health.
 
-        Hot for lava, dark for going under in a mire. Both are already visible
-        on the map, but the moment of being IN one is the part that takes
-        health, and a health bar falling with no cause on screen is the kind of
-        thing a player blames on the game.
+        Hot for lava, dark for going under in a mire, and a fainter hot while
+        still alight after walking out of one. All three are moments when the
+        ground, or something it left on you, is taking health -- and a health
+        bar falling with no cause on screen is the kind of thing a player
+        blames on the game.
         """
         if self.in_lava:
             colour, alpha = config.LAVA_COLOR, config.LAVA_WASH
         elif self.sinking:
             colour, alpha = config.MIRE_COLOR, config.MIRE_WASH
+        elif self.player.burning:
+            # Fainter than the lava's: still alight, no longer standing in it.
+            colour, alpha = config.LAVA_COLOR, config.BURN_WASH
         else:
             return
         glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
