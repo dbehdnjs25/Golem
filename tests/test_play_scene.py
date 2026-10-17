@@ -1479,3 +1479,116 @@ def test_a_mire_with_breath_left_does_not_darken_anything():
     scene = PlayScene()
     scene.player.pos.update(scene.mires[0].pos)
     assert scene.in_mire and not scene.sinking
+
+
+# --- the blizzard ---------------------------------------------------------
+
+
+def _stand_in(scene, biome) -> None:
+    import math
+
+    world = scene.world
+    index = biomes.RING_BIOMES.index(biome)
+    radians = math.radians(world.rotation + (index + 0.5) * world.sector_degrees)
+    reach = world.grassland_radius + world.ring_width * 0.5
+    scene.player.pos.update(
+        world.center.x + math.cos(radians) * reach,
+        world.center.y + math.sin(radians) * reach,
+    )
+    scene.camera.center_on(scene.player.pos)
+
+
+def test_it_only_blows_in_the_snowfield():
+    scene = PlayScene()
+    assert scene.blizzard == 0.0  # standing at the core
+    for biome in biomes.RING_BIOMES:
+        _stand_in(scene, biome)
+        if biome is not biomes.SNOWFIELD:
+            assert scene.blizzard == 0.0, biome.key
+
+
+def _node_at(scene, offset: pygame.Vector2):
+    """Plant a node at a fixed offset from the player and hand it back."""
+    from game.entities.fragment import Fragment
+    from game.items.item_kinds import STONE
+
+    node = Fragment(pos=pygame.Vector2(scene.player.pos + offset), kind=STONE)
+    scene.fragments.append(node)
+    return node
+
+
+def _pixel_at(scene, where: pygame.Vector2):
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    at = scene.camera.world_to_screen(where)
+    return surface.get_at((int(at.x), int(at.y)))[:3]
+
+
+def _looks_like(got, want, tol: int = 14) -> bool:
+    """Near enough. The whiteout fades out in rings rather than ending at a
+    line, so nothing on a snowfield is ever perfectly its own colour."""
+    return all(abs(a - b) <= tol for a, b in zip(got, want, strict=True))
+
+
+def test_a_whiteout_hides_what_is_standing_a_little_way_off():
+    # What a blizzard really takes is the sight of things, not of ground --
+    # a golem is not seen until it is close. The ground barely changes,
+    # because white snow over white ground never would.
+    scene = PlayScene()
+    _stand_in(scene, biomes.SNOWFIELD)
+    far = _node_at(scene, pygame.Vector2(380, 0))
+
+    while scene.blizzard > 0.05:  # a lull first
+        scene.clock.update(0.25)
+    assert _looks_like(_pixel_at(scene, far.pos), far.kind.color)
+
+    while scene.blizzard < 0.9:
+        scene.clock.update(0.25)
+    assert not _looks_like(_pixel_at(scene, far.pos), far.kind.color, tol=40)
+
+
+def test_your_own_feet_stay_visible_however_hard_it_blows():
+    scene = PlayScene()
+    _stand_in(scene, biomes.SNOWFIELD)
+    while scene.blizzard < 0.9:
+        scene.clock.update(0.25)
+    assert _looks_like(_pixel_at(scene, scene.player.pos), config.PLAYER_COLOR)
+
+
+def test_what_is_right_beside_you_is_still_seen():
+    scene = PlayScene()
+    _stand_in(scene, biomes.SNOWFIELD)
+    near = _node_at(scene, pygame.Vector2(60, 0))
+    while scene.blizzard < 0.9:
+        scene.clock.update(0.25)
+    assert _looks_like(_pixel_at(scene, near.pos), near.kind.color, tol=40)
+
+
+def test_the_way_home_survives_a_whiteout():
+    # The compass is the answer to not being able to see. Buried under the
+    # snow it would leave the player genuinely lost.
+    scene = PlayScene()
+    _stand_in(scene, biomes.SNOWFIELD)
+    while scene.blizzard < 0.9:
+        scene.clock.update(0.25)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    # The whole border: which edge the marker sits on depends on where the
+    # snowfield happens to be, and that moves with the map's rotation.
+    border = []
+    for x in range(0, config.SCREEN_WIDTH, 2):
+        for y in (int(config.COMPASS_MARGIN), config.SCREEN_HEIGHT - int(config.COMPASS_MARGIN)):
+            border.append(surface.get_at((x, y))[:3])
+    for y in range(120, config.SCREEN_HEIGHT - 60, 2):
+        for x in (int(config.COMPASS_MARGIN), config.SCREEN_WIDTH - int(config.COMPASS_MARGIN)):
+            border.append(surface.get_at((x, y))[:3])
+    assert config.CORE_COLOR in border
+
+
+def test_the_lull_lets_you_see_again():
+    scene = PlayScene()
+    _stand_in(scene, biomes.SNOWFIELD)
+    while scene.blizzard > 0.05:
+        scene.clock.update(0.25)
+    far = _node_at(scene, pygame.Vector2(380, 0))
+    assert _looks_like(_pixel_at(scene, far.pos), far.kind.color)

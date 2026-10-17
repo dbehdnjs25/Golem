@@ -52,6 +52,7 @@ from game.systems import (
     mining,
     raids,
     survival,
+    weather,
 )
 from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
@@ -337,6 +338,15 @@ class PlayScene(Scene):
         self._say(f"{kind.name}{_object_particle(kind.name)} 먹었다")
 
     @property
+    def in_snow(self) -> bool:
+        return self.world.biome_at(self.player.pos) is biomes.SNOWFIELD
+
+    @property
+    def blizzard(self) -> float:
+        """How hard it is blowing here, 0 outside the snowfield."""
+        return weather.blizzard_at(self.clock.elapsed) if self.in_snow else 0.0
+
+    @property
     def in_mire(self) -> bool:
         return mires.holds(self.player.pos, self.mires)
 
@@ -579,6 +589,7 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
+        self._draw_blizzard(surface)
         self._draw_burning(surface)
         self._draw_raid_edge(surface)
         self._draw_hud(surface)
@@ -1184,6 +1195,37 @@ class PlayScene(Scene):
         glow.fill((*colour, alpha))
         surface.blit(glow, (0, 0))
 
+    def _draw_blizzard(self, surface: pygame.Surface) -> None:
+        """White out everything past arm's reach while it is blowing.
+
+        Drawn over the ground and over whatever is standing on it, because the
+        point is not seeing a golem until it is close. The edge compass is
+        drawn later and survives, which is the answer to a whiteout: you can
+        still find your way home, you just cannot see what is beside you.
+        """
+        strength = self.blizzard
+        if strength <= 0.01:
+            return
+        reach = weather.sight_radius(strength)
+        full = int(config.BLIZZARD_ALPHA * strength)
+        snow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        snow.fill((*config.BLIZZARD_COLOR, full))
+        # Rings from the outside in, each overwriting the last with a lower
+        # alpha, so what can be seen fades out instead of ending at a drawn
+        # circle. Punching them all fully transparent -- the first attempt --
+        # just cut one hard-edged hole, because each wrote over the one before.
+        middle = self.camera.world_to_screen(self.player.pos)
+        rings = config.BLIZZARD_RINGS
+        for step in range(rings):
+            share = (rings - step) / rings
+            pygame.draw.circle(
+                snow,
+                (*config.BLIZZARD_COLOR, int(full * share * share)),
+                middle,
+                reach * share,
+            )
+        surface.blit(snow, (0, 0))
+
     def _draw_mires(self, surface: pygame.Surface) -> None:
         """Patches of mire, drawn like the lava: a fill and a lit rim.
 
@@ -1299,7 +1341,7 @@ class PlayScene(Scene):
         # when that happened both the marker's label and the date underneath
         # it became unreadable at once.
         backing = pygame.Surface((_BAR_X + _BAR_W + 8, 108), pygame.SRCALPHA)
-        backing.fill((0, 0, 0, 90))
+        backing.fill((0, 0, 0, config.HUD_BACKING))
         surface.blit(backing, (0, 4))
         # inventory fill gauge
         pack = self.backpack
@@ -1335,9 +1377,18 @@ class PlayScene(Scene):
         # themselves to the screen's edge and land there often -- two unrelated
         # sentences overlapping is worse than either being somewhere odd.
         floor = surface.get_height() - 50
-        surface.blit(_font(13).render(self.calendar_line, True, config.WHITE), (10, floor - 44))
+        lines = [self.calendar_line]
         if self.holding_staff:
-            surface.blit(_font(12).render(self.staff_line, True, config.WHITE), (10, floor - 24))
+            lines.append(self.staff_line)
+        for index, line in enumerate(lines):
+            # Its own backing: white text has nothing to sit on in a whiteout,
+            # and the gauges above solved the same problem the same way.
+            text = _font(13 - index).render(line, True, config.WHITE)
+            at = (10, floor - 44 + index * 20)
+            pad = pygame.Surface((text.get_width() + 8, text.get_height() + 4), pygame.SRCALPHA)
+            pad.fill((0, 0, 0, config.HUD_BACKING))
+            surface.blit(pad, (at[0] - 4, at[1] - 2))
+            surface.blit(text, at)
         if self.note_left > 0:
             # Fades out rather than vanishing, so a glance that catches the
             # tail of it still reads as "something just happened".

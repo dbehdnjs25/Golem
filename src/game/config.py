@@ -221,6 +221,26 @@ MIRE_COLOR: Final[tuple[int, int, int]] = (40, 52, 40)
 MIRE_RIM_COLOR: Final[tuple[int, int, int]] = (118, 142, 88)
 # Darker than the lava's wash: going under is a slower, quieter emergency.
 MIRE_WASH: Final[int] = 95
+
+# --- Weather --------------------------------------------------------------
+# Read off the clock, never rolled: a gust rolled every frame flickers instead
+# of gusting. Different periods, and the sandstorm offset, so the two storms
+# never march in lockstep -- that would read as one effect in two coats.
+BLIZZARD_PERIOD: Final[float] = 47.0  # seconds from calm to calm
+SANDSTORM_PERIOD: Final[float] = 71.0
+SANDSTORM_OFFSET: Final[float] = 23.0
+# How far can be seen in the snowfield. Never zero: blind is not a mechanic,
+# it is a black screen -- and the edge compass is the answer to a whiteout.
+BLIZZARD_SIGHT_MAX: Final[float] = 430.0
+BLIZZARD_SIGHT_MIN: Final[float] = 130.0
+# Near-white, and brighter than the snowfield's own ground: white snow over
+# white ground is a storm nobody can see. What it really hides is the
+# things standing on the ground, which are all coloured.
+BLIZZARD_COLOR: Final[tuple[int, int, int]] = (247, 250, 253)
+BLIZZARD_ALPHA: Final[int] = 235  # at full strength
+BLIZZARD_RINGS: Final[int] = 14  # steps in the fade at the edge of sight
+# Dark enough to read against a whiteout, not only against grass.
+HUD_BACKING: Final[int] = 165
 WIND_COLOR: Final[tuple[int, int, int]] = (120, 205, 150)
 WIND_BOG_COLOR: Final[tuple[int, int, int]] = (138, 160, 92)
 # Empty reads differently again: a bar merely sitting at zero does not
