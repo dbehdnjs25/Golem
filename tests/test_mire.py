@@ -69,15 +69,39 @@ def test_standing_still_in_one_costs_nothing():
     assert _wading(moving=False).stamina == config.PLAYER_MAX_STAMINA
 
 
-def test_you_can_get_your_breath_back_without_leaving():
-    # Because a still player is not drained, the recovery hold expires and the
-    # mire becomes somewhere to stop rather than somewhere to flee.
+def test_there_is_no_catching_your_breath_in_a_mire():
+    # Standing still stops the drain but gets nothing back: the mire holds the
+    # recovery off whether you move or not. The way through is out of it.
     mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
     player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    for _ in range(int((config.STAMINA_DELAY + 10.0) / config.FIXED_DT)):
+        survival.update_mire(config.FIXED_DT, player, [mire], moving=False)
+        survival.update_stamina(config.FIXED_DT, player)
+    assert player.stamina == 0
+
+
+def test_stepping_out_lets_you_breathe_again():
+    mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
+    player = Player(pos=pygame.Vector2(10_000, 0))
     player.stamina = 0
     for _ in range(int((config.STAMINA_DELAY + 3.0) / config.FIXED_DT)):
         survival.update_mire(config.FIXED_DT, player, [mire], moving=False)
         survival.update_stamina(config.FIXED_DT, player)
+    assert player.stamina > 0
+
+
+def test_a_meal_still_works_in_a_mire():
+    # With resting ruled out, food is the only way to breathe in there -- which
+    # is what the spec means by stamina being recovered with meat.
+    from game.items.item_kinds import COOKED_MEAT
+    from game.systems import consume
+
+    mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    survival.update_mire(1.0, player, [mire], moving=False)
+    assert consume.eat(COOKED_MEAT, player) is True
     assert player.stamina > 0
 
 

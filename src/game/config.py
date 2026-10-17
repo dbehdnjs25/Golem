@@ -203,9 +203,9 @@ POTION_HEAL: Final[float] = 45.0
 # forest. The biome around them is ordinary walking; these are what the spec's
 # drain actually means.
 #
-# Breath, never blood, and only from someone MOVING. A still player pays
-# nothing and starts recovering, which makes a mire somewhere to stop rather
-# than somewhere to flee: the cost is the wading, not the being there.
+# Breath, never blood, and only from someone MOVING -- but a mire holds the
+# recovery off either way, so stopping costs nothing and buys nothing. There
+# is no waiting one out: the way through is out of it, or a meal.
 MIRES_MIN: Final[int] = 8
 MIRES_MAX: Final[int] = 14
 MIRE_RADIUS_MIN: Final[float] = 320.0

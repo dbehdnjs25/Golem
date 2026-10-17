@@ -4,9 +4,9 @@ Terrain, like the lava pools in the burnt forest, and the same shape of thing:
 placed once from the world's seed, never moving, with no opinion from the ward.
 
 What it takes is BREATH, and only from someone who is moving. Standing still
-in a mire costs nothing and the recovery resumes, which makes it somewhere to
-stop rather than somewhere to flee -- the cost is the wading, not the being
-there.
+costs nothing -- but nothing comes back either, because a mire holds the
+recovery off regardless. There is no waiting one out: the way through is out
+of it, or a meal.
 """
 
 from __future__ import annotations

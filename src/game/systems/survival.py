@@ -58,17 +58,21 @@ def update_stamina(dt: float, player: Player) -> None:
 
 
 def update_mire(dt: float, player: Player, pools: list[Mire], moving: bool) -> None:
-    """Wading a mire takes breath. Standing in one takes nothing.
+    """Wading a mire takes breath. Standing in one gets none back.
 
     This is the bog's gimmick, and it takes BREATH rather than blood -- which
     makes it a nuisance to a player who has cooked and stocked up and a trap
     to one who has not, with no damage number to balance.
 
-    Only while moving. A still player is not fighting the mud, so the drain
-    stops, the recovery hold expires, and the patch becomes somewhere to catch
-    your breath rather than somewhere to run from.
+    Two separate rules, and they pull the same way. Only moving costs, so a
+    player who stops is not actively losing; but a mire holds the recovery off
+    whether they move or not, so stopping buys nothing either. There is no
+    waiting out a mire -- the way through is out of it, or a meal.
     """
-    if player.hp <= 0 or not moving:
+    if player.hp <= 0 or not mires.holds(player.pos, pools):
         return
-    if mires.holds(player.pos, pools):
+    if moving:
         player.drain(config.MIRE_DRAIN * dt)
+        return
+    # Standing still: nothing taken, but nothing given back either.
+    player.stamina_hold = config.STAMINA_DELAY
