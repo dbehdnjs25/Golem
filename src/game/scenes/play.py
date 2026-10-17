@@ -43,7 +43,16 @@ from game.items.item_kinds import (
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
-from game.systems import carrying, combat, crafting, detector, mining, raids, survival
+from game.systems import (
+    carrying,
+    combat,
+    consume,
+    crafting,
+    detector,
+    mining,
+    raids,
+    survival,
+)
 from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import LOCKED, Camera, edge_marker
 from game.systems.daynight import DayNight
@@ -267,6 +276,8 @@ class PlayScene(Scene):
                 self._toggle_craft()
             elif event.key == pygame.K_g:
                 self._toggle_carve()
+            elif event.key == pygame.K_f:
+                self._eat_held()
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
                 self.manager.pop()
         elif event.type == pygame.KEYUP:
@@ -288,6 +299,24 @@ class PlayScene(Scene):
             self._mouse_held = True
         elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
             self._mouse_held = False
+
+    def _eat_held(self) -> None:
+        """Use up whatever is in hand, if it is food.
+
+        Refused on a full tank rather than spent for nothing: a stack quietly
+        eaten to no effect is worse than the key doing nothing.
+        """
+        held = self.hotbar.active_stack
+        if held is None:
+            return
+        kind = held.kind
+        if kind not in consume.EDIBLE:
+            return
+        if not consume.eat(kind, self.player):
+            self._say(f"{kind.name} — 지금은 필요 없다")
+            return
+        self._spend(kind, 1)
+        self._say(f"{kind.name} 을(를) 먹었다")
 
     @property
     def sprinting(self) -> bool:

@@ -187,6 +187,13 @@ MINING_DRAIN: Final[float] = 7.0  # per second of digging
 # Digging on empty. Slower, never stopped -- see systems/mining.
 WINDED_MINING_RATE: Final[float] = 0.45
 
+# --- Food -----------------------------------------------------------------
+# Meat buys back wind. Raw gives the same breath as cooked and takes it out of
+# your health, which is what makes the walk to a hearth worth making -- and
+# hearths only stand inside the ward.
+MEAT_STAMINA: Final[float] = 55.0
+RAW_MEAT_HP_COST: Final[float] = 16.0
+
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash
 DODGE_DURATION: Final[float] = 0.18  # seconds of dash movement

@@ -29,6 +29,7 @@ from game.items.item_kinds import (
     CHARCOAL,
     CHARRED_WOOD,
     CHISEL,
+    COOKED_MEAT,
     COPPER_AXE,
     COPPER_INGOT,
     COPPER_ORE,
@@ -51,6 +52,7 @@ from game.items.item_kinds import (
     LEATHER_PACK,
     OBSIDIAN,
     PEBBLE,
+    RAW_MEAT,
     SMELTER,
     SNOWFIELD_DETECTOR,
     STAFF_ITEM,
@@ -169,6 +171,9 @@ RECIPES: tuple[Recipe, ...] = (
     # Still at the hearth rather than bare-handed: the empty-handed list is the
     # bootstrap and nothing else, and a player holding nothing has no business
     # being told about charcoal.
+    # The hearth's other job. Cooking is free where burning raw meat in the
+    # field costs blood, and a hearth only ever stands inside the ward.
+    Recipe(COOKED_MEAT, 1, ((RAW_MEAT, 1),), HEARTH_S, 6.0),
     Recipe(CHARCOAL, 2, ((CHARRED_WOOD, 2),), HEARTH_S, 3.0),
     Recipe(CHARCOAL, 2, ((WOOD, 3),), HEARTH_S, 12.0),
     # --- the blast furnace: the only way to steel ---------------------------

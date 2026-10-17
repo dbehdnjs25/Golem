@@ -13,7 +13,7 @@ from game.items import glyphs as glyph_table
 from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene
-from game.systems import raids
+from game.systems import consume, raids
 from game.systems.camera import FREE
 from game.world import biomes
 
@@ -1293,3 +1293,67 @@ def test_running_across_the_field_spends_wind():
     for _ in range(60):
         scene.update(config.FIXED_DT)
     assert scene.player.stamina < scene.player.max_stamina
+
+
+# --- food -----------------------------------------------------------------
+
+
+def _press(scene, key) -> None:
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
+
+
+def test_f_eats_what_is_in_hand():
+    scene = PlayScene()
+    scene.player.stamina = 0
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["cooked_meat"], 3)
+
+    _press(scene, pygame.K_f)
+
+    assert scene.player.stamina > 0
+    assert scene.hotbar.count(ITEM_KINDS["cooked_meat"]) == 2
+    assert "먹었다" in scene.note
+
+
+def test_raw_meat_eaten_in_the_field_costs_blood():
+    scene = PlayScene()
+    scene.player.stamina = 0
+    scene.player.hp = scene.player.max_hp
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["raw_meat"], 1)
+
+    _press(scene, pygame.K_f)
+
+    assert scene.player.stamina > 0
+    assert scene.player.hp < scene.player.max_hp
+
+
+def test_eating_with_a_full_tank_keeps_the_meat():
+    scene = PlayScene()
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["cooked_meat"], 2)
+
+    _press(scene, pygame.K_f)
+
+    assert scene.hotbar.count(ITEM_KINDS["cooked_meat"]) == 2
+    assert "필요 없다" in scene.note
+
+
+def test_pressing_f_on_a_pickaxe_does_nothing_at_all():
+    scene = PlayScene()
+    scene.player.stamina = 0
+    scene.hotbar.select(0)
+    scene.hotbar.slots[0] = Stack(ITEM_KINDS["stone_pick"], 1)
+
+    _press(scene, pygame.K_f)
+
+    assert scene.player.stamina == 0
+    assert scene.hotbar.count(ITEM_KINDS["stone_pick"]) == 1
+
+
+def test_a_wolf_finally_pays_for_itself():
+    # Raw meat has been dropping since step 6 and doing nothing at all.
+    from game.entities.beast import WOLF
+
+    assert ITEM_KINDS["raw_meat"] in {k for k, _ in WOLF.drops}
+    assert ITEM_KINDS["raw_meat"] in consume.EDIBLE
