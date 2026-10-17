@@ -63,7 +63,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, chasms, lava, mires, structures
+from game.world import biomes, chasms, ice, lava, mires, structures
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -154,6 +154,7 @@ class PlayScene(Scene):
         self.lava = lava.place(self.world, self.rng)
         self.mires = mires.place(self.world, self.rng)
         self.chasms = chasms.place(self.world, self.rng)
+        self.ice = ice.place(self.world, self.rng)
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -350,6 +351,10 @@ class PlayScene(Scene):
         return weather.blizzard_at(self.clock.elapsed) if self.in_snow else 0.0
 
     @property
+    def on_ice(self) -> bool:
+        return ice.holds(self.player.pos, self.ice)
+
+    @property
     def in_waste(self) -> bool:
         return self.world.biome_at(self.player.pos) is biomes.WASTELAND
 
@@ -495,7 +500,9 @@ class PlayScene(Scene):
 
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
-        self.player.update(dt, self._move_dir(), self.world, dodge, self.sprinting)
+        self.player.update(
+            dt, self._move_dir(), self.world, dodge, self.sprinting, slippery=self.on_ice
+        )
         aim_world = self.camera.screen_to_world(self._mouse_screen)
 
         tool = self.hotbar.active_tool
@@ -566,6 +573,7 @@ class PlayScene(Scene):
         self._draw_lava(surface)  # ground, so under everything that stands on it
         self._draw_mires(surface)
         self._draw_chasms(surface)
+        self._draw_ice(surface)
         self._draw_ward(surface)
         self._draw_temples(surface)
         self._draw_structures(surface)
@@ -1263,6 +1271,18 @@ class PlayScene(Scene):
                 reach * share,
             )
         surface.blit(snow, (0, 0))
+
+    def _draw_ice(self, surface: pygame.Surface) -> None:
+        """Sheets of bare ice, paler than the drifts and ringed in blue.
+
+        The snowfield is already white, so the sheet has to be lighter still
+        and its rim has to carry the colour -- committing to a run across one
+        is a decision made at the edge.
+        """
+        for sheet in self.ice:
+            at = self.camera.world_to_screen(sheet.pos)
+            pygame.draw.circle(surface, config.ICE_COLOR, at, sheet.radius)
+            pygame.draw.circle(surface, config.ICE_RIM_COLOR, at, sheet.radius, 4)
 
     def _draw_chasms(self, surface: pygame.Surface) -> None:
         """Holes, drawn dark with a lit rim.

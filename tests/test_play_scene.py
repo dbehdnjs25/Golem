@@ -1754,3 +1754,42 @@ def test_lava_charges_its_own_rate_and_not_the_fire_on_top():
     lost = before - scene.player.hp
     assert lost == pytest.approx(config.LAVA_DPS, abs=0.5)
     assert scene.player.burning  # alight, just not billed for it yet
+
+
+# --- ice ------------------------------------------------------------------
+
+
+def test_the_world_freezes_sheets_into_the_snowfield():
+    scene = PlayScene()
+    assert scene.ice
+    for sheet in scene.ice:
+        assert scene.world.biome_at(sheet.pos) is biomes.SNOWFIELD
+
+
+def test_running_onto_ice_and_letting_go_carries_you_on():
+    scene = PlayScene()
+    sheet = max(scene.ice, key=lambda s: s.radius)
+    scene.player.pos.update(sheet.pos - pygame.Vector2(sheet.radius * 0.8, 0))
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    for _ in range(90):
+        scene.update(config.FIXED_DT)
+    assert scene.on_ice
+
+    scene.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_d))
+    was = pygame.Vector2(scene.player.pos)
+    for _ in range(30):
+        scene.update(config.FIXED_DT)
+    assert scene.player.pos.x > was.x + 10
+
+
+def test_off_the_ice_letting_go_stops_you():
+    scene = PlayScene()
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_d))
+    for _ in range(60):
+        scene.update(config.FIXED_DT)
+    assert not scene.on_ice
+    scene.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_d))
+    scene.update(config.FIXED_DT)
+    was = pygame.Vector2(scene.player.pos)
+    scene.update(config.FIXED_DT)
+    assert scene.player.pos == was

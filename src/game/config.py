@@ -236,6 +236,23 @@ BURN_SECONDS: Final[float] = 5.0
 # Fainter than the lava's wash: still alight, no longer standing in it.
 BURN_WASH: Final[int] = 34
 
+# --- Ice ------------------------------------------------------------------
+# Sheets of bare ice in the snowfield. What they take away is GRIP: nothing
+# else on the map does that, and ice simply will not let you stop.
+ICE_MIN: Final[int] = 9
+ICE_MAX: Final[int] = 15
+ICE_RADIUS_MIN: Final[float] = 340.0
+ICE_RADIUS_MAX: Final[float] = 880.0
+# How fast the heading catches up with the input, per second. Low enough that
+# turning carries wide and stopping needs room; high enough that the player is
+# steering rather than watching.
+ICE_GRIP: Final[float] = 1.6
+ICE_STOP_BELOW: Final[float] = 6.0  # a drift this slow is just standing still
+# Paler than the drifts, with the colour in the rim: the snowfield is white
+# already, and the edge is where the decision to cross is made.
+ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
+ICE_RIM_COLOR: Final[tuple[int, int, int]] = (122, 176, 214)
+
 # --- Weather --------------------------------------------------------------
 # Read off the clock, never rolled: a gust rolled every frame flickers instead
 # of gusting. Different periods, and the sandstorm offset, so the two storms

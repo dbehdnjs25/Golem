@@ -4,7 +4,7 @@ systems/combat, which reads ``invulnerable`` and writes ``hp``."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import pygame
 
@@ -30,6 +30,9 @@ class Player:
     # recover between presses and the cost would never be felt.
     stamina_hold: float = 0.0
     burn_timer: float = 0.0  # seconds of fire still on them; see systems/status
+    # Where they are actually heading, which on ice is not where they are
+    # pushing. Off ice this is simply the input, recomputed every step.
+    slide: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
 
     @property
     def burning(self) -> bool:
@@ -81,6 +84,7 @@ class Player:
         world: WorldMap,
         dodge_pressed: bool = False,
         sprinting: bool = False,
+        slippery: bool = False,
     ) -> None:
         """Advance by ``dt`` along ``move_dir`` (unnormalized), clamped to the map circle.
 
@@ -90,6 +94,12 @@ class Player:
         Running costs wind, but only while actually covering ground: the charge
         is for distance, not for a key being held. With nothing left the player
         simply walks -- not a stutter and not a refusal to move.
+
+        ``slippery`` is ice underfoot. Then the input no longer sets the
+        direction outright -- it leans on it -- so setting off takes a moment,
+        turning carries wide, and letting go does not stop you. Top speed is
+        the same as anywhere: ice is harder to start and harder to stop, not
+        faster or slower.
         """
         # A dodge with nothing left simply does not happen: not a slow one and
         # not a cheap one. The i-frames ARE the move, so a half-priced version
@@ -107,8 +117,20 @@ class Player:
             speed = self.speed * self._sprint_mult(world)
         else:
             speed = self.speed
-        if moving:
-            self.pos += move_dir.normalize() * speed * dt
+        wanted = move_dir.normalize() * speed if moving else pygame.Vector2(0, 0)
+        if slippery:
+            # Lean on the heading rather than setting it. A dash still fires at
+            # full speed and then bleeds off slowly, which is why a dodge on
+            # ice carries so much further than one on ground.
+            if self.dodge_timer > 0 and moving:
+                self.slide.update(wanted)
+            else:
+                self.slide += (wanted - self.slide) * min(1.0, config.ICE_GRIP * dt)
+                if self.slide.length_squared() < config.ICE_STOP_BELOW**2 and not moving:
+                    self.slide.update(0, 0)
+        else:
+            self.slide.update(wanted)
+        self.pos += self.slide * dt
         world.clamp(self.pos, self.radius)
 
         self.dodge_timer = max(0.0, self.dodge_timer - dt)
