@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 from game import config
 from game.entities.player import Player
-from game.items.item_kinds import COOKED_MEAT, RAW_MEAT, ItemKind
+from game.items.item_kinds import COOKED_MEAT, POTION, RAW_MEAT, ItemKind
 
 
 @dataclass(frozen=True)
@@ -30,6 +30,9 @@ class Food:
 EDIBLE: dict[ItemKind, Food] = {
     COOKED_MEAT: Food(stamina=config.MEAT_STAMINA, hp=0.0),
     RAW_MEAT: Food(stamina=config.MEAT_STAMINA, hp=-config.RAW_MEAT_HP_COST),
+    # Blood, and no breath at all. One item answering both would make the
+    # other pointless, and these are deliberately different scarcities.
+    POTION: Food(stamina=0.0, hp=config.POTION_HEAL),
 }
 
 

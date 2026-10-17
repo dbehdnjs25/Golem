@@ -193,6 +193,11 @@ WINDED_MINING_RATE: Final[float] = 0.45
 # hearths only stand inside the ward.
 MEAT_STAMINA: Final[float] = 55.0
 RAW_MEAT_HP_COST: Final[float] = 16.0
+# The scarce answer to an empty health bar, where the ward's slow healing is
+# the free one. Brewed from a frost crystal: the spec puts the bog fourth
+# because its drain is unfair "before cooking and potions exist", so a
+# potion gated behind bog moss would be a circle.
+POTION_HEAL: Final[float] = 45.0
 
 # --- Combat: dodge ------------------------------------------------------------
 DODGE_SPEED_MULT: Final[float] = 2.6  # speed multiplier during a dash

@@ -52,6 +52,7 @@ from game.items.item_kinds import (
     LEATHER_PACK,
     OBSIDIAN,
     PEBBLE,
+    POTION,
     RAW_MEAT,
     SMELTER,
     SNOWFIELD_DETECTOR,
@@ -174,6 +175,10 @@ RECIPES: tuple[Recipe, ...] = (
     # The hearth's other job. Cooking is free where burning raw meat in the
     # field costs blood, and a hearth only ever stands inside the ward.
     Recipe(COOKED_MEAT, 1, ((RAW_MEAT, 1),), HEARTH_S, 6.0),
+    # Herbs boiled down over a frost crystal. The snowfield is the second
+    # biome and the bog the fourth, which is the order the spec needs: the
+    # bog's drain is only fair once potions exist.
+    Recipe(POTION, 1, ((GRASS, 10), (FROST_CRYSTAL, 1)), HEARTH_S, 8.0),
     Recipe(CHARCOAL, 2, ((CHARRED_WOOD, 2),), HEARTH_S, 3.0),
     Recipe(CHARCOAL, 2, ((WOOD, 3),), HEARTH_S, 12.0),
     # --- the blast furnace: the only way to steel ---------------------------

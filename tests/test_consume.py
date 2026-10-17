@@ -91,3 +91,56 @@ def test_raw_meat_is_worth_carrying_home():
         from game.items import recipes
 
         next(r for r in recipes.RECIPES if r.output is COOKED_MEAT and r.station == recipes.NOWHERE)
+
+
+# --- the potion -----------------------------------------------------------
+
+POTION = ITEM_KINDS["potion"]
+
+
+def test_a_potion_gives_blood_back_at_once():
+    player = _hungry(stamina=config.PLAYER_MAX_STAMINA, hp=10.0)
+    assert consume.eat(POTION, player) is True
+    assert player.hp == 10.0 + config.POTION_HEAL
+
+
+def test_it_does_not_overflow():
+    player = _hungry(stamina=0.0, hp=config.PLAYER_MAX_HP - 1)
+    consume.eat(POTION, player)
+    assert player.hp == player.max_hp
+
+
+def test_drinking_at_full_health_is_refused_rather_than_wasted():
+    player = _hungry(stamina=0.0, hp=config.PLAYER_MAX_HP)
+    assert consume.eat(POTION, player) is False
+
+
+def test_a_potion_gives_no_wind():
+    # Meat is for breath and this is for blood. One item doing both would make
+    # the other pointless.
+    player = _hungry(stamina=0.0, hp=10.0)
+    consume.eat(POTION, player)
+    assert player.stamina == 0
+
+
+def test_the_potion_is_brewed_out_of_the_snowfield_not_the_bog():
+    # The spec puts the bog fourth because its drain is unfair "before cooking
+    # and potions exist". A potion gated behind bog moss would be a circle.
+    from game.items import recipes
+    from game.world import biomes
+
+    brew = next(r for r in recipes.RECIPES if r.output is POTION)
+    wanted = {k for k, _ in brew.inputs}
+    assert biomes.SNOWFIELD.material in wanted
+    assert biomes.BOG.material not in wanted
+    assert brew.station == recipes.HEARTH_S
+
+
+def test_a_potion_is_dearer_than_a_meal():
+    # It is the scarce answer; meat is the common one. If a potion were cheap
+    # the ward's slow healing would never be worth standing still for.
+    from game.items import recipes
+
+    brew = next(r for r in recipes.RECIPES if r.output is POTION)
+    cook = next(r for r in recipes.RECIPES if r.output is COOKED_MEAT)
+    assert sum(n for _, n in brew.inputs) > sum(n for _, n in cook.inputs)
