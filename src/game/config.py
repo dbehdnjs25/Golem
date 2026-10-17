@@ -211,9 +211,16 @@ MIRES_MAX: Final[int] = 14
 MIRE_RADIUS_MIN: Final[float] = 320.0
 MIRE_RADIUS_MAX: Final[float] = 780.0
 MIRE_DRAIN: Final[float] = 10.0  # per second of wading
+# Once the breath is gone, a mire starts taking blood -- standing or not.
+# Well under the lava's rate: a mire is somewhere to get out of, and
+# reaching the edge of even a wide one on an empty tank must be
+# survivable. Lava is somewhere to simply not be.
+MIRE_SINK_DPS: Final[float] = 5.0
 # Against the bog's own dark green, so the edge reads before a player is in it.
 MIRE_COLOR: Final[tuple[int, int, int]] = (40, 52, 40)
 MIRE_RIM_COLOR: Final[tuple[int, int, int]] = (118, 142, 88)
+# Darker than the lava's wash: going under is a slower, quieter emergency.
+MIRE_WASH: Final[int] = 95
 WIND_COLOR: Final[tuple[int, int, int]] = (120, 205, 150)
 WIND_BOG_COLOR: Final[tuple[int, int, int]] = (138, 160, 92)
 # Empty reads differently again: a bar merely sitting at zero does not

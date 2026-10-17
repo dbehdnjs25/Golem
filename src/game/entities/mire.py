@@ -5,8 +5,8 @@ placed once from the world's seed, never moving, with no opinion from the ward.
 
 What it takes is BREATH, and only from someone who is moving. Standing still
 costs nothing -- but nothing comes back either, because a mire holds the
-recovery off regardless. There is no waiting one out: the way through is out
-of it, or a meal.
+recovery off regardless, and once the breath is gone it starts on blood.
+There is no waiting one out: the way through is out of it, or a meal.
 """
 
 from __future__ import annotations

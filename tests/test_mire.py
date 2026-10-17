@@ -151,3 +151,73 @@ def test_the_bog_outside_its_mires_asks_for_nothing():
     player = Player(pos=spot)
     survival.update_mire(5.0, player, _placed(1), moving=True)
     assert player.stamina == config.PLAYER_MAX_STAMINA
+
+
+# --- going under ----------------------------------------------------------
+
+
+def _sinking(stamina: float, moving: bool = False, dt: float = 1.0) -> Player:
+    mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = stamina
+    survival.update_mire(dt, player, [mire], moving=moving)
+    return player
+
+
+def test_running_out_in_a_mire_starts_costing_blood():
+    # Nothing left to wade with, and a mire does not let you rest. From here
+    # the only ways out are walking out of it or eating.
+    assert _sinking(0.0).hp == config.PLAYER_MAX_HP - config.MIRE_SINK_DPS
+
+
+def test_standing_still_does_not_save_you():
+    # The drain stops when you stop; this does not. Stopping was never an
+    # answer in a mire and running out is where that bites.
+    assert _sinking(0.0, moving=False).hp < config.PLAYER_MAX_HP
+    assert _sinking(0.0, moving=True).hp < config.PLAYER_MAX_HP
+
+
+def test_with_breath_left_it_costs_nothing():
+    assert _sinking(1.0, moving=False).hp == config.PLAYER_MAX_HP
+    assert _sinking(60.0, moving=True).hp == config.PLAYER_MAX_HP
+
+
+def test_outside_a_mire_an_empty_tank_is_harmless():
+    mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
+    player = Player(pos=pygame.Vector2(10_000, 0))
+    player.stamina = 0
+    survival.update_mire(10.0, player, [mire], moving=True)
+    assert player.hp == config.PLAYER_MAX_HP
+
+
+def test_a_long_enough_sinking_does_kill():
+    assert _sinking(0.0, dt=40.0).hp <= 0
+
+
+def test_it_is_slower_than_the_lava():
+    # A mire is somewhere to get out of; lava is somewhere to not be. Reaching
+    # the edge of a middling mire on an empty tank has to be survivable.
+    assert config.MIRE_SINK_DPS < config.LAVA_DPS
+    crossing = config.MIRE_RADIUS_MAX / config.PLAYER_SPEED
+    assert crossing * config.MIRE_SINK_DPS < config.PLAYER_MAX_HP
+
+
+def test_a_corpse_is_still_left_alone():
+    player = _sinking(0.0, dt=1.0)
+    player.hp = 0
+    survival.update_mire(1.0, player, [Mire(pos=pygame.Vector2(0, 0), radius=300.0)], moving=True)
+    assert player.hp == 0
+
+
+def test_sinking_does_not_quietly_let_your_breath_back():
+    # The mire blocks recovery whatever it happens to be taking at the time.
+    # Missed once: the empty-tank branch took health and forgot to hold the
+    # recovery off, so stamina climbed back while the player drowned.
+    mire = Mire(pos=pygame.Vector2(0, 0), radius=300.0)
+    player = Player(pos=pygame.Vector2(0, 0))
+    player.stamina = 0
+    for _ in range(int(6.0 / config.FIXED_DT)):
+        survival.update_mire(config.FIXED_DT, player, [mire], moving=False)
+        survival.update_stamina(config.FIXED_DT, player)
+    assert player.stamina == 0
+    assert player.hp < config.PLAYER_MAX_HP

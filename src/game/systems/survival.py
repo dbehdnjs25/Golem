@@ -64,15 +64,23 @@ def update_mire(dt: float, player: Player, pools: list[Mire], moving: bool) -> N
     makes it a nuisance to a player who has cooked and stocked up and a trap
     to one who has not, with no damage number to balance.
 
-    Two separate rules, and they pull the same way. Only moving costs, so a
-    player who stops is not actively losing; but a mire holds the recovery off
-    whether they move or not, so stopping buys nothing either. There is no
-    waiting out a mire -- the way through is out of it, or a meal.
+    Three rules, all pulling the same way. Only moving costs breath, so a
+    player who stops is not actively losing; a mire holds the recovery off
+    whether they move or not, so stopping buys nothing; and once the breath is
+    gone it starts taking blood instead, standing or not.
+
+    So there is no waiting a mire out. The way through is out of it, or a
+    meal, and the sinking is slow enough that walking to the edge of even a
+    wide one on an empty tank is survivable.
     """
     if player.hp <= 0 or not mires.holds(player.pos, pools):
         return
-    if moving:
-        player.drain(config.MIRE_DRAIN * dt)
-        return
-    # Standing still: nothing taken, but nothing given back either.
+    # First, unconditionally: a mire gives nothing back, moving or still,
+    # empty or not. Everything below only decides what it TAKES.
     player.stamina_hold = config.STAMINA_DELAY
+    if player.winded:
+        # Nothing left to wade with. Standing still does not help here, which
+        # is the point: stopping was never an answer in a mire.
+        player.hp -= config.MIRE_SINK_DPS * dt
+    elif moving:
+        player.drain(config.MIRE_DRAIN * dt)

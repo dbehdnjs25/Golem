@@ -1161,17 +1161,27 @@ class PlayScene(Scene):
     def in_lava(self) -> bool:
         return lava.burns(self.player.pos, self.lava)
 
-    def _draw_burning(self, surface: pygame.Surface) -> None:
-        """A hot wash over the screen while standing in lava.
+    @property
+    def sinking(self) -> bool:
+        """In a mire with nothing left, which is when it starts on blood."""
+        return self.in_mire and self.player.winded
 
-        The pool is already visible, but the moment of being IN it is the part
-        that costs health, and a health bar falling with no cause on screen is
-        the kind of thing a player blames on the game.
+    def _draw_burning(self, surface: pygame.Surface) -> None:
+        """A wash over the screen while the ground itself is costing health.
+
+        Hot for lava, dark for going under in a mire. Both are already visible
+        on the map, but the moment of being IN one is the part that takes
+        health, and a health bar falling with no cause on screen is the kind of
+        thing a player blames on the game.
         """
-        if not self.in_lava:
+        if self.in_lava:
+            colour, alpha = config.LAVA_COLOR, config.LAVA_WASH
+        elif self.sinking:
+            colour, alpha = config.MIRE_COLOR, config.MIRE_WASH
+        else:
             return
         glow = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        glow.fill((*config.LAVA_COLOR, config.LAVA_WASH))
+        glow.fill((*colour, alpha))
         surface.blit(glow, (0, 0))
 
     def _draw_mires(self, surface: pygame.Surface) -> None:

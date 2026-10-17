@@ -1454,3 +1454,28 @@ def test_what_the_notes_actually_say():
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
     assert scene.note == "익힌 고기를 먹었다"
     assert "(" not in scene.note
+
+
+def test_going_under_in_a_mire_darkens_the_screen():
+    # Same reasoning as the lava wash: health falling with nothing on screen
+    # to explain it reads as the game misbehaving.
+    scene = PlayScene()
+    scene.player.pos.update(scene.mires[0].pos)
+    scene.camera.center_on(scene.player.pos)
+    assert not scene.sinking
+    before = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(before)
+
+    scene.player.stamina = 0
+    assert scene.sinking
+    after = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(after)
+
+    corner = (config.SCREEN_WIDTH - 4, 4)
+    assert after.get_at(corner)[:3] != before.get_at(corner)[:3]
+
+
+def test_a_mire_with_breath_left_does_not_darken_anything():
+    scene = PlayScene()
+    scene.player.pos.update(scene.mires[0].pos)
+    assert scene.in_mire and not scene.sinking
