@@ -248,6 +248,20 @@ ICE_RADIUS_MAX: Final[float] = 880.0
 # steering rather than watching.
 ICE_GRIP: Final[float] = 1.6
 ICE_STOP_BELOW: Final[float] = 6.0  # a drift this slow is just standing still
+
+# --- Gimmicks -------------------------------------------------------------
+# Ground a boss (or the player's supreme glyph) leaves behind. It fades: a
+# trail that never cooled would wall an arena in by the end of a long fight.
+PATCH_RADIUS: Final[float] = 120.0
+PATCH_SECONDS: Final[float] = 7.0
+# A shove does no damage of its own. What makes it frightening is where it
+# puts you, which is why the plateau has holes in it.
+SHOVE_DISTANCE: Final[float] = 420.0
+# Lightning runs between marks, never from one. Standing clear of the lines is
+# the answer, and the wasteland is where there is nothing to stand behind.
+ARC_WIDTH: Final[float] = 90.0
+ARC_DPS: Final[float] = 9.0  # per line caught in, per second
+MARK_SECONDS: Final[float] = 6.0
 # Paler than the drifts, with the colour in the rim: the snowfield is white
 # already, and the edge is where the decision to cross is made.
 ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
