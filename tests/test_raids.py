@@ -8,16 +8,28 @@ def test_the_interval_shortens_with_every_boss():
     assert [raids.interval(n) for n in range(6)] == list(config.RAID_INTERVALS)
 
 
-def test_it_starts_at_a_week_and_bottoms_out_at_two_days():
+def test_it_starts_at_a_week_and_bottoms_out_at_five_days():
     assert raids.interval(0) == 7
-    assert raids.interval(5) == 2
+    assert raids.interval(5) == 5
+
+
+def test_it_tightens_exactly_twice_and_at_the_second_boss_and_the_fourth():
+    # Not once per boss. A day off every time landed raids every other night
+    # by the end, which leaves no room between them to go anywhere.
+    assert raids.interval(1) == raids.interval(0)  # the first boss changes nothing
+    assert raids.interval(2) < raids.interval(1)  # the second does
+    assert raids.interval(3) == raids.interval(2)
+    assert raids.interval(4) < raids.interval(3)  # and the fourth
+    assert raids.interval(5) == raids.interval(4)
+    steps = {raids.interval(n) for n in range(6)}
+    assert len(steps) == 3  # a week, six days, five
 
 
 def test_more_bosses_than_the_table_knows_does_not_blow_up():
     # Nothing should be able to kill six bosses, but an index error here would
     # be a crash at the very end of a run, which is the worst possible place.
-    assert raids.interval(6) == 2
-    assert raids.interval(99) == 2
+    assert raids.interval(6) == 5
+    assert raids.interval(99) == 5
 
 
 def test_the_first_day_is_never_a_raid():

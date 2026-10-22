@@ -324,10 +324,15 @@ BEAST_FLEE_RANGE: Final[float] = 320.0
 
 # --- Raids ----------------------------------------------------------------
 # Days between raids, indexed by how many bosses are down. The calendar is
-# tied to progress rather than to a difficulty dial: every boss takes a day off
-# the gap, so the nights crowd in as the player gets stronger and it reads as
-# "you are paying for this" rather than as the game turning a knob.
-RAID_INTERVALS: Final[tuple[int, ...]] = (7, 6, 5, 4, 3, 2)
+# tied to progress rather than to a difficulty dial: it reads as "you are
+# paying for this" rather than as the game turning a knob.
+#
+# It tightens twice over the run, at the second boss and the fourth, from a
+# week down to five days. A day off per boss was too steep -- by the last
+# stretch raids were landing every other night, which left no room between
+# them to go anywhere, and the whole point of a shorter gap is that the trips
+# out get tighter, not that they stop.
+RAID_INTERVALS: Final[tuple[int, ...]] = (7, 7, 6, 6, 5, 5)
 
 # The core's own health. It grows per level, which is what the last stretch of
 # the ladder buys: the ward finishes at WARD_MAX_LEVEL, so levels past that
