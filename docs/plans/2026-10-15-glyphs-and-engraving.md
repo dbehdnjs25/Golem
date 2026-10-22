@@ -1,6 +1,6 @@
 # 7단계: 마법 — 그림을 찾아 새긴다 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 바이옴을 돌아다닐 이유를 만든다. 세계에 흩어진 구조물에서 그림을 배우고, 소모되는 새김 도구로 장비에 새기고, 지팡이로 쏜다. 탐지기가 사원 방향을 알려준다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md` 「마법 — 그림을 찾아 새긴다」
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md` 「마법 — 그림을 찾아 새긴다」
 
 **선행:** 1~6단계 완료
 

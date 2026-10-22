@@ -1,6 +1,6 @@
 # 생존 — 스테미나와 보급 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 스펙의 「생존」 절을 채운다. 스테미나가 회피·달리기·채집을 제한하고, 고기가 그것을 돌려주고, 물약이 HP를 돌려준다. 그래서 집에 가는 이유가 "치료"가 아니라 **보급**이 된다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md` 「생존」
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md` 「생존」
 
 **선행:** 1~7단계 완료
 

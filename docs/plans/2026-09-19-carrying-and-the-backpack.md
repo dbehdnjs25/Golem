@@ -1,6 +1,6 @@
 # 4단계: 소지품 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 기본 인벤토리를 없애고 배낭을 유일한 저장소로 만든다. 핫바가 도구와 재료를 함께 담고, 슬롯 격자에서 옮길 수 있고, 죽으면 배낭이 짐 더미가 된다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
 
 **선행:** 1~3단계 완료
 

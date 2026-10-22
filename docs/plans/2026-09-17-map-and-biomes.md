@@ -1,6 +1,6 @@
 # 2단계: 맵과 바이옴 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 사각형 월드를 원형 맵으로 바꾸고, 중앙 초원 + 바깥 링 5등분 바이옴과 사원 자리, 거리에 따른 광물 분포를 만든다. 화면에는 바이옴을 단색으로 칠한다.
 
@@ -8,9 +8,9 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
 
-**선행:** `docs/superpowers/plans/2026-09-17-concept-constants-rewrite.md` (1단계, 완료)
+**선행:** `docs/plans/2026-09-17-concept-constants-rewrite.md` (1단계, 완료)
 
 ## Global Constraints
 

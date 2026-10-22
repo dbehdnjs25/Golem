@@ -1,6 +1,6 @@
 # 6단계: 적 재분류와 습격 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 적을 골렘과 야생동물로 나누고, 코어에 HP를 주고, 정해진 밤마다 결계가 뚫리는 습격을 만든다. 습격의 주기와 구성이 플레이어의 진행도를 따라가게 한다.
 
@@ -8,8 +8,8 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
-**구조를 물려받는 곳:** `docs/superpowers/specs/2026-07-30-core-defense-design.md` (코어 HP·수리·패배 신호의 구조는 유효, 이름과 수치는 교체)
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
+**구조를 물려받는 곳:** `docs/specs/2026-07-30-core-defense-design.md` (코어 HP·수리·패배 신호의 구조는 유효, 이름과 수치는 교체)
 
 **선행:** 1~5단계 완료
 

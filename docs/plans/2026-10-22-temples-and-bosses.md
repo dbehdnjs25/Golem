@@ -1,6 +1,6 @@
 # 8단계: 사원과 보스 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 사원 다섯 곳을 실제 장소로 만들고, 보스 다섯을 세운다. 그림 10개와 코어 레벨 50이 여기서 열린다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
 
 **선행:** 1~7단계 + 생존 + 다섯 지형 완료
 

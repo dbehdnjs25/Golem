@@ -1,6 +1,6 @@
 # Combat System Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** Add a projectile weapon, dodge, and a Virus enemy (spawned periodically and by Trojan fragments) with HP, contact damage, a death penalty, and core respawn — reusing the existing pure-`update(dt)` + hotbar-tool patterns.
 

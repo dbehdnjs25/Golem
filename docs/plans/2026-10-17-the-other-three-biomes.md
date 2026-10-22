@@ -1,6 +1,6 @@
 # 남은 세 바이옴의 지형 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 설원·바람 고원·황무지에 각자의 지형을 준다. 불탄 숲의 용암과 늪지의 늪은 이미 있다. 다섯 곳에서 **움직이는 방식이 각각 달라야** 한다는 스펙의 약속을 마저 지킨다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md` 「다섯 바이옴」
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md` 「다섯 바이옴」
 
 **선행:** 1~7단계 + 생존 완료
 

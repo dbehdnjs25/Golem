@@ -1,6 +1,6 @@
 # Items & Inventory UI Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** Give inventory contents an item identity, then let the player open the Core like a chest and drag stacks between it and the backpack, with a transfer delay proportional to the megabytes moved.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Spec: `docs/superpowers/specs/2026-07-30-inventory-ui-design.md`. Read it before Task 1.
+- Spec: `docs/specs/2026-07-30-inventory-ui-design.md`. Read it before Task 1.
 - Logic lives in `update(dt, ...)` and takes the timestep explicitly. Rendering lives in `draw(surface)`. Nothing outside `core/app.py` touches `pygame.display`, the event pump, or `pygame.quit`.
 - **No input polling inside scenes.** `pygame.key.get_pressed()` and `pygame.key.get_mods()` are banned; modifier state is tracked from KEYDOWN/KEYUP events.
 - Run tools from the venv on Windows: `.venv/Scripts/pytest.exe`, `.venv/Scripts/ruff.exe`, `.venv/Scripts/mypy.exe`. Bare `pytest` / `python -m pytest` will fail — the global interpreter has no pytest.

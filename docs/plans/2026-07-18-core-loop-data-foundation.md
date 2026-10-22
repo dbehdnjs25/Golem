@@ -1,6 +1,6 @@
 # 핵심 루프 & 데이터 기반 Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 채굴 → 배낭 적재 → 코어 귀환 → 창고 자동 입고로 이어지는 게임의 핵심 루프와 그 데이터 기반을 헤드리스 테스트가 되는 형태로 구현한다.
 

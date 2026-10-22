@@ -1,6 +1,6 @@
 # 화산지대를 불탄 숲으로 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 첫 바이옴을 화산지대에서 **불탄 숲**으로 바꾼다. 불탄 나무는 숯 대신 쓰고, 용암 웅덩이가 자연히 생기고, 웅덩이 둘레에만 흑요석이 박힌 돌이 선다.
 

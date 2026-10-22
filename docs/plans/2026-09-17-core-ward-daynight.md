@@ -1,6 +1,6 @@
 # 3단계: 코어·결계·낮밤 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 맵을 실제 축척으로 키우고, 코어 파편을 모아 점화하는 시작을 만들고, 코어 레벨에 따라 넓어지는 결계와 그 안에서만 되는 가속 회복, 그리고 낮/밤 주기를 만든다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
 
 **선행:** 1단계(`2026-09-17-concept-constants-rewrite.md`), 2단계(`2026-09-17-map-and-biomes.md`) — 둘 다 완료
 

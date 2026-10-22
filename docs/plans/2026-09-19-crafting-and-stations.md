@@ -1,6 +1,6 @@
 # 5b단계: 시설과 제작 — 구현 계획
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> 작업 단위마다 실패하는 테스트 → 구현 → 검증 4종 → 커밋. 진행은 체크박스(`- [ ]`)로 표시한다.
 
 **Goal:** 제작 메뉴 하나로 만들기를 통일하고, 결계 안에 시설을 지어 배치하고, 주조에 시간이 걸리게 한다. 도구 등급 사다리를 위까지 잇고 배낭을 만들 수 있게 한다.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** pygame-ce, Python >= 3.10, pytest + pytest-cov, ruff, mypy (strict)
 
-**Spec:** `docs/superpowers/specs/2026-08-29-world-rebuild-concept-design.md`
+**Spec:** `docs/specs/2026-08-29-world-rebuild-concept-design.md`
 
 **선행:** 1~4단계, 5a 완료
 
