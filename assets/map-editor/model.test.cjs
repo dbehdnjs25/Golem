@@ -37,11 +37,14 @@ console.log('Passed: whole-map random placement, valid IDs, unchanged dimensions
 assert.deepEqual(M.biomes.map(b=>b.id),['grassland','bog','burnt_forest','wind_plateau','wasteland','snowfield']);
 const legacy=M.clone(map);delete legacy.biome;
 const oldPlateau={...M.create(8,8,'old plateau','wind_plateau'),tileset:'../grassland/tiles32/grassland-32.webp',data:Array(64).fill(3)};
+const oldWasteland={...M.create(8,8,'old wasteland','wasteland'),tileset:'../grassland/tiles32/grassland-32.webp',data:Array(64).fill(3)};
+assert.ok(M.validate(oldWasteland).data.every(id=>id===0));
+assert.throws(()=>M.validate({...M.create(8,8,'wasteland','wasteland'),data:Array(64).fill(16)}));
 assert.ok(M.validate(oldPlateau).data.every(id=>id===0));
 assert.throws(()=>M.validate({...M.create(8,8,'plateau','wind_plateau'),data:Array(64).fill(16)}));
 assert.equal(M.validate(legacy).biome,'grassland');
 for(const {id,name} of M.biomes){
-  const lastTile=['bog','wind_plateau'].includes(id)?15:id==='burnt_forest'?21:63;
+  const lastTile=['bog','wind_plateau','wasteland'].includes(id)?15:id==='burnt_forest'?21:63;
   const biomeMap=M.create(8,8,name,id);M.put(biomeMap,7,7,lastTile);
   assert.equal(biomeMap.biome,id);
   assert.deepEqual(M.validate(JSON.parse(JSON.stringify(biomeMap))),biomeMap);

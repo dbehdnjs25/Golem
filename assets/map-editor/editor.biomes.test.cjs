@@ -6,6 +6,7 @@ const ASSETS=require('../grassland/tiles32/tileset.json');
 ASSETS.biomes={bog:require('../bog/tiles32/tileset.json')};
 ASSETS.biomes.burnt_forest=require('../burnt-forest/tiles32/tileset.json');
 ASSETS.biomes.wind_plateau=require('../wind_plateau/tiles32/tileset.json');
+ASSETS.biomes.wasteland=require('../wasteland/tiles32/tileset.json');
 
 // Run the real editor handlers with a minimal DOM/canvas adapter.
 function editor(saved){
@@ -40,7 +41,7 @@ function editor(saved){
 
 const e=editor();
 assert.equal(e.tileCount(),64);
-for(const biome of M.biomes.filter(b=>!['grassland','bog','burnt_forest','wind_plateau'].includes(b.id))){
+for(const biome of M.biomes.filter(b=>!['grassland','bog','burnt_forest','wind_plateau','wasteland'].includes(b.id))){
   e.create(biome.id);
   assert.equal(e.tileCount(),0);
   assert.equal(e.$('#tileCount').textContent,0);

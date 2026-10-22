@@ -11,7 +11,7 @@ const MeadowModel = (() => {
     if (!size(width) || !size(height)) throw Error('맵 크기는 4~128칸이어야 합니다.');
     if (!biomes.some(b=>b.id===biome)) throw Error('올바른 바이옴을 선택하세요.');
     return {format:'meadow-map', version:1, name, biome, width, height, tileSize:32,
-      tileset:biome==='burnt_forest'?'../burnt-forest/tiles32/burnt-forest-32.webp':['bog','wind_plateau'].includes(biome)?`../${biome}/tiles32/${biome}-32.webp`:'../grassland/tiles32/grassland-32.webp', data:Array(width*height).fill(0)};
+      tileset:biome==='burnt_forest'?'../burnt-forest/tiles32/burnt-forest-32.webp':['bog','wind_plateau','wasteland'].includes(biome)?`../${biome}/tiles32/${biome}-32.webp`:'../grassland/tiles32/grassland-32.webp', data:Array(width*height).fill(0)};
   }
   function validate(raw, tileCount = 64) {
     if (!raw || raw.format !== 'meadow-map' || raw.version !== 1 || raw.tileSize !== 32 ||
@@ -23,6 +23,10 @@ const MeadowModel = (() => {
     if(next.biome==='wind_plateau'){
       if(raw.tileset!==next.tileset)return next;
       if(raw.data.some(id=>id>=16))throw Error('바람 고원 맵의 타일 번호가 올바르지 않습니다.');
+    }
+    if(next.biome==='wasteland'){
+      if(raw.tileset!==next.tileset)return next;
+      if(raw.data.some(id=>id>=16))throw Error('황무지 맵의 타일 번호가 올바르지 않습니다.');
     }
     // Earlier bog maps used grassland IDs. Replace that shared ground on import.
     if(next.biome==='bog'){
