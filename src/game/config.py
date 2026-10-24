@@ -262,6 +262,22 @@ SHOVE_DISTANCE: Final[float] = 420.0
 ARC_WIDTH: Final[float] = 90.0
 ARC_DPS: Final[float] = 9.0  # per line caught in, per second
 MARK_SECONDS: Final[float] = 6.0
+
+# --- Temples --------------------------------------------------------------
+# One room per ring biome, on the site the map chose in step 2. The inside is
+# redrawn on every entry; see entities/temple for the three rules that keep
+# that from being exploitable.
+TEMPLE_RADIUS: Final[float] = 900.0
+TEMPLE_SPACING: Final[float] = 150.0  # nothing inside sits on anything else
+# Guards stand around the altar, not around the room: the chest by the door
+# has to be reachable without a fight, or tasting the element becomes the
+# prize for winning one.
+GUARDS_MIN: Final[int] = 2
+GUARDS_MAX: Final[int] = 4
+GUARD_RING: Final[float] = 320.0
+# How far apart two temples' seed streams sit. Nobody visits one ten thousand
+# times, so no two can collide.
+TEMPLE_SEED_STRIDE: Final[int] = 10_000
 # Paler than the drifts, with the colour in the rim: the snowfield is white
 # already, and the edge is where the decision to cross is made.
 ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
