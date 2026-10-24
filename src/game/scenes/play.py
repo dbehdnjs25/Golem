@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import math
 import random
+from dataclasses import replace
 
 import pygame
 
@@ -20,12 +21,14 @@ from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.entities.station import Station, place, stations_at
 from game.entities.structure import Structure
+from game.entities.temple import Temple
 from game.inventory import grid, packs
 from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
 from game.items import engraving, grades
+from game.items import glyphs as glyph_table
 from game.items.engraving import Engraved
 from game.items.glyphs import Glyph
 from game.items.item_kinds import (
@@ -44,6 +47,7 @@ from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.systems import (
+    arena,
     carrying,
     combat,
     consume,
@@ -63,7 +67,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, chasms, ice, lava, mires, structures
+from game.world import biomes, chasms, ice, lava, mires, structures, temples
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -135,6 +139,8 @@ class PlayScene(Scene):
         self.rng = random.Random(1234)
         self.world = WorldMap.create(self.rng)
         self.temple_sites = self.world.temple_sites(self.rng)
+        self.temples = temples.place(self.world, self.temple_sites, self.rng)
+        self.arena = arena.Ground()
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
@@ -541,8 +547,11 @@ class PlayScene(Scene):
         survival.update_lava(dt, self.player, self.lava)
         status.update_burn(dt, self.player, at_source=self.in_lava)
 
+        self._visit_temples()
         if sync:
             self._open_structure()
+            self._open_chest()
+            self._use_altar()
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
                 # Mending first. The same key already means "deal with the
@@ -1148,6 +1157,77 @@ class PlayScene(Scene):
         self.note = line
         self.note_left = config.NOTE_SECONDS
 
+    # --- temples ----------------------------------------------------------
+    def _visit_temples(self) -> None:
+        """Notice the player crossing a threshold, and redraw what they walk into.
+
+        Only on the way IN from outside: the room is redrawn by ``enter`` and
+        a player who merely wanders near the door gets the same room back.
+        """
+        for temple in self.temples:
+            if temple.contains(self.player.pos):
+                was = temple.layout
+                temple.enter(self.player.pos)
+                if temple.layout is not was and not temple.guards_down:
+                    self._raise_guards(temple)
+            else:
+                temple.leave()
+        here = self.standing_in
+        if here is not None:
+            arena.hold(self.player.pos, here, self.arena)
+
+    @property
+    def standing_in(self) -> Temple | None:
+        for temple in self.temples:
+            if temple.inside:
+                return temple
+        return None
+
+    def _raise_guards(self, temple: Temple) -> None:
+        """Set this drawing's guard on their feet.
+
+        Plain golems for now; Task 4 gives each biome its own kind and these
+        become a first look at whatever will later join the raids.
+        """
+        self.enemies = [e for e in self.enemies if not getattr(e, "guarding", False)]
+        assert temple.layout is not None
+        for spot in temple.layout.guards:
+            golem = Golem(pos=pygame.Vector2(spot), scale=config.GUARD_SCALE)
+            golem.guarding = True  # type: ignore[attr-defined]
+            self.enemies.append(golem)
+
+    def _open_chest(self) -> None:
+        """Take what the temple's chest holds: that biome's greater glyph."""
+        temple = self.standing_in
+        if temple is None or temple.layout is None or temple.layout.chest is None:
+            return
+        if temple.layout.chest.distance_to(self.player.pos) > config.ALTAR_REACH:
+            return
+        greater = next(
+            (g for g in glyph_table.glyphs_of(temple.biome) if g.tier == glyph_table.GREATER),
+            None,
+        )
+        temple.chest_opened = True
+        temple.layout = replace(temple.layout, chest=None)
+        if greater is None:  # pragma: no cover - the catalogue has one per biome
+            return
+        fresh = self.grimoire.learn(greater)
+        said = "배웠다" if fresh else "— 이미 아는 그림"
+        self._say(f"{greater.name}{_object_particle(greater.name)} {said}")
+
+    def _use_altar(self) -> None:
+        """Stand at the plinth and call. Nothing answers yet -- see task 3."""
+        temple = self.standing_in
+        if temple is None or temple.layout is None:
+            return
+        if temple.layout.altar.distance_to(self.player.pos) > config.ALTAR_REACH:
+            return
+        refused = arena.why_not(temple)
+        if refused is not None:
+            self._say(refused)
+            return
+        self._say("제단이 응답한다 — 아직 부를 것이 없다")
+
     def _open_structure(self) -> None:
         """Read whatever ruin the player is standing at.
 
@@ -1279,9 +1359,34 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
-        """Placeholder markers so the five sites are visible before temples exist."""
-        for site in self.temple_sites:
-            pygame.draw.circle(surface, config.WHITE, self.camera.world_to_screen(site), 9, 3)
+        """The buildings, and whatever this visit's drawing put inside them.
+
+        A wall and a door read from outside; the chest, the plinth and the
+        guard only exist once somebody has walked in, because the room is not
+        drawn until then.
+        """
+        for temple in self.temples:
+            at = self.camera.world_to_screen(temple.pos)
+            pygame.draw.circle(surface, config.TEMPLE_FLOOR, at, temple.radius)
+            wall = (
+                config.TEMPLE_SEALED
+                if self.arena.sealed and temple.inside
+                else (config.TEMPLE_WALL)
+            )
+            pygame.draw.circle(surface, wall, at, temple.radius, 6)
+            layout = temple.layout
+            if layout is None:
+                continue
+            pygame.draw.circle(
+                surface, config.TEMPLE_DOOR, self.camera.world_to_screen(layout.door), 16
+            )
+            if layout.chest is not None:
+                spot = self.camera.world_to_screen(layout.chest)
+                pygame.draw.rect(surface, config.CHEST_COLOR, (spot.x - 16, spot.y - 12, 32, 24))
+                pygame.draw.rect(surface, config.WHITE, (spot.x - 16, spot.y - 12, 32, 24), 2)
+            plinth = self.camera.world_to_screen(layout.altar)
+            lit = config.ALTAR_SPENT if temple.boss_killed else config.ALTAR_COLOR
+            pygame.draw.circle(surface, lit, plinth, 30, 5)
 
     def detector_reading(self) -> tuple[float, str, Biome] | None:
         """Bearing, distance word and biome for the detector in hand.

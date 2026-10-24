@@ -1695,3 +1695,68 @@ def test_off_the_ice_letting_go_stops_you():
     was = pygame.Vector2(scene.player.pos)
     scene.update(config.FIXED_DT)
     assert scene.player.pos == was
+
+
+# --- temples in the scene -------------------------------------------------
+
+
+def test_walking_in_draws_a_room_and_stands_its_guard_up():
+    scene = PlayScene()
+    temple = scene.temples[0]
+    assert temple.layout is None
+
+    scene.player.pos.update(temple.pos + pygame.Vector2(temple.radius * 0.6, 0))
+    scene.update(config.FIXED_DT)
+
+    assert temple.layout is not None
+    guarding = [e for e in scene.enemies if getattr(e, "guarding", False)]
+    assert len(guarding) == len(temple.layout.guards)
+
+
+def test_the_guard_does_not_pile_up_over_repeated_visits():
+    # Each drawing stands its own; the last drawing's must not still be about.
+    scene = PlayScene()
+    temple = scene.temples[0]
+    inside = temple.pos + pygame.Vector2(temple.radius * 0.6, 0)
+    away = temple.pos + pygame.Vector2(temple.radius * 3, 0)
+    for _ in range(4):
+        scene.player.pos.update(inside)
+        scene.update(config.FIXED_DT)
+        scene.player.pos.update(away)
+        scene.update(config.FIXED_DT)
+    guarding = [e for e in scene.enemies if getattr(e, "guarding", False)]
+    assert len(guarding) <= config.GUARDS_MAX
+
+
+def test_the_chest_hands_over_that_biome_s_greater_glyph():
+    scene = PlayScene()
+    temple = scene.temples[0]
+    scene.player.pos.update(temple.pos)
+    scene.update(config.FIXED_DT)
+
+    scene.player.pos.update(temple.layout.chest)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+
+    greater = next(g for g in glyph_table.glyphs_of(temple.biome) if g.tier == glyph_table.GREATER)
+    assert scene.grimoire.knows(greater)
+    assert temple.chest_opened
+    assert temple.layout.chest is None
+
+
+def test_the_altar_refuses_while_the_guard_stands():
+    scene = PlayScene()
+    temple = scene.temples[0]
+    scene.player.pos.update(temple.pos)
+    scene.update(config.FIXED_DT)
+
+    scene.player.pos.update(temple.layout.altar)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
+    scene.update(config.FIXED_DT)
+    assert "수호" in scene.note
+
+
+def test_a_whole_room_fits_on_one_screen():
+    # Two screens across, the walk from door to plinth is taken without ever
+    # seeing both ends of it.
+    assert config.TEMPLE_RADIUS < config.SCREEN_WIDTH / 2

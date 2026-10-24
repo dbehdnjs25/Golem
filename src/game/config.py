@@ -267,14 +267,17 @@ MARK_SECONDS: Final[float] = 6.0
 # One room per ring biome, on the site the map chose in step 2. The inside is
 # redrawn on every entry; see entities/temple for the three rules that keep
 # that from being exploitable.
-TEMPLE_RADIUS: Final[float] = 900.0
-TEMPLE_SPACING: Final[float] = 150.0  # nothing inside sits on anything else
+# Just inside half a screen, so a whole room is in frame at once. At nine
+# hundred it was two screens across and the walk from the door to the
+# plinth was taken without ever seeing both.
+TEMPLE_RADIUS: Final[float] = 420.0
+TEMPLE_SPACING: Final[float] = 90.0  # nothing inside sits on anything else
 # Guards stand around the altar, not around the room: the chest by the door
 # has to be reachable without a fight, or tasting the element becomes the
 # prize for winning one.
 GUARDS_MIN: Final[int] = 2
 GUARDS_MAX: Final[int] = 4
-GUARD_RING: Final[float] = 320.0
+GUARD_RING: Final[float] = 190.0
 # How far apart two temples' seed streams sit. Nobody visits one ten thousand
 # times, so no two can collide.
 TEMPLE_SEED_STRIDE: Final[int] = 10_000
@@ -287,11 +290,24 @@ ARENA_LAVA: Final[int] = 4
 ARENA_ICE: Final[int] = 4
 ARENA_CHASMS: Final[int] = 5
 ARENA_MIRES: Final[int] = 4
-ARENA_PATCH_MIN: Final[float] = 90.0
-ARENA_PATCH_MAX: Final[float] = 210.0
+ARENA_PATCH_MIN: Final[float] = 55.0
+ARENA_PATCH_MAX: Final[float] = 115.0
 ARENA_WALL: Final[float] = 40.0  # kept off the wall, so the rim is walkable
-ARENA_ALTAR_CLEAR: Final[float] = 120.0  # never over the plinth
+ARENA_ALTAR_CLEAR: Final[float] = 70.0  # never over the plinth
 ARENA_ATTEMPTS: Final[int] = 200
+ALTAR_REACH: Final[float] = 110.0  # how close to stand to use one
+# Guards are tougher than a roadside golem: they are the test of whether
+# the boss behind them is worth calling yet.
+GUARD_SCALE: Final[float] = 2.4
+TEMPLE_FLOOR: Final[tuple[int, int, int]] = (52, 48, 60)
+TEMPLE_WALL: Final[tuple[int, int, int]] = (164, 158, 176)
+# The wall goes red while the door is shut, so being sealed in reads
+# without having to walk to the edge and find out.
+TEMPLE_SEALED: Final[tuple[int, int, int]] = (214, 92, 84)
+TEMPLE_DOOR: Final[tuple[int, int, int]] = (120, 255, 180)
+CHEST_COLOR: Final[tuple[int, int, int]] = (196, 152, 92)
+ALTAR_COLOR: Final[tuple[int, int, int]] = (235, 210, 120)
+ALTAR_SPENT: Final[tuple[int, int, int]] = (110, 104, 96)
 # Paler than the drifts, with the colour in the rim: the snowfield is white
 # already, and the edge is where the decision to cross is made.
 ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
