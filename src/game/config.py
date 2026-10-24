@@ -278,6 +278,20 @@ GUARD_RING: Final[float] = 320.0
 # How far apart two temples' seed streams sit. Nobody visits one ten thousand
 # times, so no two can collide.
 TEMPLE_SEED_STRIDE: Final[int] = 10_000
+
+# --- Arenas ---------------------------------------------------------------
+# What the floor becomes when a boss is called. Each biome lays its own, so
+# the boss's tricks and the ground it fights on are the same thing -- except
+# the wasteland, which lays nothing because its terrain IS the absence of any.
+ARENA_LAVA: Final[int] = 4
+ARENA_ICE: Final[int] = 4
+ARENA_CHASMS: Final[int] = 5
+ARENA_MIRES: Final[int] = 4
+ARENA_PATCH_MIN: Final[float] = 90.0
+ARENA_PATCH_MAX: Final[float] = 210.0
+ARENA_WALL: Final[float] = 40.0  # kept off the wall, so the rim is walkable
+ARENA_ALTAR_CLEAR: Final[float] = 120.0  # never over the plinth
+ARENA_ATTEMPTS: Final[int] = 200
 # Paler than the drifts, with the colour in the rim: the snowfield is white
 # already, and the edge is where the decision to cross is made.
 ICE_COLOR: Final[tuple[int, int, int]] = (236, 245, 252)
