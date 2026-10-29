@@ -1,4 +1,4 @@
-const assert=require('node:assert/strict');
+﻿const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const M=require('./model.js');
@@ -102,7 +102,7 @@ assert.equal(restoredVolcano.run('M.validate(JSON.parse(JSON.stringify(map))).bi
 restoredVolcano.run('choose(21);setCell(0,0,21)');
 assert.equal(restoredVolcano.run('M.validate(JSON.parse(JSON.stringify(map))).data[0]'),21);
 restoredVolcano.run('randomMapButton.onclick()');
-assert.ok(restoredVolcano.run('map.data.every(id=>id>=0&&id<22)'));
+assert.ok(restoredVolcano.run('map.data.every(id=>id>=0&&id<43)'));
 restoredVolcano.run('travel()');assert.equal(restoredVolcano.run('map.data[0]'),21);
 assert.equal(restoredVolcano.run("availableTiles().filter(t=>t.category==='embers').length"),9);
 assert.ok(restoredVolcano.run('availableTiles().every(t=>![10,11,12].includes(t.id))'));
@@ -119,3 +119,15 @@ assert.ok(e.run('map.data.every(id=>id>=0&&id<16)'));
 e.run('travel()');assert.equal(e.run('map.data[0]'),15);
 const restoredPlateau=editor(M.create(8,8,'plateau','wind_plateau'));
 assert.equal(restoredPlateau.tileCount(),16);
+e.create('wasteland');
+assert.equal(e.tileCount(),25);assert.equal(e.run('selected'),0);
+assert.ok(!ASSETS.biomes.wasteland.tiles.filter(t=>!t.hidden).some(t=>[1,2,3,4,5].includes(t.family)));
+assert.equal(e.run('randomMapButton.disabled'),false);
+assert.equal(e.run('map.tileset'),'../wasteland/tiles32/wasteland-32.webp');
+e.run('choose(15);setCell(0,0,15)');
+assert.equal(e.run('M.validate(JSON.parse(JSON.stringify(map))).data[0]'),15);
+e.run('randomMapButton.onclick()');
+assert.ok(e.run('map.data.every(id=>id>=0&&id<43)'));
+e.run('travel()');assert.equal(e.run('map.data[0]'),15);
+assert.equal(editor(M.create(8,8,'wasteland','wasteland')).tileCount(),25);
+

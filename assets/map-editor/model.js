@@ -26,7 +26,7 @@ const MeadowModel = (() => {
     }
     if(next.biome==='wasteland'){
       if(raw.tileset!==next.tileset)return next;
-      if(raw.data.some(id=>id>=16))throw Error('황무지 맵의 타일 번호가 올바르지 않습니다.');
+      if(raw.data.some(id=>id>=43))throw Error('황무지 맵의 타일 번호가 올바르지 않습니다.');
     }
     // Earlier bog maps used grassland IDs. Replace that shared ground on import.
     if(next.biome==='bog'){
@@ -35,7 +35,7 @@ const MeadowModel = (() => {
     }
     if(next.biome==='burnt_forest'){
       if(raw.tileset!==next.tileset&&raw.tileset!=='../volcano/tiles32/volcano-32.webp')return next;
-      if(raw.data.some(id=>id>=22))throw Error('불탄 숲 맵의 타일 번호가 올바르지 않습니다.');
+      if(raw.data.some(id=>id>=43))throw Error('불탄 숲 맵의 타일 번호가 올바르지 않습니다.');
       return {...next,data:raw.data.map(id=>id>=10&&id<=12?id+6:id)};
     }
     return {...next,data:[...raw.data]};
@@ -66,7 +66,7 @@ const MeadowModel = (() => {
     }
     const groups=[...families.values()], next=clone(map);
     next.data=map.data.map(()=>{
-      if(!groups.length||random()<.65)return 0;
+      if(!groups.length||random()<.75)return 0;
       const variants=groups[Math.floor(random()*groups.length)];
       return variants[Math.floor(random()*variants.length)];
     });

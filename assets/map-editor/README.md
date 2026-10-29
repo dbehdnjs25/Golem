@@ -1,4 +1,4 @@
-# Meadow Studio
+﻿# Meadow Studio
 
 `index.html`을 더블클릭하면 열리는 오프라인 맵 에디터입니다. HTML 하나에 타일과 코드를 포함하므로 서버와 설치가 필요 없습니다.
 
@@ -49,6 +49,7 @@ for i, tile_id in enumerate(data['data']):
 .venv/Scripts/python.exe assets/bog/build_tiles32.py
 .venv/Scripts/python.exe assets/burnt-forest/build_tiles32.py
 .venv/Scripts/python.exe assets/wind_plateau/build_tiles32.py
+.venv/Scripts/python.exe assets/wasteland/build_tiles32.py
 .venv/Scripts/python.exe assets/map-editor/build.py
 node assets/map-editor/model.test.cjs
 node assets/map-editor/editor.biomes.test.cjs
@@ -65,3 +66,5 @@ node assets/map-editor/editor.biomes.test.cjs
 불씨 2개 변형을 3종 더 추가했습니다(ID 19~21). 현재 불씨 1개는 3종, 2개는 6종이며, 불탄 숲의 선택 가능한 타일은 총 19종입니다.
 
 바람 고원은 기본 땅과 바람에 눕는 풀·자갈·풍화된 바위·바람에 깎인 땅·풀과 자갈 혼합의 위치 변형 3종씩, 총 16종(ID 0~15)을 사용합니다. 새 맵에서 바람 고원을 선택하면 전용 타일 목록과 랜덤 배치를 사용할 수 있습니다. 과거 초원 시트를 사용하던 바람 고원 맵은 전용 기본 땅으로 전환됩니다. 에셋은 assets/wind_plateau/tiles32에 있습니다.
+
+황무지는 모래빛 기본 땅과 마른 덤불·선인장·풍화된 사암·바람 자국·혼합 타일의 위치 변형 3종씩, 총 16종(ID 0~18)을 사용합니다. 전체 랜덤 배치를 지원하며 에셋은 assets/wasteland/tiles32에 있습니다. 예전 공용 타일을 쓰던 황무지 맵은 불러올 때 황무지 기본 땅으로 전환됩니다.
