@@ -289,7 +289,9 @@ TEMPLE_SEED_STRIDE: Final[int] = 10_000
 ARENA_LAVA: Final[int] = 4
 ARENA_ICE: Final[int] = 4
 ARENA_CHASMS: Final[int] = 5
-ARENA_MIRES: Final[int] = 4
+# Three, where the others get four: the bog boss's own tricks lay more mire
+# on top of these, so the floor it starts with has to leave room for them.
+ARENA_MIRES: Final[int] = 3
 ARENA_PATCH_MIN: Final[float] = 55.0
 ARENA_PATCH_MAX: Final[float] = 115.0
 ARENA_WALL: Final[float] = 40.0  # kept off the wall, so the rim is walkable
