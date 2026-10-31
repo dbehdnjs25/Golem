@@ -8,7 +8,7 @@ tiles = root.parent / 'grassland' / 'tiles32'
 meta = json.loads((tiles / 'tileset.json').read_text(encoding='utf-8'))
 meta['url'] = 'data:image/webp;base64,' + base64.b64encode((tiles / meta['image']).read_bytes()).decode()
 meta['biomes'] = {}
-for biome in ('bog', 'burnt_forest', 'wind_plateau', 'wasteland'):
+for biome in ('bog', 'burnt_forest', 'wind_plateau', 'wasteland', 'snowfield'):
     folder = root.parent / ('burnt-forest' if biome == 'burnt_forest' else biome) / 'tiles32'
     biome_meta = json.loads((folder / 'tileset.json').read_text(encoding='utf-8'))
     biome_meta['url'] = 'data:image/webp;base64,' + base64.b64encode((folder / biome_meta['image']).read_bytes()).decode()

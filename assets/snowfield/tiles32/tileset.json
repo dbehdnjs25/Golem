@@ -1,0 +1,379 @@
+{
+  "image": "snowfield-32.webp",
+  "tilewidth": 32,
+  "tileheight": 32,
+  "columns": 4,
+  "tilecount": 25,
+  "margin": 0,
+  "spacing": 0,
+  "tiles": [
+    {
+      "id": 0,
+      "name": "설원 기본 땅",
+      "file": "snow_00.webp",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 0,
+      "position": "기본"
+    },
+    {
+      "id": 1,
+      "name": "눈덕이 ? 1",
+      "file": "snow_01.webp",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 1,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 2,
+      "name": "눈덕이 ? 2",
+      "file": "snow_02.webp",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 1,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 3,
+      "name": "눈덕이 ? 3",
+      "file": "snow_03.webp",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 1,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 4,
+      "name": "얼음 조각 ? 1",
+      "file": "snow_04.webp",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 2,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 5,
+      "name": "얼음 조각 ? 2",
+      "file": "snow_05.webp",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 2,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 6,
+      "name": "얼음 조각 ? 3",
+      "file": "snow_06.webp",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 2,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 7,
+      "name": "서리 풀 ? 1",
+      "file": "snow_07.webp",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 3,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 8,
+      "name": "서리 풀 ? 2",
+      "file": "snow_08.webp",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 3,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 9,
+      "name": "서리 풀 ? 3",
+      "file": "snow_09.webp",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ],
+      "category": "plants",
+      "family": 3,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 10,
+      "name": "서리 균열 ? 1",
+      "file": "snow_10.webp",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 4,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 11,
+      "name": "서리 균열 ? 2",
+      "file": "snow_11.webp",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 4,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 12,
+      "name": "서리 균열 ? 3",
+      "file": "snow_12.webp",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 4,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 13,
+      "name": "눈 덮인 돌 ? 1",
+      "file": "snow_13.webp",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 5,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 14,
+      "name": "눈 덮인 돌 ? 2",
+      "file": "snow_14.webp",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 5,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 15,
+      "name": "눈 덮인 돌 ? 3",
+      "file": "snow_15.webp",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ],
+      "category": "stones",
+      "family": 5,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 16,
+      "name": "얼음과 풀 ? 1",
+      "file": "snow_16.webp",
+      "rect": [
+        0,
+        128,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 6,
+      "position": "변형 1",
+      "hidden": true
+    },
+    {
+      "id": 17,
+      "name": "얼음과 풀 ? 2",
+      "file": "snow_17.webp",
+      "rect": [
+        32,
+        128,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 6,
+      "position": "변형 2",
+      "hidden": true
+    },
+    {
+      "id": 18,
+      "name": "얼음과 풀 ? 3",
+      "file": "snow_18.webp",
+      "rect": [
+        64,
+        128,
+        32,
+        32
+      ],
+      "category": "mixed",
+      "family": 6,
+      "position": "변형 3",
+      "hidden": true
+    },
+    {
+      "id": 19,
+      "name": "눈더미 변형 1",
+      "file": "snow_19.webp",
+      "rect": [
+        96,
+        128,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 1"
+    },
+    {
+      "id": 20,
+      "name": "눈더미 변형 2",
+      "file": "snow_20.webp",
+      "rect": [
+        0,
+        160,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 2"
+    },
+    {
+      "id": 21,
+      "name": "눈더미 변형 3",
+      "file": "snow_21.webp",
+      "rect": [
+        32,
+        160,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 3"
+    },
+    {
+      "id": 22,
+      "name": "눈더미 변형 4",
+      "file": "snow_22.webp",
+      "rect": [
+        64,
+        160,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 4"
+    },
+    {
+      "id": 23,
+      "name": "눈더미 변형 5",
+      "file": "snow_23.webp",
+      "rect": [
+        96,
+        160,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 5"
+    },
+    {
+      "id": 24,
+      "name": "눈더미 변형 6",
+      "file": "snow_24.webp",
+      "rect": [
+        0,
+        192,
+        32,
+        32
+      ],
+      "category": "ground",
+      "family": 7,
+      "position": "크기와 모양 6"
+    }
+  ]
+}

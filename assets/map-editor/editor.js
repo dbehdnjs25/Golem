@@ -46,7 +46,7 @@ function filters(){
   if(!empty)$('.library-foot').childNodes[1].textContent=` ${M.biomes.find(b=>b.id===map.biome).name} 타일 세트 `;
   $('#search').disabled=empty;
   randomMapButton.disabled=!ready||tiles.length<2;
-  randomMapHint.textContent=empty?'이 바이옴의 타일은 아직 준비 중입니다.':tiles.length===1?'기본 땅 1종 · 랜덤 배치는 변형 추가 후 사용 가능합니다.':map.biome==='bog'?'맵 전체에 물결·수생 식물·부유물을 섞어 배치':map.biome==='burnt_forest'?'맵 전체에 탄 나무·숯 조각·불씨를 섞어 배치':map.biome==='wind_plateau'?'맵 전체에 고원 풀·자갈·풍화된 바위를 섞어 배치':map.biome==='wasteland'?'기본 땅 약 75% · 갈라진 땅 변형을 섞어 배치':'맵 전체에 꽃·풀·돌을 섞어 배치 · 실행 취소 가능';
+  randomMapHint.textContent=empty?'이 바이옴의 타일은 아직 준비 중입니다.':tiles.length===1?'기본 땅 1종 · 랜덤 배치는 변형 추가 후 사용 가능합니다.':map.biome==='bog'?'맵 전체에 물결·수생 식물·부유물을 섞어 배치':map.biome==='burnt_forest'?'맵 전체에 탄 나무·숯 조각·불씨를 섞어 배치':map.biome==='wind_plateau'?'맵 전체에 고원 풀·자갈·풍화된 바위를 섞어 배치':map.biome==='snowfield'?'\uAE30\uBCF8 \uB208 \uB545 90% \u00B7 \uB208\uB355\uC774\uC640 \uC5BC\uC74C \uD0C0\uC77C\uC744 \uC11E\uC5B4 \uBC30\uCE58':map.biome==='wasteland'?'기본 땅 약 75% · 갈라진 땅 변형을 섞어 배치':'맵 전체에 꽃·풀·돌을 섞어 배치 · 실행 취소 가능';
   $('#filters').replaceChildren();
   if(empty)return;
   for(const [id,label] of categories){

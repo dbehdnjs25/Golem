@@ -11,7 +11,7 @@ const MeadowModel = (() => {
     if (!size(width) || !size(height)) throw Error('맵 크기는 4~128칸이어야 합니다.');
     if (!biomes.some(b=>b.id===biome)) throw Error('올바른 바이옴을 선택하세요.');
     return {format:'meadow-map', version:1, name, biome, width, height, tileSize:32,
-      tileset:biome==='burnt_forest'?'../burnt-forest/tiles32/burnt-forest-32.webp':['bog','wind_plateau','wasteland'].includes(biome)?`../${biome}/tiles32/${biome}-32.webp`:'../grassland/tiles32/grassland-32.webp', data:Array(width*height).fill(0)};
+      tileset:biome==='burnt_forest'?'../burnt-forest/tiles32/burnt-forest-32.webp':['bog','wind_plateau','wasteland','snowfield'].includes(biome)?`../${biome}/tiles32/${biome}-32.webp`:'../grassland/tiles32/grassland-32.webp', data:Array(width*height).fill(0)};
   }
   function validate(raw, tileCount = 64) {
     if (!raw || raw.format !== 'meadow-map' || raw.version !== 1 || raw.tileSize !== 32 ||
@@ -23,6 +23,10 @@ const MeadowModel = (() => {
     if(next.biome==='wind_plateau'){
       if(raw.tileset!==next.tileset)return next;
       if(raw.data.some(id=>id>=16))throw Error('바람 고원 맵의 타일 번호가 올바르지 않습니다.');
+    }
+    if(next.biome==='snowfield'){
+      if(raw.tileset!==next.tileset)return next;
+      if(raw.data.some(id=>id>=25))throw Error('\uC124\uC6D0 \uB9F5\uC758 \uD0C0\uC77C \uBC88\uD638\uAC00 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.');
     }
     if(next.biome==='wasteland'){
       if(raw.tileset!==next.tileset)return next;
@@ -65,8 +69,9 @@ const MeadowModel = (() => {
       families.get(tile.family).push(tile.id);
     }
     const groups=[...families.values()], next=clone(map);
+    const baseChance=map.biome==='snowfield' ? .9 : .75;
     next.data=map.data.map(()=>{
-      if(!groups.length||random()<.75)return 0;
+      if(!groups.length||random()<baseChance)return 0;
       const variants=groups[Math.floor(random()*groups.length)];
       return variants[Math.floor(random()*variants.length)];
     });

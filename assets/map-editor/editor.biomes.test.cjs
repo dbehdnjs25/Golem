@@ -7,6 +7,7 @@ ASSETS.biomes={bog:require('../bog/tiles32/tileset.json')};
 ASSETS.biomes.burnt_forest=require('../burnt-forest/tiles32/tileset.json');
 ASSETS.biomes.wind_plateau=require('../wind_plateau/tiles32/tileset.json');
 ASSETS.biomes.wasteland=require('../wasteland/tiles32/tileset.json');
+ASSETS.biomes.snowfield=require('../snowfield/tiles32/tileset.json');
 
 // Run the real editor handlers with a minimal DOM/canvas adapter.
 function editor(saved){
@@ -41,7 +42,7 @@ function editor(saved){
 
 const e=editor();
 assert.equal(e.tileCount(),64);
-for(const biome of M.biomes.filter(b=>!['grassland','bog','burnt_forest','wind_plateau','wasteland'].includes(b.id))){
+for(const biome of M.biomes.filter(b=>!['grassland','bog','burnt_forest','wind_plateau','wasteland','snowfield'].includes(b.id))){
   e.create(biome.id);
   assert.equal(e.tileCount(),0);
   assert.equal(e.$('#tileCount').textContent,0);
@@ -65,8 +66,8 @@ for(const biome of M.biomes.filter(b=>!['grassland','bog','burnt_forest','wind_p
   assert.ok(e.tools.every(b=>!b.disabled));
 }
 const restored=editor(M.create(8,8,'saved','snowfield'));
-assert.equal(restored.tileCount(),0);
-assert.equal(restored.run('selected'),null);
+assert.equal(restored.tileCount(),7);
+assert.equal(restored.run('selected'),0);
 e.create('bog');
 assert.equal(e.tileCount(),16);
 assert.equal(e.run('selected'),0);
@@ -119,6 +120,17 @@ assert.ok(e.run('map.data.every(id=>id>=0&&id<16)'));
 e.run('travel()');assert.equal(e.run('map.data[0]'),15);
 const restoredPlateau=editor(M.create(8,8,'plateau','wind_plateau'));
 assert.equal(restoredPlateau.tileCount(),16);
+e.create('snowfield');
+assert.equal(e.tileCount(),7);assert.equal(e.run('selected'),0);
+assert.ok(e.run('availableTiles().every(t=>t.id===0||t.id>=19)'));
+assert.equal(e.run('randomMapButton.disabled'),false);
+assert.equal(e.run('map.tileset'),'../snowfield/tiles32/snowfield-32.webp');
+e.run('choose(24);setCell(0,0,24)');
+assert.equal(e.run('M.validate(JSON.parse(JSON.stringify(map))).data[0]'),24);
+e.run('randomMapButton.onclick()');
+assert.ok(e.run('map.data.every(id=>id===0||id>=19&&id<25)'));
+e.run('travel()');assert.equal(e.run('map.data[0]'),24);
+assert.equal(editor(M.create(8,8,'snow','snowfield')).tileCount(),7);
 e.create('wasteland');
 assert.equal(e.tileCount(),25);assert.equal(e.run('selected'),0);
 assert.ok(!ASSETS.biomes.wasteland.tiles.filter(t=>!t.hidden).some(t=>[1,2,3,4,5].includes(t.family)));

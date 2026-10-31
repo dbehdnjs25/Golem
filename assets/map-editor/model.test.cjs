@@ -22,6 +22,7 @@ assert.equal(M.resize(variants,12,12).data[5*12+7],47);
 assert.equal(M.resize(variants,12,12).data[6*12+3],51);
 assert.equal(M.resize(variants,12,12).data[7*12+7],63);
 const assets=require('../grassland/tiles32/tileset.json');
+const snowAssets=require('../snowfield/tiles32/tileset.json');
 let seed=20260919;const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296};
 const original=M.clone(variants), scattered=M.randomize(variants,assets.tiles,random);
 assert.deepEqual(variants,original);
@@ -30,6 +31,9 @@ assert.deepEqual(M.validate(JSON.parse(JSON.stringify(scattered))),scattered);
 assert.ok(new Set(scattered.data).size>5);assert.ok(scattered.data.includes(0));
 assert.ok(M.randomize(variants,assets.tiles,()=>.74).data.every(id=>id===0));
 assert.ok(M.randomize(variants,assets.tiles,()=>.76).data.every(id=>id!==0));
+const snowMap=M.create(8,8,'snowfield test','snowfield');
+assert.ok(M.randomize(snowMap,snowAssets.tiles,()=>.89).data.every(id=>id===0));
+assert.ok(M.randomize(snowMap,snowAssets.tiles,()=>.91).data.every(id=>id>0));
 const randomHistory=new M.History();randomHistory.commit(original,scattered);
 assert.deepEqual(randomHistory.undo(scattered),original);
 assert.deepEqual(randomHistory.redo(original),scattered);
@@ -42,11 +46,12 @@ const oldPlateau={...M.create(8,8,'old plateau','wind_plateau'),tileset:'../gras
 const oldWasteland={...M.create(8,8,'old wasteland','wasteland'),tileset:'../grassland/tiles32/grassland-32.webp',data:Array(64).fill(3)};
 assert.ok(M.validate(oldWasteland).data.every(id=>id===0));
 assert.throws(()=>M.validate({...M.create(8,8,'wasteland','wasteland'),data:Array(64).fill(43)}));
+assert.throws(()=>M.validate({...M.create(8,8,'snowfield','snowfield'),data:Array(64).fill(25)}));
 assert.ok(M.validate(oldPlateau).data.every(id=>id===0));
 assert.throws(()=>M.validate({...M.create(8,8,'plateau','wind_plateau'),data:Array(64).fill(16)}));
 assert.equal(M.validate(legacy).biome,'grassland');
 for(const {id,name} of M.biomes){
-  const lastTile=['bog','wind_plateau'].includes(id)?15:id==='wasteland'?42:id==='burnt_forest'?21:63;
+  const lastTile=['bog','wind_plateau'].includes(id)?15:id==='wasteland'?42:id==='snowfield'?24:id==='burnt_forest'?21:63;
   const biomeMap=M.create(8,8,name,id);M.put(biomeMap,7,7,lastTile);
   assert.equal(biomeMap.biome,id);
   assert.deepEqual(M.validate(JSON.parse(JSON.stringify(biomeMap))),biomeMap);
@@ -68,6 +73,7 @@ assert.throws(()=>M.validate({...M.create(8,8,'bog','bog'),data:Array(64).fill(1
 const oldVolcano={...M.create(8,8,'old volcano','burnt_forest'),tileset:'../grassland/tiles32/grassland-32.webp',data:Array(64).fill(3)};
 assert.ok(M.validate(oldVolcano).data.every(id=>id===0));
 assert.throws(()=>M.validate({...M.create(8,8,'burnt_forest','burnt_forest'),data:Array(64).fill(43)}));
+assert.throws(()=>M.validate({...M.create(8,8,'snowfield','snowfield'),data:Array(64).fill(25)}));
 for(const retired of [10,11,12]){
   const saved=M.create(8,8,'embers','burnt_forest');saved.data[0]=retired;
   assert.equal(M.validate(saved).data[0],retired+6);
