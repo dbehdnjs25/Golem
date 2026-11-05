@@ -7,6 +7,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import replace
+from pathlib import Path
 
 import pygame
 
@@ -80,6 +81,15 @@ _SPRINT_KEYS = {pygame.K_LSHIFT, pygame.K_RSHIFT}
 # machine without these still draws something rather than raising.
 _FONT_NAMES = ("malgungothic", "gulim", "arial")
 _fonts: dict[int, pygame.font.Font] = {}
+_UI_ASSET_DIR = Path(__file__).resolve().parents[3] / "assets" / "ui"
+_ui_images: dict[str, pygame.Surface] = {}
+
+
+def _ui_asset(name: str) -> pygame.Surface:
+    """Load a small reusable UI image once; keep its alpha for HUD compositing."""
+    if name not in _ui_images:
+        _ui_images[name] = pygame.image.load(str(_UI_ASSET_DIR / name))
+    return _ui_images[name]
 
 
 def _object_particle(word: str) -> str:
@@ -486,17 +496,6 @@ class PlayScene(Scene):
         """Red on a raid night. The wall being down has to read from inside."""
         return config.WARD_BROKEN_COLOR if self.is_raid else config.WARD_COLOR
 
-    @property
-    def calendar_line(self) -> str:
-        """What day it is and how long until the next raid.
-
-        The spec's shortening cycle only means something if the player can
-        count it; unreadable, it is just the occasional bad night.
-        """
-        left = self.days_to_raid
-        when = "습격 오늘 밤" if left == 0 else f"습격까지 {left}일"
-        return f"{self.clock.day}일차 · {when}"
-
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
         self.player.update(
@@ -663,14 +662,6 @@ class PlayScene(Scene):
             for site in self.structures
             if not site.opened and self.player.pos.distance_to(site.pos) <= config.RUIN_SIGHTING
         ]
-
-    @property
-    def staff_line(self) -> str:
-        """What the staff is doing, in a few words under the gauges."""
-        if self.staff.overloaded:
-            return f"과부하 {self.staff.lockout:.1f}초"
-        held = self.staff.ready
-        return held.name if held is not None else "빈 지팡이"
 
     @property
     def holding_staff(self) -> bool:
@@ -1465,7 +1456,7 @@ class PlayScene(Scene):
         # and can land anywhere along it, including on top of these gauges --
         # when that happened both the marker's label and the date underneath
         # it became unreadable at once.
-        backing = pygame.Surface((_BAR_X + _BAR_W + 8, 108), pygame.SRCALPHA)
+        backing = pygame.Surface((_BAR_X + _BAR_W + 8, 88), pygame.SRCALPHA)
         backing.fill((0, 0, 0, config.HUD_BACKING))
         surface.blit(backing, (0, 4))
         # inventory fill gauge
@@ -1481,39 +1472,16 @@ class PlayScene(Scene):
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
         _draw_bar(surface, 58, 5, ready, (120, 160, 220), bg=(40, 40, 55))
-        # day/night progress: warm across the day, cold across the night, and
-        # red while the ward is open, so the hour and the danger are one gauge.
-        if self.is_raid:
-            phase_color = config.WARD_BROKEN_COLOR
-        else:
-            phase_color = (90, 110, 200) if self.clock.is_night else (240, 220, 130)
-        _draw_bar(surface, 68, 5, self.clock.phase_fraction, phase_color, bg=(40, 40, 55))
-        # the core's own health, below the clock -- only once it can be hurt
+        # the core's own health, at the foot of the stack -- only once it can
+        # be hurt
         if self.core.ignited:
-            _draw_bar(surface, 78, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
-        # the staff's strain, but only while it is the thing in hand: a gauge
-        # for something slung on your back is a gauge nobody reads
-        if self.holding_staff:
-            hot = self.staff.strain / config.STAFF_STRAIN_MAX
-            colour = config.STRAIN_LOCKED_COLOR if self.staff.overloaded else config.STRAIN_COLOR
-            _draw_bar(surface, 90, 6, hot, colour, bg=(40, 40, 55))
-        # The written lines sit low, just above the hotbar. Up beside the
-        # gauges they shared the corner with the compass markers, which pin
-        # themselves to the screen's edge and land there often -- two unrelated
-        # sentences overlapping is worse than either being somewhere odd.
-        floor = surface.get_height() - 50
-        lines = [self.calendar_line]
-        if self.holding_staff:
-            lines.append(self.staff_line)
-        for index, line in enumerate(lines):
-            # Its own backing: white text has nothing to sit on in a whiteout,
-            # and the gauges above solved the same problem the same way.
-            text = _font(13 - index).render(line, True, config.WHITE)
-            at = (10, floor - 44 + index * 20)
-            pad = pygame.Surface((text.get_width() + 8, text.get_height() + 4), pygame.SRCALPHA)
-            pad.fill((0, 0, 0, config.HUD_BACKING))
-            surface.blit(pad, (at[0] - 4, at[1] - 2))
-            surface.blit(text, at)
+            _draw_bar(surface, 68, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
+        # The clock and the staff's strain are both off the HUD entirely --
+        # gauge and written line alike. The hour is going to be a watch the
+        # player carries, which is worth nothing if the corner tells them
+        # anyway, and the strain gauge comes back when the staff itself is
+        # built out. Seven near-identical bars in one corner meant hunting for
+        # health by colour, which is the one thing that has to be instant.
         if self.note_left > 0:
             # Fades out rather than vanishing, so a glance that catches the
             # tail of it still reads as "something just happened".
@@ -1524,7 +1492,14 @@ class PlayScene(Scene):
         # which draws its own -- two hotbars on screen reads as two hotbars.
         if self.grid_open:
             return
-        for i in range(len(self.hotbar.slots)):
-            x = 10 + i * 44
-            color = config.WHITE if i == self.hotbar.selected else (120, 120, 140)
-            pygame.draw.rect(surface, color, pygame.Rect(x, surface.get_height() - 50, 40, 40), 2)
+        bar_y = surface.get_height() - 60
+        surface.blit(_ui_asset("hotbar_panel.png"), (4, bar_y))
+        empty_slot = _ui_asset("hotbar_slot.png")
+        selected_slot = _ui_asset("hotbar_slot_selected.png")
+        for i, slot in enumerate(self.hotbar.slots):
+            x, y = 10 + i * 44, surface.get_height() - 50
+            surface.blit(selected_slot if i == self.hotbar.selected else empty_slot, (x, y))
+            key_color = (255, 224, 160) if i == self.hotbar.selected else (186, 194, 210)
+            surface.blit(_font(9).render(str(i + 1), True, key_color), (x + 3, y + 2))
+            if slot is not None:
+                self._draw_contents(surface, pygame.Rect(x + 8, y + 8, 24, 24), slot)

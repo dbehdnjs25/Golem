@@ -12,7 +12,7 @@ from game.inventory.storage import Container
 from game.items import glyphs as glyph_table
 from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
-from game.scenes.play import PlayScene
+from game.scenes.play import PlayScene, _ui_asset
 from game.systems import consume, raids
 from game.systems.camera import FREE
 from game.world import biomes, mires
@@ -21,6 +21,11 @@ from game.world import biomes, mires
 def _key_event(key):
     return pygame.event.Event(pygame.KEYDOWN, key=key)
 
+
+def test_hotbar_ui_assets_load_at_gameplay_size():
+    assert _ui_asset("hotbar_panel.png").get_size() == (232, 60)
+    assert _ui_asset("hotbar_slot.png").get_size() == (40, 40)
+    assert _ui_asset("hotbar_slot_selected.png").get_size() == (40, 40)
 
 def test_number_keys_select_hotbar():
     scene = PlayScene()
@@ -848,23 +853,6 @@ def _has_ink(surface: pygame.Surface, rect: pygame.Rect, colour) -> bool:
     return False
 
 
-def test_the_calendar_is_on_screen():
-    # The spec's shortening cycle only means anything if the player can count
-    # it. Unreadable, it is just the occasional bad night.
-    scene = PlayScene()
-    scene.core.ignite()
-    assert "1일차" in scene.calendar_line
-    assert "7일" in scene.calendar_line  # a whole week stands between
-
-
-def test_the_calendar_says_tonight_on_a_raid_day():
-    scene = PlayScene()
-    scene.core.ignite()
-    raid_day = next(d for d in range(2, 40) if raids.is_raid_night(d, 0))
-    _wind_to(scene, raid_day, night=False)
-    assert "오늘" in scene.calendar_line
-
-
 def test_the_core_bar_only_appears_once_the_core_can_be_hurt():
     # An unlit pedestal with a health bar promises a fight that cannot happen.
     scene = PlayScene()
@@ -1198,22 +1186,6 @@ def test_an_opened_ruin_stops_being_flagged():
     assert scene.flagged_ruins() == []
 
 
-def test_the_staff_line_says_what_it_will_throw():
-    scene = _with_staff(PlayScene())
-    assert scene.staff_line == "빈 지팡이"
-    ember = glyph_table.BURNT_GLYPHS[0]
-    scene.grimoire.learn(ember)
-    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
-    scene.carve(ember)
-    assert scene.staff_line == ember.name
-
-
-def test_the_staff_line_says_overloaded_with_the_time_left():
-    scene = _with_staff(PlayScene())
-    scene.staff.lockout = config.STAFF_LOCKOUT
-    assert "과부하" in scene.staff_line
-
-
 # --- the burnt forest -----------------------------------------------------
 
 
@@ -1436,8 +1408,8 @@ def test_walking_the_bog_between_its_mires_is_free():
 
 
 def test_the_gauges_do_not_sit_on_top_of_each_other():
-    # Four bars and two lines share that corner now; one covering another
-    # would be the kind of thing nobody notices until a fight.
+    # Five bars and two lines share that corner; one covering another would be
+    # the kind of thing nobody notices until a fight.
     scene = PlayScene()
     scene.core.ignite()
     scene.hotbar.select(3)
