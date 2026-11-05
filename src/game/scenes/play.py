@@ -46,6 +46,7 @@ from game.items.item_kinds import (
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
+from game.render.floor import Floor
 from game.systems import (
     arena,
     carrying,
@@ -161,6 +162,7 @@ class PlayScene(Scene):
         self.mires = mires.place(self.world, self.rng)
         self.chasms = chasms.place(self.world, self.rng)
         self.ice = ice.place(self.world, self.rng)
+        self.floor = Floor(self.world)  # the tiled ground, built in chunks
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -958,26 +960,15 @@ class PlayScene(Scene):
             pygame.draw.rect(surface, (200, 200, 215), rect, border_radius=2)
 
     def _draw_world(self, surface: pygame.Surface) -> None:
-        """Paint the map: void, then one wedge per ring biome, then the grassland.
+        """Paint the map's floor from each biome's own tiles.
 
-        Flat colours until real tiles exist. Wedges rather than tiles because the
-        biomes ARE angular sectors -- five polygons draw them exactly, in seven
-        calls a frame instead of the five hundred a tile grid costs, with no
-        stair-stepping and no per-tile biome lookup.
+        The flat-colour wedges this replaced drew the sectors exactly, which was
+        the right placeholder and the wrong floor: a biome you walk across for
+        twenty screens needs texture to read as ground at all. ``Biome.color``
+        stays -- the map pointer, the glyph list and the locator all still speak
+        in it.
         """
-        surface.fill(config.VOID_COLOR)
-        center = self.camera.world_to_screen(self.world.center)
-        steps = 24  # arc samples per wedge; the chord error is under a pixel
-        for index, biome in enumerate(biomes.RING_BIOMES):
-            start = self.world.rotation + index * self.world.sector_degrees
-            points = [center]
-            for step in range(steps + 1):
-                angle = math.radians(start + self.world.sector_degrees * step / steps)
-                points.append(
-                    center + pygame.Vector2(math.cos(angle), math.sin(angle)) * self.world.radius
-                )
-            pygame.draw.polygon(surface, biome.color, points)
-        pygame.draw.circle(surface, biomes.GRASSLAND.color, center, self.world.grassland_radius)
+        self.floor.draw(surface, self.camera)
 
     def _gather_underfoot(self) -> None:
         """Pick up loose things by walking over them.

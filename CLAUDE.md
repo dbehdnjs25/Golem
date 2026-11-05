@@ -59,7 +59,9 @@ Run: `pytest` (coverage on by default). Prefer testing `entities/`, `systems/`,
 | Player/enemy/bullet logic | `game/entities/*.py` |
 | Cross-entity systems (physics, collision, spawning) | `game/systems/*.py` (add when needed) |
 | Terrain: biomes, the map circle, resource distribution | `game/world/*.py` |
+| Anything that touches a surface (the tiled floor) | `game/render/*.py` |
 | Assets | `assets/{images,sounds,fonts}/` |
+| Biome tile art + `tileset.json` | `assets/<biome>/tiles32/` |
 
 The `Ball` entity + `PlayScene` are **example scaffolding** demonstrating the
 pattern — replace or delete them once the real game is designed.

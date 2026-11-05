@@ -254,18 +254,34 @@ def test_the_core_stands_at_the_centre_of_the_map():
     assert scene.core.pos == scene.world.center
 
 
-def test_the_centre_of_the_view_is_painted_grassland():
-    from game.world import biomes
+def test_the_centre_of_the_view_is_painted_with_the_grassland_s_own_tile():
+    """The floor at the core is the grassland's art, pixel for pixel.
+
+    It used to be enough to compare against ``GRASSLAND.color``, because the
+    floor was that one flat colour. Now the same claim has to be made against
+    the atlas: work out which cell the probe lands in, ask the tile table what
+    goes there, and read that tile out of the sheet.
+    """
+    from game.world import tiles
 
     scene = PlayScene()
     surface = pygame.Surface(config.SCREEN_SIZE)
     scene.camera.center_on(scene.world.center)
     scene.draw(surface)
-    # The camera is centred on the core, so the middle of the screen is the
-    # middle of the grassland. Sample to the side of the core, which is drawn
-    # on top of it.
+    # Beside the core, which is drawn on top of the floor.
     probe = (config.SCREEN_WIDTH // 2 + int(config.CORE_RADIUS) + 20, config.SCREEN_HEIGHT // 2)
-    assert surface.get_at(probe)[:3] == biomes.GRASSLAND.color
+
+    spot = scene.camera.screen_to_world(pygame.Vector2(probe))
+    cell_x = int(spot.x // config.TILE_SIZE)
+    cell_y = int(spot.y // config.TILE_SIZE)
+    assert tiles.biome_for_cell(scene.world, cell_x, cell_y) is biomes.GRASSLAND
+
+    sheet = tiles.SHEETS["grassland"]
+    left, top, _, _ = sheet.rect(tiles.pick(sheet, cell_x, cell_y))
+    atlas = pygame.image.load(str(sheet.image))
+    inside_x = int(spot.x) % config.TILE_SIZE
+    inside_y = int(spot.y) % config.TILE_SIZE
+    assert surface.get_at(probe)[:3] == atlas.get_at((left + inside_x, top + inside_y))[:3]
 
 
 def test_outside_the_map_is_painted_void():
