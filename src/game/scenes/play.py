@@ -86,9 +86,18 @@ _ui_images: dict[str, pygame.Surface] = {}
 
 
 def _ui_asset(name: str) -> pygame.Surface:
-    """Load a small reusable UI image once; keep its alpha for HUD compositing."""
+    """Load a reusable UI image once, at UI_SCALE, keeping its alpha.
+
+    Scaled with the plain scale rather than smoothscale, and by a whole number,
+    so a 40-pixel slot becomes a sharp 80 rather than a soft one.
+    """
     if name not in _ui_images:
-        _ui_images[name] = pygame.image.load(str(_UI_ASSET_DIR / name))
+        art = pygame.image.load(str(_UI_ASSET_DIR / name))
+        if config.UI_SCALE != 1:
+            art = pygame.transform.scale(
+                art, (art.get_width() * config.UI_SCALE, art.get_height() * config.UI_SCALE)
+            )
+        _ui_images[name] = art
     return _ui_images[name]
 
 
@@ -127,13 +136,43 @@ def _font(size: int) -> pygame.font.Font:
 
 
 # HUD gauges: same left edge and width, stacked down the top-left corner.
-_BAR_X = 10
-_BAR_W = 120
+_BAR_X = 10 * config.UI_SCALE
+_BAR_W = 120 * config.UI_SCALE
 _BAR_BG = (60, 60, 80)
 
-# How far the first slot sits inside the hotbar panel's left edge, matching the
-# border the art is drawn with.
-_HOTBAR_INSET = 6
+_PIXEL_DIGITS = {
+    "1": ("010", "110", "010", "010", "111"),
+    "2": ("110", "001", "010", "100", "111"),
+    "3": ("110", "001", "010", "001", "110"),
+    "4": ("101", "101", "111", "001", "001"),
+    "5": ("111", "100", "110", "001", "110"),
+}
+_HOTBAR_DIGIT_SCALE = 3 * config.UI_SCALE
+
+
+def _draw_hotbar_digit(surface: pygame.Surface, digit: int, x: int, y: int) -> None:
+    """Draw a tiny pixel key number on the slot well, before its item sprite."""
+    color = (205, 207, 190)
+    for row, bits in enumerate(_PIXEL_DIGITS[str(digit)]):
+        for column, bit in enumerate(bits):
+            if bit == "1":
+                px = x + column * _HOTBAR_DIGIT_SCALE
+                py = y + row * _HOTBAR_DIGIT_SCALE
+                pygame.draw.rect(
+                    surface,
+                    (15, 18, 17),
+                    pygame.Rect(
+                        px + 1,
+                        py + 1,
+                        _HOTBAR_DIGIT_SCALE,
+                        _HOTBAR_DIGIT_SCALE,
+                    ),
+                )
+                pygame.draw.rect(
+                    surface,
+                    color,
+                    pygame.Rect(px, py, _HOTBAR_DIGIT_SCALE, _HOTBAR_DIGIT_SCALE),
+                )
 
 
 def _draw_bar(
@@ -177,6 +216,7 @@ class PlayScene(Scene):
         self.chasms = chasms.place(self.world, self.rng)
         self.ice = ice.place(self.world, self.rng)
         self.floor = Floor(self.world)  # the tiled ground, built in chunks
+        self._field: pygame.Surface | None = None  # reused when the zoom != 1
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
             offset=pygame.Vector2(0, 0),
@@ -329,6 +369,10 @@ class PlayScene(Scene):
             self._held_keys.discard(event.key)
         elif event.type == pygame.MOUSEMOTION:
             self._mouse_screen = pygame.Vector2(event.pos)
+        elif event.type == pygame.MOUSEWHEEL:
+            # Up is in. The camera keeps the middle of the view where it is,
+            # so the ground does not lurch sideways on every notch.
+            self.camera.zoom_by(event.y)
         elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
             if self.grid_open:
                 self._click_grid(pygame.Vector2(event.pos))
@@ -574,6 +618,53 @@ class PlayScene(Scene):
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
+        # The world is drawn onto a FIELD the size the zoom asks for, then
+        # scaled down onto the window. Drawing it straight at screen size and
+        # scaling each shape instead would mean a zoom factor at every radius,
+        # every rect and every line in this file; this way the whole field
+        # keeps drawing in world pixels and knows nothing about the wheel.
+        #
+        # At 1.0 there is no second surface and no scale -- the ordinary case
+        # pays nothing.
+        field = self._field_surface(surface)
+        self._draw_field(field)
+        if field is not surface:
+            # Nearest-neighbour. Every zoom step lands a 32-pixel tile on a
+            # whole number of pixels, so this stays sharp; smoothscale would
+            # blur pixel art that was drawn to be read.
+            pygame.transform.scale(field, surface.get_size(), surface)
+        # Screen effects, not world ones: the raid border has to hug the real
+        # edge of the window, not the edge of a field that may be twice its
+        # size.
+        self._draw_sandstorm(surface)
+        self._draw_burning(surface)
+        self._draw_raid_edge(surface)
+        self._draw_hud(surface)
+        # Markers last, so one is never lost behind the gauges. A ruin you
+        # cannot see is a ruin you walk past. Each label carries its own
+        # backing so both stay readable.
+        self._draw_compass(surface)
+        self._draw_detector(surface)
+        self._draw_grid(surface)
+        self._draw_craft(surface)
+        self._draw_carve(surface)
+
+    def _field_surface(self, surface: pygame.Surface) -> pygame.Surface:
+        """The surface the world is drawn onto, kept between frames.
+
+        At zoom 1.0 that is the window itself. Otherwise it is one surface of
+        the field's size, reused -- a fresh 1920x1080 allocation every frame
+        would cost more than the drawing does.
+        """
+        wanted = self.camera.field_size
+        if wanted == surface.get_size():
+            return surface
+        if self._field is None or self._field.get_size() != wanted:
+            self._field = pygame.Surface(wanted)
+        return self._field
+
+    def _draw_field(self, surface: pygame.Surface) -> None:
+        """Everything that lives in the world, in world pixels."""
         self._draw_world(surface)
         self._draw_lava(surface)  # ground, so under everything that stands on it
         self._draw_mires(surface)
@@ -620,18 +711,6 @@ class PlayScene(Scene):
             self.camera.world_to_screen(self.player.pos),
             self.player.radius,
         )
-        self._draw_sandstorm(surface)
-        self._draw_burning(surface)
-        self._draw_raid_edge(surface)
-        self._draw_hud(surface)
-        # Markers last, so one is never lost behind the gauges. A ruin you
-        # cannot see is a ruin you walk past; the date underneath it can wait a
-        # second. Each label carries its own backing so both stay readable.
-        self._draw_compass(surface)
-        self._draw_detector(surface)
-        self._draw_grid(surface)
-        self._draw_craft(surface)
-        self._draw_carve(surface)
 
     # --- the belongings screen -------------------------------------------
     def _toggle_grid(self) -> None:
@@ -1419,8 +1498,12 @@ class PlayScene(Scene):
 
         Distance is given in walking time, because that is the unit every other
         decision is made in: a day is twelve minutes and the biomes are three.
+        The core is the exception and carries no label at all: it is the one
+        marker that is always up, its colour is unmistakable, and the direction
+        is the whole answer. The piles and the ruins keep their words, because
+        a pile is on a clock and a ruin has to be told from a vault.
         """
-        self._point_at(surface, self.core.pos, config.CORE_COLOR, "코어")
+        self._point_at(surface, self.core.pos, config.CORE_COLOR)
         for pile in self.loot:
             self._point_at(surface, pile.pos, config.LOOT_COLOR, "짐")
         # Ruins, but only ones within sight of. Twelve of them scattered over a
@@ -1436,50 +1519,69 @@ class PlayScene(Scene):
         surface: pygame.Surface,
         target: pygame.Vector2,
         colour: tuple[int, int, int],
-        label: str,
+        label: str | None = None,
     ) -> None:
         at = edge_marker(
-            self.camera.world_to_screen(target), config.SCREEN_SIZE, config.COMPASS_MARGIN
+            self.camera.world_to_view(target), config.SCREEN_SIZE, config.COMPASS_MARGIN
         )
         if at is None:
             return  # it is on screen; the thing itself is the marker
-        pygame.draw.circle(surface, colour, at, 7)
-        pygame.draw.circle(surface, (20, 20, 28), at, 7, 2)
+        pygame.draw.circle(surface, colour, at, 7 * config.UI_SCALE)
+        pygame.draw.circle(surface, (20, 20, 28), at, 7 * config.UI_SCALE, 2 * config.UI_SCALE)
+        if label is None:
+            return  # the dot alone; see the note in _draw_compass
         seconds = self.player.pos.distance_to(target) / config.PLAYER_SPEED
         far = f"{seconds / 60:.1f}분" if seconds >= 60 else f"{seconds:.0f}초"
-        text = _font(12).render(f"{label} {far}", True, colour)
-        box = text.get_rect(center=(int(at.x), int(at.y) + 16))
+        text = _font(12 * config.UI_SCALE).render(f"{label} {far}", True, colour)
+        box = text.get_rect(center=(int(at.x), int(at.y) + 16 * config.UI_SCALE))
         box.clamp_ip(surface.get_rect())
-        backing = pygame.Surface((box.width + 6, box.height + 2), pygame.SRCALPHA)
+        backing = pygame.Surface(
+            (box.width + 6 * config.UI_SCALE, box.height + 2 * config.UI_SCALE), pygame.SRCALPHA
+        )
         backing.fill((0, 0, 0, 150))
-        surface.blit(backing, (box.left - 3, box.top - 1))
+        surface.blit(backing, (box.left - 3 * config.UI_SCALE, box.top - 1 * config.UI_SCALE))
         surface.blit(text, box)
 
     def _draw_hud(self, surface: pygame.Surface) -> None:
         # A dim backing first. Compass markers are pinned to the screen's edge
         # and can land anywhere along it, including on top of these gauges --
-        # when that happened both the marker's label and the date underneath
-        # it became unreadable at once.
-        backing = pygame.Surface((_BAR_X + _BAR_W + 8, 88), pygame.SRCALPHA)
+        # when that happened the marker's label and the gauge under it became
+        # unreadable at once.
+        backing = pygame.Surface(
+            (_BAR_X + _BAR_W + 8 * config.UI_SCALE, 68 * config.UI_SCALE), pygame.SRCALPHA
+        )
         backing.fill((0, 0, 0, config.HUD_BACKING))
-        surface.blit(backing, (0, 4))
-        # inventory fill gauge
-        pack = self.backpack
-        frac = pack.used / pack.size if pack is not None and pack.size else 0.0
-        _draw_bar(surface, 10, 14, frac, (90, 200, 120))
-        # hp bar
+        surface.blit(backing, (0, 4 * config.UI_SCALE))
+        # hp first, at the top of the stack
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0
-        _draw_bar(surface, 30, 14, hp_frac, config.HP_COLOR)
+        _draw_bar(surface, 10 * config.UI_SCALE, 14 * config.UI_SCALE, hp_frac, config.HP_COLOR)
         # stamina, directly under health: the two things a body runs out of
         wind = self.player.stamina / self.player.max_stamina
-        _draw_bar(surface, 46, 9, wind, self.wind_colour)
+        _draw_bar(surface, 26 * config.UI_SCALE, 9 * config.UI_SCALE, wind, self.wind_colour)
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
-        _draw_bar(surface, 58, 5, ready, (120, 160, 220), bg=(40, 40, 55))
+        _draw_bar(
+            surface,
+            38 * config.UI_SCALE,
+            5 * config.UI_SCALE,
+            ready,
+            (120, 160, 220),
+            bg=(40, 40, 55),
+        )
         # the core's own health, at the foot of the stack -- only once it can
         # be hurt
         if self.core.ignited:
-            _draw_bar(surface, 68, 8, self.core.hp / self.core.max_hp, config.CORE_COLOR)
+            _draw_bar(
+                surface,
+                48 * config.UI_SCALE,
+                8 * config.UI_SCALE,
+                self.core.hp / self.core.max_hp,
+                config.CORE_COLOR,
+            )
+        # No pack gauge. How full the bag is matters when deciding what to pick
+        # up, and that decision is made with the bag open, where the grid shows
+        # it exactly; in the corner it was a bar that never moved during the
+        # minute it would have had to be read.
         # The clock and the staff's strain are both off the HUD entirely --
         # gauge and written line alike. The hour is going to be a watch the
         # player carries, which is worth nothing if the corner tells them
@@ -1489,9 +1591,11 @@ class PlayScene(Scene):
         if self.note_left > 0:
             # Fades out rather than vanishing, so a glance that catches the
             # tail of it still reads as "something just happened".
-            said = _font(16).render(self.note, True, config.WHITE)
+            said = _font(16 * config.UI_SCALE).render(self.note, True, config.WHITE)
             said.set_alpha(int(255 * min(1.0, self.note_left / config.NOTE_FADE)))
-            surface.blit(said, said.get_rect(midtop=(surface.get_width() // 2, 24)))
+            surface.blit(
+                said, said.get_rect(midtop=(surface.get_width() // 2, 24 * config.UI_SCALE))
+            )
         # hotbar (bottom-left). Hidden while the belongings screen is open,
         # which draws its own -- two hotbars on screen reads as two hotbars.
         if self.grid_open:
@@ -1499,16 +1603,24 @@ class PlayScene(Scene):
         # Centred along the bottom. In the corner it fought the gauges for the
         # same eye and left the middle of the screen empty; the belt is the one
         # thing the hand is always on, so it belongs under the thumb.
-        bar_y = surface.get_height() - 60
-        panel = _ui_asset("hotbar_panel.png")
-        panel_x = (surface.get_width() - panel.get_width()) // 2
-        surface.blit(panel, (panel_x, bar_y))
         empty_slot = _ui_asset("hotbar_slot.png")
         selected_slot = _ui_asset("hotbar_slot_selected.png")
+        step = 44 * config.UI_SCALE
+        slot_size = 40 * config.UI_SCALE
+        group_width = (len(self.hotbar.slots) - 1) * step + slot_size
+        start_x = (surface.get_width() - group_width) // 2
         for i, slot in enumerate(self.hotbar.slots):
-            x, y = panel_x + _HOTBAR_INSET + i * 44, surface.get_height() - 50
+            x, y = start_x + i * step, surface.get_height() - 50 * config.UI_SCALE
             surface.blit(selected_slot if i == self.hotbar.selected else empty_slot, (x, y))
-            key_color = (255, 224, 160) if i == self.hotbar.selected else (186, 194, 210)
-            surface.blit(_font(9).render(str(i + 1), True, key_color), (x + 3, y + 2))
+            _draw_hotbar_digit(surface, i + 1, x + 15 * config.UI_SCALE, y - 7 * config.UI_SCALE)
             if slot is not None:
-                self._draw_contents(surface, pygame.Rect(x + 8, y + 8, 24, 24), slot)
+                self._draw_contents(
+                    surface,
+                    pygame.Rect(
+                        x + 8 * config.UI_SCALE,
+                        y + 8 * config.UI_SCALE,
+                        24 * config.UI_SCALE,
+                        24 * config.UI_SCALE,
+                    ),
+                    slot,
+                )

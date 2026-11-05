@@ -14,7 +14,7 @@ from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene, _ui_asset
 from game.systems import consume, raids
-from game.systems.camera import FREE
+from game.systems.camera import FREE, Camera
 from game.world import biomes, mires
 
 
@@ -23,9 +23,20 @@ def _key_event(key):
 
 
 def test_hotbar_ui_assets_load_at_gameplay_size():
-    assert _ui_asset("hotbar_panel.png").get_size() == (232, 60)
-    assert _ui_asset("hotbar_slot.png").get_size() == (40, 40)
-    assert _ui_asset("hotbar_slot_selected.png").get_size() == (40, 40)
+    # Cut at 40 and drawn at UI_SCALE. A whole multiple, so the slot's edges
+    # stay as sharp as they were authored.
+    side = 40 * config.UI_SCALE
+    assert _ui_asset("hotbar_slot.png").get_size() == (side, side)
+    assert _ui_asset("hotbar_slot_selected.png").get_size() == (side, side)
+
+
+def test_default_hud_draws_floating_hotbar_slots():
+    surface = pygame.Surface(config.SCREEN_SIZE, pygame.SRCALPHA)
+    scene = PlayScene()
+    scene.hotbar.select(2)
+    scene._draw_hud(surface)
+    selected_x = (config.SCREEN_WIDTH - 224) // 2 + 2 * 44 + 6
+    assert surface.get_at((selected_x, config.SCREEN_HEIGHT - 44)).a > 0
 
 
 def test_number_keys_select_hotbar():
@@ -858,7 +869,7 @@ def test_the_core_bar_only_appears_once_the_core_can_be_hurt():
     # An unlit pedestal with a health bar promises a fight that cannot happen.
     scene = PlayScene()
     before = _shot(scene)
-    gauge = pygame.Rect(8, 74, 126, 8)
+    gauge = pygame.Rect(8 * config.UI_SCALE, 48 * config.UI_SCALE, 126, 8 * config.UI_SCALE)
     assert not _has_ink(before, gauge, config.CORE_COLOR)
     scene.core.ignite()
     assert _has_ink(_shot(scene), gauge, config.CORE_COLOR)
@@ -1409,8 +1420,8 @@ def test_walking_the_bog_between_its_mires_is_free():
 
 
 def test_the_gauges_do_not_sit_on_top_of_each_other():
-    # Five bars and two lines share that corner; one covering another would be
-    # the kind of thing nobody notices until a fight.
+    # Four bars share that corner; one covering another would be the kind of
+    # thing nobody notices until a fight.
     scene = PlayScene()
     scene.core.ignite()
     scene.hotbar.select(3)
@@ -1418,7 +1429,7 @@ def test_the_gauges_do_not_sit_on_top_of_each_other():
     surface = pygame.Surface(config.SCREEN_SIZE)
     scene.draw(surface)
     # The stamina bar's own row must still be its own colour.
-    assert surface.get_at((12, 50))[:3] == config.WIND_COLOR
+    assert surface.get_at((12 * config.UI_SCALE, 30 * config.UI_SCALE))[:3] == config.WIND_COLOR
 
 
 def test_the_object_particle_follows_the_word():
@@ -1749,3 +1760,109 @@ def test_a_whole_room_fits_on_one_screen():
     # Two screens across, the walk from door to plinth is taken without ever
     # seeing both ends of it.
     assert config.TEMPLE_RADIUS < config.SCREEN_WIDTH / 2
+
+
+# --- the wheel zooms ------------------------------------------------------
+
+
+def _wheel(scene, y):
+    scene.handle_event(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=y))
+
+
+def test_the_wheel_only_ever_narrows_the_view():
+    # Up draws less world and magnifies it, which is exact. Down stops at the
+    # window's own size: going wider would mean squeezing a bigger field into
+    # the window, and a squeeze drops different pixels every frame as you walk.
+    scene = PlayScene()
+    widest = scene.camera.field_size
+    _wheel(scene, 1)
+    assert scene.camera.field_size < widest
+    _wheel(scene, -1)
+    assert scene.camera.field_size == widest
+    _wheel(scene, -1)
+    assert scene.camera.field_size == widest  # and no further
+
+
+def test_zooming_keeps_the_player_in_the_middle():
+    # Locked, the camera follows the player; a zoom that moved them would read
+    # as the ground sliding out from under their feet.
+    scene = PlayScene()
+    scene.camera.center_on(scene.player.pos)
+    _wheel(scene, -1)
+    scene.camera.center_on(scene.player.pos)
+    middle = scene.camera.world_to_screen(scene.player.pos)
+    assert middle == pygame.Vector2(scene.camera.field_size) / 2
+
+
+def test_the_hud_does_not_zoom_with_the_world():
+    # The gauges are read, not inhabited. Scaled with the field they would
+    # shrink exactly when there is more going on to need them.
+    scene = PlayScene()
+    _wheel(scene, -1)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    assert surface.get_at((12 * config.UI_SCALE, 12 * config.UI_SCALE))[:3] == config.HP_COLOR
+
+
+def test_a_zoomed_out_world_still_gets_drawn():
+    scene = PlayScene()
+    _wheel(scene, -1)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    surface.fill(config.BACKGROUND)
+    scene.draw(surface)
+    middle = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT - 120)
+    assert surface.get_at(middle)[:3] != config.BACKGROUND
+
+
+def test_the_mouse_still_aims_where_it_points_when_zoomed():
+    # Mining reads the mouse through the camera. Zoomed out, a click halfway
+    # across the window is twice as far into the world as it was.
+    scene = PlayScene()
+    scene.camera.center_on(scene.player.pos)
+    probe = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
+    wide = scene.camera.screen_to_world(probe)
+    _wheel(scene, 1)
+    scene.camera.center_on(scene.player.pos)
+    close = scene.camera.screen_to_world(probe)
+    assert close.distance_to(scene.player.pos) < wide.distance_to(scene.player.pos)
+
+
+def test_the_core_marker_is_not_drawn_while_the_core_is_in_view_and_zoomed_out():
+    # The compass works in screen pixels; the world is drawn in field pixels,
+    # which at any zoom but 1.0 are a different size. Comparing one against the
+    # other put the dot in a corner while the core sat in the middle of the
+    # screen.
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.camera.set_zoom(2.0)
+    scene.camera.center_on(scene.core.pos)
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    corner = pygame.Rect(
+        config.SCREEN_WIDTH - 2 * config.COMPASS_MARGIN,
+        config.SCREEN_HEIGHT - 2 * config.COMPASS_MARGIN,
+        2 * config.COMPASS_MARGIN,
+        2 * config.COMPASS_MARGIN,
+    )
+    assert not _has_ink(surface, corner, config.CORE_COLOR)
+
+
+def test_the_core_marker_still_points_the_right_way_when_zoomed_out():
+    scene = PlayScene()
+    scene.core.ignite()
+    scene.camera.set_zoom(2.0)
+    # Walk far to the right of the core, so home is off the left edge.
+    scene.camera.center_on(scene.core.pos + pygame.Vector2(scene.camera.field_size[0] * 2, 0))
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    left = pygame.Rect(0, 0, 3 * config.COMPASS_MARGIN, config.SCREEN_HEIGHT)
+    assert _has_ink(surface, left, config.CORE_COLOR)
+
+
+def test_every_zoom_step_maps_whole_pixels_onto_the_window():
+    # What has to divide evenly is the FIELD against the WINDOW, not the tile
+    # against the field. A 4:3 field smears every third pixel across two.
+    for step in Camera.ZOOM_STEPS:
+        ratio = config.SCREEN_WIDTH / round(config.SCREEN_WIDTH / step)
+        assert ratio >= 1 or round(1 / ratio) == 1 / ratio
+        assert ratio <= 1 or round(ratio) == ratio

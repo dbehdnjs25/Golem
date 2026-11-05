@@ -9,10 +9,22 @@ from __future__ import annotations
 from typing import Final
 
 # --- Window -----------------------------------------------------------------
+# Drawn big and shown at its own size. Pixel art only survives 1:1 or a whole
+# multiple; anything in between -- a window stretched 1.78x to fill a screen, a
+# zoom step of 0.75 -- spreads some pixels over two and leaves the rest alone,
+# which is the shimmer you see while walking. So the window is large to begin
+# with, the view is never stretched up to reach it, and the zoom only ever
+# REDUCES how much world is on screen.
 TITLE: Final[str] = "Golem"
-SCREEN_WIDTH: Final[int] = 960
-SCREEN_HEIGHT: Final[int] = 540
+SCREEN_WIDTH: Final[int] = 1600
+SCREEN_HEIGHT: Final[int] = 900
 SCREEN_SIZE: Final[tuple[int, int]] = (SCREEN_WIDTH, SCREEN_HEIGHT)
+
+# Everything in the HUD is laid out in these units and multiplied by UI_SCALE
+# when drawn: the gauges were sized for a 960-wide window and are specks on a
+# 1600-wide one. A whole number, because the slot art is scaled by it too and a
+# fractional multiple would soften the one thing the bigger window was for.
+UI_SCALE: Final[int] = 2
 
 # --- Timing -----------------------------------------------------------------
 # The simulation advances in fixed steps for deterministic, testable logic.
