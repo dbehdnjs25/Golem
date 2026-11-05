@@ -27,6 +27,7 @@ def test_hotbar_ui_assets_load_at_gameplay_size():
     assert _ui_asset("hotbar_slot.png").get_size() == (40, 40)
     assert _ui_asset("hotbar_slot_selected.png").get_size() == (40, 40)
 
+
 def test_number_keys_select_hotbar():
     scene = PlayScene()
     scene.handle_event(_key_event(pygame.K_2))

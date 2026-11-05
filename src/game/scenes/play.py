@@ -131,6 +131,10 @@ _BAR_X = 10
 _BAR_W = 120
 _BAR_BG = (60, 60, 80)
 
+# How far the first slot sits inside the hotbar panel's left edge, matching the
+# border the art is drawn with.
+_HOTBAR_INSET = 6
+
 
 def _draw_bar(
     surface: pygame.Surface,
@@ -1492,12 +1496,17 @@ class PlayScene(Scene):
         # which draws its own -- two hotbars on screen reads as two hotbars.
         if self.grid_open:
             return
+        # Centred along the bottom. In the corner it fought the gauges for the
+        # same eye and left the middle of the screen empty; the belt is the one
+        # thing the hand is always on, so it belongs under the thumb.
         bar_y = surface.get_height() - 60
-        surface.blit(_ui_asset("hotbar_panel.png"), (4, bar_y))
+        panel = _ui_asset("hotbar_panel.png")
+        panel_x = (surface.get_width() - panel.get_width()) // 2
+        surface.blit(panel, (panel_x, bar_y))
         empty_slot = _ui_asset("hotbar_slot.png")
         selected_slot = _ui_asset("hotbar_slot_selected.png")
         for i, slot in enumerate(self.hotbar.slots):
-            x, y = 10 + i * 44, surface.get_height() - 50
+            x, y = panel_x + _HOTBAR_INSET + i * 44, surface.get_height() - 50
             surface.blit(selected_slot if i == self.hotbar.selected else empty_slot, (x, y))
             key_color = (255, 224, 160) if i == self.hotbar.selected else (186, 194, 210)
             surface.blit(_font(9).render(str(i + 1), True, key_color), (x + 3, y + 2))
