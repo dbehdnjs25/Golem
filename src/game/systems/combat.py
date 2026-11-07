@@ -14,13 +14,27 @@ from game.entities.core import Core
 from game.entities.enemy import TARGET_PLAYER, Creature, Golem
 from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
+from game.entities.patch import Patch
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
+from game.items.glyphs import SUPREME, Glyph
 from game.items.item_kinds import ItemKind
 from game.items.staff import Staff
 from game.items.tools import WeaponTool
+from game.systems import gimmicks
 from game.world.map import WorldMap
+
+
+def _trick_of(glyph: Glyph | None) -> str | None:
+    """The gimmick a shot should carry, or None.
+
+    Only the SUPREME cut throws the trick. If the first rung already did, the
+    boss would be guarding a bigger number rather than something new.
+    """
+    if glyph is None or glyph.tier != SUPREME:
+        return None
+    return glyph.gimmick
 
 
 def fire_weapon(
@@ -47,6 +61,7 @@ def fire_weapon(
         damage=weapon.total_damage,  # base plus whatever is carved on it
         radius=weapon.projectile_radius,
         ttl=weapon.projectile_ttl,
+        gimmick=_trick_of(next(iter(weapon.engraved.glyphs), None)),
     )
     return 1.0 / weapon.fire_rate, [shot]
 
@@ -82,6 +97,7 @@ def fire_staff(
         damage=glyph.power,  # the glyph IS the attack; the staff adds nothing
         radius=config.PROJECTILE_RADIUS,
         ttl=config.PROJECTILE_TTL,
+        gimmick=_trick_of(glyph),
     )
     return 1.0 / config.STAFF_FIRE_RATE, [shot]
 
@@ -98,7 +114,17 @@ def update_projectiles(
     projectiles: list[Projectile],
     enemies: list[Golem],
     world: WorldMap,
+    patches: list[Patch] | None = None,
+    marks: list[pygame.Vector2] | None = None,
+    from_pos: pygame.Vector2 | None = None,
 ) -> None:
+    """Fly, hit, and raise whatever trick the shot was carrying.
+
+    The three new arguments are where a trick lands: the ground it leaves, the
+    marks it sets, and whose feet to shove away from. Left out, a shot is
+    damage and nothing else -- which is what every shot was before the supreme
+    glyphs existed.
+    """
     surviving: list[Projectile] = []
     any_killed = False
     for shot in projectiles:
@@ -108,12 +134,38 @@ def update_projectiles(
         hit = _first_hit(shot, enemies)
         if hit is not None:
             hit.damage(shot.damage)
+            _raise_trick(shot, hit, patches, marks, from_pos, world)
             any_killed = any_killed or hit.is_dead
             continue  # projectile consumed
         surviving.append(shot)
     projectiles[:] = surviving
     if any_killed:  # skip rebuilding the list on the common no-kill frame
         enemies[:] = [e for e in enemies if not e.is_dead]
+
+
+def _raise_trick(
+    shot: Projectile,
+    hit: Golem,
+    patches: list[Patch] | None,
+    marks: list[pygame.Vector2] | None,
+    from_pos: pygame.Vector2 | None,
+    world: WorldMap,
+) -> None:
+    """Put the shot's gimmick on the floor, through the boss's own function."""
+    if shot.gimmick is None or patches is None or marks is None:
+        return
+    gimmick = gimmicks.by_key(shot.gimmick)
+    if gimmick is None:
+        return
+    gimmicks.strike(
+        gimmick,
+        at=pygame.Vector2(hit.pos),
+        victim=hit,
+        away_from=from_pos if from_pos is not None else shot.pos - shot.vel,
+        patches=patches,
+        marks=marks,
+        world=world,
+    )
 
 
 def update_enemies(

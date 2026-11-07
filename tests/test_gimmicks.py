@@ -218,7 +218,16 @@ def test_no_gimmick_kills_outright_from_full_health(gimmick):
     patches: list[Patch] = []
     marks: list[pygame.Vector2] = []
     player = _player()
-    gimmick.apply(player, HOME, patches, marks)
+    # The boss's side of the one shared call: aimed at the player, thrown from
+    # somewhere else in the room.
+    gimmicks.strike(
+        gimmick,
+        at=pygame.Vector2(player.pos),
+        victim=player,
+        away_from=HOME + pygame.Vector2(200, 0),
+        patches=patches,
+        marks=marks,
+    )
     gimmicks.touch(1.0, player, patches, moving=True)
     gimmicks.arc(1.0, player, marks)
     assert player.hp > 0

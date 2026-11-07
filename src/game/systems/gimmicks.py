@@ -20,8 +20,8 @@ colour, and none of them kills outright.
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 import pygame
 
@@ -50,20 +50,34 @@ def foul(at: pygame.Vector2, patches: list[Patch]) -> None:
     patches.append(Patch(pos=pygame.Vector2(at), kind=SLUDGE))
 
 
-def shove(player: Player, away_from: pygame.Vector2, world: WorldMap | None = None) -> None:
-    """Throw them back. No damage of its own.
+class Body(Protocol):
+    """Anything that stands somewhere and takes up room.
+
+    The player on the boss's side of a trick, a golem on the player's. Written
+    as a protocol rather than a union so that neither has to know about the
+    other to be shoved.
+    """
+
+    pos: pygame.Vector2
+
+    @property
+    def radius(self) -> float: ...
+
+
+def shove(body: Body, away_from: pygame.Vector2, world: WorldMap | None = None) -> None:
+    """Throw it back. No damage of its own.
 
     What makes a shove frightening is where it puts you, which is why the
     plateau has holes in it. The shove itself has to stay harmless, or it
     becomes a hit that also moves you rather than a move.
     """
-    offset = player.pos - away_from
+    offset = body.pos - away_from
     if offset.length_squared() == 0:
         # Standing inside whatever threw it. Any direction beats none.
         offset = pygame.Vector2(1, 0)
-    player.pos += offset.normalize() * config.SHOVE_DISTANCE
+    body.pos += offset.normalize() * config.SHOVE_DISTANCE
     if world is not None:
-        world.clamp(player.pos, player.radius)
+        world.clamp(body.pos, body.radius)
 
 
 def mark(at: pygame.Vector2, marks: list[pygame.Vector2]) -> None:
@@ -150,8 +164,6 @@ def update_marks(dt: float, marks: list[pygame.Vector2], timers: list[float]) ->
 
 # --- the table ------------------------------------------------------------
 
-_Apply = Callable[[Player, pygame.Vector2, list[Patch], list[pygame.Vector2]], None]
-
 
 @dataclass(frozen=True)
 class Gimmick:
@@ -159,46 +171,59 @@ class Gimmick:
     name: str
     biome: Biome
     effect: str  # what it asks of the player, in a word
-    apply: _Apply
-
-
-def _burn(
-    player: Player, at: pygame.Vector2, patches: list[Patch], marks: list[pygame.Vector2]
-) -> None:
-    scorch(player.pos, patches)
-
-
-def _chill(
-    player: Player, at: pygame.Vector2, patches: list[Patch], marks: list[pygame.Vector2]
-) -> None:
-    freeze(player.pos, patches)
-
-
-def _gust(
-    player: Player, at: pygame.Vector2, patches: list[Patch], marks: list[pygame.Vector2]
-) -> None:
-    shove(player, at)
-
-
-def _rot(
-    player: Player, at: pygame.Vector2, patches: list[Patch], marks: list[pygame.Vector2]
-) -> None:
-    foul(player.pos, patches)
-
-
-def _shock(
-    player: Player, at: pygame.Vector2, patches: list[Patch], marks: list[pygame.Vector2]
-) -> None:
-    mark(player.pos, marks)
 
 
 GIMMICKS: tuple[Gimmick, ...] = (
-    Gimmick("burn", "불길", BURNT_FOREST, "ground", _burn),
-    Gimmick("chill", "빙결", SNOWFIELD, "footing", _chill),
-    Gimmick("gust", "돌풍", WIND_PLATEAU, "position", _gust),
-    Gimmick("rot", "부패", BOG, "breath", _rot),
-    Gimmick("shock", "감전", WASTELAND, "spacing", _shock),
+    Gimmick("burn", "불길", BURNT_FOREST, "ground"),
+    Gimmick("chill", "빙결", SNOWFIELD, "footing"),
+    Gimmick("gust", "돌풍", WIND_PLATEAU, "position"),
+    Gimmick("rot", "부패", BOG, "breath"),
+    Gimmick("shock", "감전", WASTELAND, "spacing"),
 )
+
+_BY_KEY: dict[str, Gimmick] = {g.key: g for g in GIMMICKS}
+
+
+def by_key(key: str) -> Gimmick | None:
+    """The gimmick a glyph names, or None for one that names nothing."""
+    return _BY_KEY.get(key)
+
+
+def strike(
+    gimmick: Gimmick,
+    *,
+    at: pygame.Vector2,
+    victim: Body,
+    away_from: pygame.Vector2,
+    patches: list[Patch],
+    marks: list[pygame.Vector2],
+    world: WorldMap | None = None,
+) -> None:
+    """Raise one gimmick at a point, against whoever is standing on it.
+
+    THE one path. A boss calls it with the player as the victim and itself as
+    ``away_from``; the player's supreme glyph calls it with the golem it hit
+    and the player's own feet. Two implementations would be wrong twice, and
+    the wrong one would be whichever side got less play.
+
+    ``at`` and ``victim.pos`` are usually the same place and deliberately are
+    not required to be: a trick that lands short still leaves its ground where
+    it landed.
+    """
+    if gimmick.key == "burn":
+        scorch(at, patches)
+    elif gimmick.key == "chill":
+        freeze(at, patches)
+    elif gimmick.key == "rot":
+        foul(at, patches)
+    elif gimmick.key == "shock":
+        mark(at, marks)
+    elif gimmick.key == "gust":
+        # The only one that leaves nothing behind. It moves what it hits, and
+        # away from whoever threw it -- toward would be a pull, and the holes
+        # on the plateau are on the far side.
+        shove(victim, away_from, world)
+
 
 _BY_BIOME: dict[Biome, Gimmick] = {g.biome: g for g in GIMMICKS}
 

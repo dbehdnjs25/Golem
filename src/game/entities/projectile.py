@@ -17,6 +17,10 @@ class Projectile:
     damage: float
     radius: float = config.PROJECTILE_RADIUS
     ttl: float = config.PROJECTILE_TTL
+    # The gimmick a supreme glyph put on this shot, by key, or None. Carried on
+    # the shot rather than looked up at the moment of impact: by then the
+    # weapon may have been swapped, dropped, or carved over.
+    gimmick: str | None = None
 
     @property
     def is_expired(self) -> bool:

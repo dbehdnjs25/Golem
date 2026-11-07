@@ -18,6 +18,7 @@ from game.entities.core import Core
 from game.entities.enemy import Creature, Golem
 from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
+from game.entities.patch import Patch
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.entities.station import Station, place, stations_at
@@ -35,6 +36,7 @@ from game.items.glyphs import Glyph
 from game.items.item_kinds import (
     CHISEL,
     CORE_SHARD,
+    CORE_SIGIL,
     GRASS,
     OBSIDIAN_STONE,
     PEBBLE,
@@ -56,6 +58,7 @@ from game.systems import (
     crafting,
     detector,
     falling,
+    gimmicks,
     mining,
     raids,
     status,
@@ -147,27 +150,22 @@ _PIXEL_DIGITS = {
     "4": ("101", "101", "111", "001", "001"),
     "5": ("111", "100", "110", "001", "110"),
 }
-_HOTBAR_DIGIT_SCALE = 3 * config.UI_SCALE
+_HOTBAR_DIGIT_SCALE = 2 * config.UI_SCALE
 
 
-def _draw_hotbar_digit(surface: pygame.Surface, digit: int, x: int, y: int) -> None:
+def _draw_hotbar_digit(
+    surface: pygame.Surface,
+    digit: int,
+    x: int,
+    y: int,
+    color: tuple[int, int, int],
+) -> None:
     """Draw a tiny pixel key number on the slot well, before its item sprite."""
-    color = (205, 207, 190)
     for row, bits in enumerate(_PIXEL_DIGITS[str(digit)]):
         for column, bit in enumerate(bits):
             if bit == "1":
                 px = x + column * _HOTBAR_DIGIT_SCALE
                 py = y + row * _HOTBAR_DIGIT_SCALE
-                pygame.draw.rect(
-                    surface,
-                    (15, 18, 17),
-                    pygame.Rect(
-                        px + 1,
-                        py + 1,
-                        _HOTBAR_DIGIT_SCALE,
-                        _HOTBAR_DIGIT_SCALE,
-                    ),
-                )
                 pygame.draw.rect(
                     surface,
                     color,
@@ -186,6 +184,154 @@ def _draw_bar(
     """A left-anchored gauge filled to ``frac`` (0..1) of its width."""
     pygame.draw.rect(surface, bg, pygame.Rect(_BAR_X, y, _BAR_W, height))
     pygame.draw.rect(surface, color, pygame.Rect(_BAR_X, y, int(_BAR_W * frac), height))
+
+
+def _draw_pixel_round_rect(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int],
+    scale: int,
+    cut: int,
+) -> None:
+    rows = rect.height // scale
+    columns = rect.width // scale
+    for row in range(rows):
+        inset = max(0, cut - min(row, rows - 1 - row) - 1)
+        pygame.draw.rect(
+            surface,
+            color,
+            pygame.Rect(
+                rect.x + inset * scale,
+                rect.y + row * scale,
+                (columns - 2 * inset) * scale,
+                scale,
+            ),
+        )
+
+
+def _draw_pixel_round_right(
+    surface: pygame.Surface,
+    rect: pygame.Rect,
+    color: tuple[int, int, int],
+    scale: int,
+    cut: int,
+) -> None:
+    rows = rect.height // scale
+    columns = rect.width // scale
+    for row in range(rows):
+        inset = max(0, cut - min(row, rows - 1 - row) - 1)
+        pygame.draw.rect(
+            surface,
+            color,
+            pygame.Rect(
+                rect.x,
+                rect.y + row * scale,
+                (columns - inset) * scale,
+                scale,
+            ),
+        )
+
+
+def _draw_health_bar(surface: pygame.Surface, y: int, frac: float) -> None:
+    """Draw the health gauge joined to an enlarged square heart tile."""
+    scale = config.UI_SCALE
+    icon_size = 20 * scale
+    height = 14 * scale
+    cap_y = y - 4 * scale
+    x = _BAR_X
+    frame = (76, 81, 78)
+    frame_light = (105, 111, 106)
+    well = (32, 35, 34)
+
+    # Heart cap: stepped pixel corners echo the hotbar's square slots.
+    _draw_pixel_round_rect(surface, pygame.Rect(x, cap_y, icon_size, icon_size), frame, scale, 3)
+    _draw_pixel_round_rect(
+        surface,
+        pygame.Rect(x + scale, cap_y + scale, icon_size - 2 * scale, icon_size - 2 * scale),
+        frame_light,
+        scale,
+        2,
+    )
+    _draw_pixel_round_rect(
+        surface,
+        pygame.Rect(x + 3 * scale, cap_y + 3 * scale, icon_size - 6 * scale, icon_size - 6 * scale),
+        well,
+        scale,
+        1,
+    )
+
+    # Keep the square's right edge. The gauge has no left end cap, so its
+    # background begins flush against that edge and only its top/bottom/right
+    # frame lines are drawn.
+    body_x = x + icon_size
+    body_width = _BAR_W
+    _draw_pixel_round_right(
+        surface, pygame.Rect(body_x, y, body_width, height), frame_light, scale, 3
+    )
+    pygame.draw.line(
+        surface,
+        frame,
+        (body_x, y),
+        (body_x + body_width - 2 * scale - 1, y),
+        scale,
+    )
+    pygame.draw.line(
+        surface,
+        frame,
+        (body_x, y + height - scale),
+        (body_x + body_width - 2 * scale - 1, y + height - scale),
+        scale,
+    )
+    pygame.draw.rect(
+        surface,
+        frame,
+        pygame.Rect(body_x + body_width - 2 * scale, y + scale, scale, scale),
+    )
+    pygame.draw.line(
+        surface,
+        frame,
+        (body_x + body_width - scale, y + 2 * scale),
+        (body_x + body_width - scale, y + height - 2 * scale - 1),
+        scale,
+    )
+    pygame.draw.rect(
+        surface,
+        frame,
+        pygame.Rect(
+            body_x + body_width - 2 * scale,
+            y + height - 2 * scale,
+            scale,
+            scale,
+        ),
+    )
+    _draw_pixel_round_right(
+        surface,
+        pygame.Rect(body_x, y + 3 * scale, body_width - 3 * scale, height - 6 * scale),
+        well,
+        scale,
+        1,
+    )
+    heart = _ui_asset("health_heart.png")
+    surface.blit(
+        heart,
+        (
+            x + (icon_size - heart.get_width()) // 2,
+            cap_y + (icon_size - heart.get_height()) // 2,
+        ),
+    )
+
+    fill_x = body_x
+    fill_y = y + 3 * scale
+    fill_width = body_width - 3 * scale
+    fill_width = int(fill_width * max(0.0, min(1.0, frac)))
+    if fill_width:
+        _draw_pixel_round_right(
+            surface,
+            pygame.Rect(fill_x, fill_y, fill_width, height - 6 * scale),
+            (255, 0, 0),
+            scale,
+            1,
+        )
 
 
 class PlayScene(Scene):
@@ -216,6 +362,12 @@ class PlayScene(Scene):
         self.chasms = chasms.place(self.world, self.rng)
         self.ice = ice.place(self.world, self.rng)
         self.floor = Floor(self.world)  # the tiled ground, built in chunks
+        # What the tricks leave behind. One pair of lists for the whole field:
+        # a supreme glyph and a boss write to the same ground, because they
+        # are the same trick thrown from different ends.
+        self.patches: list[Patch] = []
+        self.marks: list[pygame.Vector2] = []
+        self.mark_timers: list[float] = []
         self._field: pygame.Surface | None = None  # reused when the zoom != 1
         self.player = Player(pos=pygame.Vector2(center))
         self.camera = Camera(
@@ -495,7 +647,17 @@ class PlayScene(Scene):
         # The world does not stop for a death: golems keep walking, shots keep
         # flying, and what was chasing the player is still out there on the way
         # back. Only the player's own half of the step waits.
-        combat.update_projectiles(dt, self.projectiles, self.enemies, self.world)
+        combat.update_projectiles(
+            dt,
+            self.projectiles,
+            self.enemies,
+            self.world,
+            patches=self.patches,
+            marks=self.marks,
+            from_pos=self.player.pos,
+        )
+        gimmicks.update_patches(dt, self.patches)
+        gimmicks.update_marks(dt, self.marks, self.mark_timers)
         combat.update_enemies(
             dt, self.enemies, self.player, self.world, self.core, raid=self.is_raid
         )
@@ -608,6 +770,12 @@ class PlayScene(Scene):
                 self._spend(STONE, self.core.repair(self._carried(STONE)))
                 moved = self.store.add(CORE_SHARD, self._carried(CORE_SHARD))
                 self._spend(CORE_SHARD, moved)
+                # A boss's sigil, if one is being carried. The cap opens HERE
+                # rather than where the boss died, which is what turns a win
+                # five biomes out into a walk home.
+                if self._carried(CORE_SIGIL) and self.core.offer_sigil():
+                    self._spend(CORE_SIGIL, 1)
+                    self._say(f"코어가 인장을 받았다 · 한계 {self.core.level_cap}")
             elif self._carried(CORE_SHARD) >= config.CORE_SHARDS_TO_IGNITE:
                 self._spend(CORE_SHARD, config.CORE_SHARDS_TO_IGNITE)
                 self.core.ignite()
@@ -1547,14 +1715,13 @@ class PlayScene(Scene):
         # and can land anywhere along it, including on top of these gauges --
         # when that happened the marker's label and the gauge under it became
         # unreadable at once.
-        backing = pygame.Surface(
-            (_BAR_X + _BAR_W + 8 * config.UI_SCALE, 68 * config.UI_SCALE), pygame.SRCALPHA
-        )
+        backing_width = _BAR_X + _BAR_W + 20 * config.UI_SCALE + 8 * config.UI_SCALE
+        backing = pygame.Surface((backing_width, 68 * config.UI_SCALE), pygame.SRCALPHA)
         backing.fill((0, 0, 0, config.HUD_BACKING))
         surface.blit(backing, (0, 4 * config.UI_SCALE))
         # hp first, at the top of the stack
         hp_frac = max(0.0, self.player.hp / self.player.max_hp) if self.player.max_hp else 0.0
-        _draw_bar(surface, 10 * config.UI_SCALE, 14 * config.UI_SCALE, hp_frac, config.HP_COLOR)
+        _draw_health_bar(surface, 10 * config.UI_SCALE, hp_frac)
         # stamina, directly under health: the two things a body runs out of
         wind = self.player.stamina / self.player.max_stamina
         _draw_bar(surface, 26 * config.UI_SCALE, 9 * config.UI_SCALE, wind, self.wind_colour)
@@ -1611,8 +1778,16 @@ class PlayScene(Scene):
         start_x = (surface.get_width() - group_width) // 2
         for i, slot in enumerate(self.hotbar.slots):
             x, y = start_x + i * step, surface.get_height() - 50 * config.UI_SCALE
-            surface.blit(selected_slot if i == self.hotbar.selected else empty_slot, (x, y))
-            _draw_hotbar_digit(surface, i + 1, x + 15 * config.UI_SCALE, y - 7 * config.UI_SCALE)
+            is_selected = i == self.hotbar.selected
+            surface.blit(selected_slot if is_selected else empty_slot, (x, y))
+            number_color = (143, 134, 106) if is_selected else (105, 111, 106)
+            _draw_hotbar_digit(
+                surface,
+                i + 1,
+                x + 17 * config.UI_SCALE,
+                y - 3 * config.UI_SCALE,
+                number_color,
+            )
             if slot is not None:
                 self._draw_contents(
                     surface,
