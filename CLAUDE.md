@@ -62,6 +62,7 @@ Run: `pytest` (coverage on by default). Prefer testing `entities/`, `systems/`,
 | Anything that touches a surface (the tiled floor) | `game/render/*.py` |
 | Assets | `assets/{images,sounds,fonts}/` |
 | Biome tile art + `tileset.json` | `assets/<biome>/tiles32/` |
+| Tuning scripts (not shipped; nothing in `src/` imports them) | `dev/*.py` |
 
 The `Ball` entity + `PlayScene` are **example scaffolding** demonstrating the
 pattern — replace or delete them once the real game is designed.
@@ -70,6 +71,7 @@ pattern — replace or delete them once the real game is designed.
 
 ```bash
 python -m game        # run
+python dev/speed.py 400   # run with one number turned up; see dev/README.md
 pytest                # test + coverage
 ruff check . && ruff format --check .
 mypy
