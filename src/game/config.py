@@ -385,6 +385,34 @@ GOLEM_SPEED_SCALING: Final[float] = 0.25
 # ore out there is better for exactly this reason: distance is the danger.
 GOLEM_SCALE_AT_EDGE: Final[float] = 4.0
 
+# --- Bosses ---------------------------------------------------------------
+# One per ring biome, in ring order, which is difficulty order. A boss is the
+# gate at the end of its biome, so the health climbs with the ring; the speeds
+# barely move, because a boss you cannot walk away from is not harder, it is
+# a different fight.
+BOSS_HP: Final[tuple[float, ...]] = (1200.0, 1500.0, 1850.0, 2250.0, 2800.0)
+BOSS_SPEED: Final[float] = 150.0  # px/s; slower than the player on purpose
+BOSS_RADIUS: Final[float] = 46.0
+BOSS_CONTACT_DPS: Final[float] = 14.0
+
+# Half health turns it, and the turn never goes back.
+BOSS_PHASE_AT: Final[float] = 0.5
+# What the second phase changes. Only three numbers, all in the same
+# direction: it hits harder, moves faster, and -- the one that favours the
+# player -- takes more. Without that last one a phase two is pure punishment
+# and the fight gets longer exactly when it got harder.
+BOSS_PHASE2_MIGHT: Final[float] = 1.35  # damage it deals
+BOSS_PHASE2_HASTE: Final[float] = 1.20  # how fast it moves
+BOSS_PHASE2_FRAILTY: Final[float] = 1.30  # damage it takes
+
+# The thrown arm. It flies out, and while it is away the boss cannot use its
+# close blows -- dodging it is what buys the window.
+ARM_SPEED: Final[float] = 560.0  # px/s outward
+ARM_RETURN_SPEED: Final[float] = 900.0  # faster coming home; the window is short
+ARM_RADIUS: Final[float] = 16.0
+ARM_REACH: Final[float] = 520.0  # how far it goes before giving up
+ARM_DRAG_TO: Final[float] = 70.0  # how close to the boss a catch leaves you
+
 # --- Wild animals ---------------------------------------------------------
 # They press around the ward at night and are the only thing abroad before the
 # core is lit -- with nowhere to heal, a night out is what makes lighting it
