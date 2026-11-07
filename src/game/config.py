@@ -565,6 +565,28 @@ PROJECTILE_SPEED: Final[float] = 520.0  # px/s
 PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
 PROJECTILE_RADIUS: Final[float] = 4.0
 
+# --- What the tricks leave on the floor, and the boss's own bar ------------
+# The ground a gimmick left has to read as ground rather than as an enemy, so
+# these sit near their biome's own colour and are drawn under everything that
+# stands on them.
+BURNING_COLOR: Final[tuple[int, int, int]] = (214, 108, 52)
+FROST_COLOR: Final[tuple[int, int, int]] = (168, 214, 232)
+SLUDGE_COLOR: Final[tuple[int, int, int]] = (96, 128, 66)
+MARK_COLOR: Final[tuple[int, int, int]] = (236, 214, 92)
+PATCH_ALPHA: Final[int] = 110
+
+# One bar, across the top, only while a boss is up. Away from the corner the
+# player's own health lives in: looking for your own health and finding the
+# boss's is the worst possible moment for that mistake.
+BOSS_BAR_Y: Final[int] = 10 * UI_SCALE
+BOSS_BAR_H: Final[int] = 13 * UI_SCALE
+# Wide enough to clear the gauge panel in the corner, which is drawn after it
+# and was covering the bar's left end -- the part that empties last.
+BOSS_BAR_MARGIN: Final[int] = 160 * UI_SCALE
+BOSS_BAR_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
+BOSS_PHASE2_COLOR: Final[tuple[int, int, int]] = (255, 196, 92)
+BOSS_BAR_BG: Final[tuple[int, int, int]] = (38, 32, 36)
+
 # --- Combat: colours (RGB) ----------------------------------------------------
 GOLEM_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
 PROJECTILE_COLOR: Final[tuple[int, int, int]] = (255, 240, 150)

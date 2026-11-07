@@ -14,11 +14,12 @@ import pygame
 from game import config
 from game.core.scene import Scene
 from game.entities.beast import Beast
+from game.entities.boss import BOSS_KINDS, Boss
 from game.entities.core import Core
 from game.entities.enemy import Creature, Golem
 from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
-from game.entities.patch import Patch
+from game.entities.patch import BURNING, FROST, SLUDGE, Patch
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.entities.station import Station, place, stations_at
@@ -61,6 +62,7 @@ from game.systems import (
     gimmicks,
     mining,
     raids,
+    spoils,
     status,
     survival,
     weather,
@@ -104,21 +106,37 @@ def _ui_asset(name: str) -> pygame.Surface:
     return _ui_images[name]
 
 
+def _has_final_consonant(word: str) -> bool:
+    """Whether a Korean word ends in a consonant, which both markers turn on.
+
+    Hangul syllables are laid out so that the remainder tells you. Anything
+    that is not a syllable counts as a vowel ending, which is the safer guess
+    for a loanword read aloud.
+    """
+    if not word:
+        return False
+    last = word.strip()[-1]
+    if not ("가" <= last <= "힣"):
+        return False
+    return (ord(last) - 0xAC00) % 28 != 0
+
+
+def _subject_particle(word: str) -> str:
+    """Korean's subject marker: 이 after a final consonant, 가 after a vowel.
+
+    Written out rather than as "이(가)", which is how a form looks and not how
+    anyone speaks.
+    """
+    return "이" if _has_final_consonant(word) else "가"
+
+
 def _object_particle(word: str) -> str:
     """Korean's object marker: 을 after a final consonant, 를 after a vowel.
 
     Picked from the last syllable rather than written as "을(를)", which is
-    how a form looks, not how anyone speaks. Hangul syllables are laid out so
-    that the remainder tells you whether there is a final consonant; anything
-    that is not a syllable gets the vowel form, which is the safer guess for
-    a loanword read aloud.
+    how a form looks, not how anyone speaks.
     """
-    if not word:
-        return "를"
-    last = word.strip()[-1]
-    if not ("가" <= last <= "힣"):
-        return "를"
-    return "를" if (ord(last) - 0xAC00) % 28 == 0 else "을"
+    return "을" if _has_final_consonant(word) else "를"
 
 
 def _font(size: int) -> pygame.font.Font:
@@ -139,6 +157,14 @@ def _font(size: int) -> pygame.font.Font:
 
 
 # HUD gauges: same left edge and width, stacked down the top-left corner.
+# What each sort of left-behind ground is drawn in. Near its biome's own
+# colour, so the floor still reads as that biome with a trick on it.
+_PATCH_COLORS = {
+    BURNING: config.BURNING_COLOR,
+    FROST: config.FROST_COLOR,
+    SLUDGE: config.SLUDGE_COLOR,
+}
+
 _BAR_X = 10 * config.UI_SCALE
 _BAR_W = 120 * config.UI_SCALE
 _BAR_BG = (60, 60, 80)
@@ -341,6 +367,8 @@ class PlayScene(Scene):
         self.temple_sites = self.world.temple_sites(self.rng)
         self.temples = temples.place(self.world, self.temple_sites, self.rng)
         self.arena = arena.Ground()
+        self.boss: Boss | None = None  # at most one, and only inside a temple
+        self.boss_temple: Temple | None = None  # which room it is holding
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
@@ -652,6 +680,7 @@ class PlayScene(Scene):
             self.projectiles,
             self.enemies,
             self.world,
+            boss=self.boss,
             patches=self.patches,
             marks=self.marks,
             timers=self.mark_timers,
@@ -659,6 +688,7 @@ class PlayScene(Scene):
         )
         gimmicks.update_patches(dt, self.patches)
         gimmicks.update_marks(dt, self.marks, self.mark_timers)
+        self._update_boss(dt)
         combat.update_enemies(
             dt, self.enemies, self.player, self.world, self.core, raid=self.is_raid
         )
@@ -808,6 +838,7 @@ class PlayScene(Scene):
         self._draw_sandstorm(surface)
         self._draw_burning(surface)
         self._draw_raid_edge(surface)
+        self._draw_boss_bar(surface)
         self._draw_hud(surface)
         # Markers last, so one is never lost behind the gauges. A ruin you
         # cannot see is a ruin you walk past. Each label carries its own
@@ -848,6 +879,8 @@ class PlayScene(Scene):
         # everything on a clock is drawn over it, because a wolf you cannot
         # tell from yourself is not atmosphere, it is a lost fight -- and a
         # loot pile with five minutes left should not be hidden by the hour.
+        self._draw_arena(surface)  # the floor this fight was given
+        self._draw_patches(surface)  # ground, so under what stands on it
         self._draw_night(surface)
         self._draw_loot(surface)
         on_field: tuple[Creature, ...] = (*self.enemies, *self.beasts)
@@ -874,6 +907,7 @@ class PlayScene(Scene):
                 self.camera.world_to_screen(self.core.pos),
                 self.core.radius,
             )
+        self._draw_boss(surface)  # under the player, who must never be hidden
         pygame.draw.circle(
             surface,
             config.PLAYER_COLOR,
@@ -1406,9 +1440,14 @@ class PlayScene(Scene):
                     self._raise_guards(temple)
             else:
                 temple.leave()
-        here = self.standing_in
-        if here is not None:
-            arena.hold(self.player.pos, here, self.arena)
+        # A sealed room holds against ITS temple, not against whichever one the
+        # player is currently counted as standing in. One long step -- a shove,
+        # a dodge, anything that moves further than the wall is thick -- would
+        # otherwise land outside, be read as having left, and never be pulled
+        # back.
+        held = self.boss_temple if self.arena.sealed else self.standing_in
+        if held is not None:
+            arena.hold(self.player.pos, held, self.arena)
 
     @property
     def standing_in(self) -> Temple | None:
@@ -1460,7 +1499,12 @@ class PlayScene(Scene):
         if refused is not None:
             self._say(refused)
             return
-        self._say("제단이 응답한다 — 아직 부를 것이 없다")
+        if not arena.summon(temple, self.arena, self.rng):
+            return  # one is already up
+        kind = BOSS_KINDS[biomes.RING_BIOMES.index(temple.biome)]
+        self.boss = Boss(pos=pygame.Vector2(temple.pos), kind=kind)
+        self.boss_temple = temple
+        self._say(f"{kind.name}{_subject_particle(kind.name)} 일어난다")
 
     def _open_structure(self) -> None:
         """Read whatever ruin the player is standing at.
@@ -1591,6 +1635,133 @@ class PlayScene(Scene):
             at = self.camera.world_to_screen(pool.pos)
             pygame.draw.circle(surface, config.LAVA_COLOR, at, pool.radius)
             pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
+
+    def _update_boss(self, dt: float) -> None:
+        """Walk it at the player, bruise whoever stands in it, and bury it.
+
+        It never leaves the room, so the room's own circle is its leash -- the
+        same one the sealed door holds the player with.
+        """
+        boss = self.boss
+        if boss is None or self.boss_temple is None:
+            return
+        temple = self.boss_temple
+        boss.update(dt, self.player.pos, temple.pos, temple.radius)
+        reach = boss.radius + self.player.radius
+        if boss.pos.distance_to(self.player.pos) <= reach and self.player.iframe_timer <= 0:
+            self.player.hp -= boss.contact_dps * dt
+        if boss.is_dead:
+            self._bury_boss(boss, temple)
+
+    def _bury_boss(self, boss: Boss, temple: Temple) -> None:
+        """Three things open, and one of them has to be carried home.
+
+        The glyph is learned where it fell, the door opens, and the sigil goes
+        in the bag -- the cap it buys is granted at the core, which is what
+        makes a win five biomes out into a walk back.
+        """
+        glyph = spoils.glyph_of(boss.kind)
+        self.grimoire.learn(glyph)
+        temple.boss_killed = True
+        self.core.bosses_killed += 1
+        arena.release(self.arena)
+        self.boss = None
+        self.boss_temple = None
+        carrying.store(spoils.drop_of(boss.kind), 1, self.backpack, self.hotbar)
+        self._say(
+            f"{boss.kind.name}{_object_particle(boss.kind.name)} 쓰러뜨렸다"
+            f" · {glyph.name}{_object_particle(glyph.name)} 배웠다"
+        )
+
+    def _draw_arena(self, surface: pygame.Surface) -> None:
+        """The hazards a summon laid on the temple floor.
+
+        Drawn from the arena's own lists rather than the world's: the room gets
+        a fresh floor every fight and the map must not keep it.
+        """
+        ground = self.arena
+        for pool in ground.lava:
+            at = self.camera.world_to_screen(pool.pos)
+            pygame.draw.circle(surface, config.LAVA_COLOR, at, pool.radius)
+            pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
+        for sheet in ground.ice:
+            at = self.camera.world_to_screen(sheet.pos)
+            pygame.draw.circle(surface, config.ICE_COLOR, at, sheet.radius)
+            pygame.draw.circle(surface, config.ICE_RIM_COLOR, at, sheet.radius, 3)
+        for hole in ground.chasms:
+            at = self.camera.world_to_screen(hole.pos)
+            pygame.draw.circle(surface, config.CHASM_COLOR, at, hole.radius)
+            pygame.draw.circle(surface, config.CHASM_RIM_COLOR, at, hole.radius, 4)
+        for bog in ground.mires:
+            at = self.camera.world_to_screen(bog.pos)
+            pygame.draw.circle(surface, config.MIRE_COLOR, at, bog.radius)
+            pygame.draw.circle(surface, config.MIRE_RIM_COLOR, at, bog.radius, 3)
+
+    def _draw_boss(self, surface: pygame.Surface) -> None:
+        """The thing itself, in its biome's colour and far bigger than a golem.
+
+        A second ring once it has turned, so the phase reads on the creature
+        as well as on the bar -- the bar is at the top of the screen and the
+        fight is not.
+        """
+        boss = self.boss
+        if boss is None:
+            return
+        at = self.camera.world_to_screen(boss.pos)
+        pygame.draw.circle(surface, boss.color, at, boss.radius)
+        pygame.draw.circle(surface, config.WHITE, at, boss.radius, 3)
+        if boss.phase == 2:
+            pygame.draw.circle(surface, config.BOSS_PHASE2_COLOR, at, boss.radius + 7, 3)
+
+    def _draw_boss_bar(self, surface: pygame.Surface) -> None:
+        """One bar across the top, only while a boss is up.
+
+        Away from the corner the player's own health lives in: hunting for
+        your own health and finding the boss's is the worst possible moment
+        for that mistake. It changes colour on the turn, so the second phase
+        announces itself without a line of text.
+        """
+        boss = self.boss
+        if boss is None:
+            return
+        margin = config.BOSS_BAR_MARGIN
+        width = surface.get_width() - margin * 2
+        left, top = margin, config.BOSS_BAR_Y
+        height = config.BOSS_BAR_H
+        pygame.draw.rect(surface, config.BOSS_BAR_BG, (left, top, width, height))
+        left_over = max(0.0, boss.hp / boss.kind.hp)
+        colour = config.BOSS_PHASE2_COLOR if boss.phase == 2 else config.BOSS_BAR_COLOR
+        pygame.draw.rect(surface, colour, (left, top, int(width * left_over), height))
+        pygame.draw.rect(surface, config.WHITE, (left, top, width, height), 2)
+        # Inside the bar rather than under it: under it the name sat exactly
+        # where the notes come up, and the two overlapped the moment a boss
+        # was called -- which is when a note is most likely to be on screen.
+        name = _font(11 * config.UI_SCALE).render(boss.kind.name, True, config.WHITE)
+        surface.blit(name, name.get_rect(center=(surface.get_width() // 2, top + height // 2)))
+
+    def _draw_patches(self, surface: pygame.Surface) -> None:
+        """What the tricks left on the floor, under everything that stands on it.
+
+        Translucent, because it is ground rather than a thing: solid, a burnt
+        patch would read as an enemy the player has to shoot.
+        """
+        for patch in self.patches:
+            colour = _PATCH_COLORS.get(patch.kind)
+            if colour is None:
+                continue
+            at = self.camera.world_to_screen(patch.pos)
+            size = int(patch.radius * 2)
+            tint = pygame.Surface((size, size), pygame.SRCALPHA)
+            pygame.draw.circle(
+                tint, (*colour, config.PATCH_ALPHA), (size // 2, size // 2), int(patch.radius)
+            )
+            surface.blit(tint, (at.x - patch.radius, at.y - patch.radius))
+            # A solid rim. The fill alone is a wash of colour whose edge is
+            # guesswork, and where the edge is is the whole question.
+            pygame.draw.circle(surface, colour, at, int(patch.radius), 3)
+        for spot in self.marks:
+            at = self.camera.world_to_screen(spot)
+            pygame.draw.circle(surface, config.MARK_COLOR, at, 10, 3)
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
         """The buildings, and whatever this visit's drawing put inside them.

@@ -5,7 +5,8 @@ unit-testable headlessly. Rendering lives in the scene, never here."""
 from __future__ import annotations
 
 import random
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+from typing import Protocol
 
 import pygame
 
@@ -109,10 +110,30 @@ def fire_staff(
     return 1.0 / config.STAFF_FIRE_RATE, [shot]
 
 
-def _first_hit(shot: Projectile, enemies: list[Golem]) -> Golem | None:
-    for enemy in enemies:
-        if not enemy.is_dead and shot.pos.distance_to(enemy.pos) <= shot.radius + enemy.radius:
-            return enemy
+class Hurtable(Protocol):
+    """Anything a shot can land on: a golem, an animal, a boss.
+
+    A protocol rather than a shared base class, because the three have nothing
+    else in common -- one marches on the core, one hunts, one holds a room --
+    and inventing an ancestor for them would be inventing a relationship that
+    is not there.
+    """
+
+    pos: pygame.Vector2
+
+    @property
+    def radius(self) -> float: ...
+
+    @property
+    def is_dead(self) -> bool: ...
+
+    def damage(self, amount: float) -> None: ...
+
+
+def _first_hit(shot: Projectile, targets: Sequence[Hurtable]) -> Hurtable | None:
+    for target in targets:
+        if not target.is_dead and shot.pos.distance_to(target.pos) <= shot.radius + target.radius:
+            return target
     return None
 
 
@@ -121,6 +142,7 @@ def update_projectiles(
     projectiles: list[Projectile],
     enemies: list[Golem],
     world: WorldMap,
+    boss: Hurtable | None = None,
     patches: list[Patch] | None = None,
     marks: list[pygame.Vector2] | None = None,
     timers: list[float] | None = None,
@@ -139,7 +161,10 @@ def update_projectiles(
         shot.update(dt)
         if shot.is_expired or not world.contains(shot.pos):
             continue
-        hit = _first_hit(shot, enemies)
+        # The boss first: it is the thing in the room, and a golem standing
+        # in front of it must not eat the shot that was aimed past it.
+        hit = _first_hit(shot, [boss] if boss is not None else [])
+        hit = hit if hit is not None else _first_hit(shot, enemies)
         if hit is not None:
             hit.damage(shot.damage)
             _raise_trick(shot, hit, patches, marks, timers, from_pos, world)
@@ -153,7 +178,7 @@ def update_projectiles(
 
 def _raise_trick(
     shot: Projectile,
-    hit: Golem,
+    hit: Hurtable,
     patches: list[Patch] | None,
     marks: list[pygame.Vector2] | None,
     timers: list[float] | None,
