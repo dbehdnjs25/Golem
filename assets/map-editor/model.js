@@ -26,11 +26,11 @@ const MeadowModel = (() => {
     }
     if(next.biome==='snowfield'){
       if(raw.tileset!==next.tileset)return next;
-      if(raw.data.some(id=>id>=25))throw Error('\uC124\uC6D0 \uB9F5\uC758 \uD0C0\uC77C \uBC88\uD638\uAC00 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.');
+      if(raw.data.some(id=>id>=7))throw Error('\uC124\uC6D0 \uB9F5\uC758 \uD0C0\uC77C \uBC88\uD638\uAC00 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.');
     }
     if(next.biome==='wasteland'){
       if(raw.tileset!==next.tileset)return next;
-      if(raw.data.some(id=>id>=43))throw Error('황무지 맵의 타일 번호가 올바르지 않습니다.');
+      if(raw.data.some(id=>id>=25))throw Error('황무지 맵의 타일 번호가 올바르지 않습니다.');
     }
     // Earlier bog maps used grassland IDs. Replace that shared ground on import.
     if(next.biome==='bog'){
@@ -39,8 +39,7 @@ const MeadowModel = (() => {
     }
     if(next.biome==='burnt_forest'){
       if(raw.tileset!==next.tileset&&raw.tileset!=='../volcano/tiles32/volcano-32.webp')return next;
-      if(raw.data.some(id=>id>=43))throw Error('불탄 숲 맵의 타일 번호가 올바르지 않습니다.');
-      return {...next,data:raw.data.map(id=>id>=10&&id<=12?id+6:id)};
+      if(raw.data.some(id=>id>=19))throw Error('불탄 숲 맵의 타일 번호가 올바르지 않습니다.');
     }
     return {...next,data:[...raw.data]};
   }

@@ -3,7 +3,7 @@
   "tilewidth": 32,
   "tileheight": 32,
   "columns": 4,
-  "tilecount": 22,
+  "tilecount": 19,
   "margin": 0,
   "spacing": 0,
   "tiles": [
@@ -149,6 +149,7 @@
     },
     {
       "id": 10,
+      "name": "불씨 1개 · 랜덤 1",
       "file": "burnt_10.webp",
       "rect": [
         64,
@@ -156,15 +157,13 @@
         32,
         32
       ],
-      "hidden": true,
-      "name": "불씨 2개 · 랜덤 1",
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 1",
-      "replacement": 16
+      "family": 10,
+      "position": "랜덤 1"
     },
     {
       "id": 11,
+      "name": "불씨 1개 · 랜덤 2",
       "file": "burnt_11.webp",
       "rect": [
         96,
@@ -172,15 +171,13 @@
         32,
         32
       ],
-      "hidden": true,
-      "name": "불씨 2개 · 랜덤 2",
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 2",
-      "replacement": 17
+      "family": 10,
+      "position": "랜덤 2"
     },
     {
       "id": 12,
+      "name": "불씨 1개 · 랜덤 3",
       "file": "burnt_12.webp",
       "rect": [
         0,
@@ -188,16 +185,13 @@
         32,
         32
       ],
-      "hidden": true,
-      "name": "불씨 2개 · 랜덤 3",
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 3",
-      "replacement": 18
+      "family": 10,
+      "position": "랜덤 3"
     },
     {
       "id": 13,
-      "name": "불씨 1개 · 랜덤 1",
+      "name": "불씨 2개 · 랜덤 1",
       "file": "burnt_13.webp",
       "rect": [
         32,
@@ -211,7 +205,7 @@
     },
     {
       "id": 14,
-      "name": "불씨 1개 · 랜덤 2",
+      "name": "불씨 2개 · 랜덤 2",
       "file": "burnt_14.webp",
       "rect": [
         64,
@@ -225,7 +219,7 @@
     },
     {
       "id": 15,
-      "name": "불씨 1개 · 랜덤 3",
+      "name": "불씨 2개 · 랜덤 3",
       "file": "burnt_15.webp",
       "rect": [
         96,
@@ -239,7 +233,7 @@
     },
     {
       "id": 16,
-      "name": "불씨 2개 · 랜덤 1",
+      "name": "불씨 2개 · 랜덤 4",
       "file": "burnt_16.webp",
       "rect": [
         0,
@@ -248,12 +242,12 @@
         32
       ],
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 1"
+      "family": 13,
+      "position": "랜덤 4"
     },
     {
       "id": 17,
-      "name": "불씨 2개 · 랜덤 2",
+      "name": "불씨 2개 · 랜덤 5",
       "file": "burnt_17.webp",
       "rect": [
         32,
@@ -262,12 +256,12 @@
         32
       ],
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 2"
+      "family": 13,
+      "position": "랜덤 5"
     },
     {
       "id": 18,
-      "name": "불씨 2개 · 랜덤 3",
+      "name": "불씨 2개 · 랜덤 6",
       "file": "burnt_18.webp",
       "rect": [
         64,
@@ -276,49 +270,7 @@
         32
       ],
       "category": "embers",
-      "family": 16,
-      "position": "랜덤 3"
-    },
-    {
-      "id": 19,
-      "name": "불씨 2개 · 랜덤 4",
-      "file": "burnt_19.webp",
-      "rect": [
-        96,
-        128,
-        32,
-        32
-      ],
-      "category": "embers",
-      "family": 16,
-      "position": "랜덤 4"
-    },
-    {
-      "id": 20,
-      "name": "불씨 2개 · 랜덤 5",
-      "file": "burnt_20.webp",
-      "rect": [
-        0,
-        160,
-        32,
-        32
-      ],
-      "category": "embers",
-      "family": 16,
-      "position": "랜덤 5"
-    },
-    {
-      "id": 21,
-      "name": "불씨 2개 · 랜덤 6",
-      "file": "burnt_21.webp",
-      "rect": [
-        32,
-        160,
-        32,
-        32
-      ],
-      "category": "embers",
-      "family": 16,
+      "family": 13,
       "position": "랜덤 6"
     }
   ]

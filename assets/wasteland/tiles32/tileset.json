@@ -3,7 +3,7 @@
   "tilewidth": 32,
   "tileheight": 32,
   "columns": 4,
-  "tilecount": 43,
+  "tilecount": 25,
   "margin": 0,
   "spacing": 0,
   "tiles": [
@@ -23,7 +23,7 @@
     },
     {
       "id": 1,
-      "name": "마른 덤불 · 랜덤 1",
+      "name": "갈라진 땅 1 · 기본 방향",
       "file": "waste_01.webp",
       "rect": [
         32,
@@ -31,14 +31,13 @@
         32,
         32
       ],
-      "category": "plants",
+      "category": "ground",
       "family": 1,
-      "position": "랜덤 1",
-      "hidden": true
+      "position": "기본 방향 1"
     },
     {
       "id": 2,
-      "name": "마른 덤불 · 랜덤 2",
+      "name": "갈라진 땅 1 · 90° 회전 · 우측",
       "file": "waste_02.webp",
       "rect": [
         64,
@@ -46,14 +45,13 @@
         32,
         32
       ],
-      "category": "plants",
+      "category": "ground",
       "family": 1,
-      "position": "랜덤 2",
-      "hidden": true
+      "position": "90° 회전 · 우측 1"
     },
     {
       "id": 3,
-      "name": "마른 덤불 · 랜덤 3",
+      "name": "갈라진 땅 1 · 180° 회전 · 아래쪽",
       "file": "waste_03.webp",
       "rect": [
         96,
@@ -61,14 +59,13 @@
         32,
         32
       ],
-      "category": "plants",
+      "category": "ground",
       "family": 1,
-      "position": "랜덤 3",
-      "hidden": true
+      "position": "180° 회전 · 아래쪽 1"
     },
     {
       "id": 4,
-      "name": "선인장 · 랜덤 1",
+      "name": "갈라진 땅 1 · 270° 회전 · 좌측",
       "file": "waste_04.webp",
       "rect": [
         0,
@@ -76,14 +73,13 @@
         32,
         32
       ],
-      "category": "plants",
-      "family": 2,
-      "position": "랜덤 1",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "270° 회전 · 좌측 1"
     },
     {
       "id": 5,
-      "name": "선인장 · 랜덤 2",
+      "name": "갈라진 땅 2 · 기본 방향",
       "file": "waste_05.webp",
       "rect": [
         32,
@@ -91,14 +87,13 @@
         32,
         32
       ],
-      "category": "plants",
-      "family": 2,
-      "position": "랜덤 2",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "기본 방향 2"
     },
     {
       "id": 6,
-      "name": "선인장 · 랜덤 3",
+      "name": "갈라진 땅 2 · 90° 회전 · 우측",
       "file": "waste_06.webp",
       "rect": [
         64,
@@ -106,14 +101,13 @@
         32,
         32
       ],
-      "category": "plants",
-      "family": 2,
-      "position": "랜덤 3",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "90° 회전 · 우측 2"
     },
     {
       "id": 7,
-      "name": "풍화된 사암 · 랜덤 1",
+      "name": "갈라진 땅 2 · 180° 회전 · 아래쪽",
       "file": "waste_07.webp",
       "rect": [
         96,
@@ -121,14 +115,13 @@
         32,
         32
       ],
-      "category": "stones",
-      "family": 3,
-      "position": "랜덤 1",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "180° 회전 · 아래쪽 2"
     },
     {
       "id": 8,
-      "name": "풍화된 사암 · 랜덤 2",
+      "name": "갈라진 땅 2 · 270° 회전 · 좌측",
       "file": "waste_08.webp",
       "rect": [
         0,
@@ -136,14 +129,13 @@
         32,
         32
       ],
-      "category": "stones",
-      "family": 3,
-      "position": "랜덤 2",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "270° 회전 · 좌측 2"
     },
     {
       "id": 9,
-      "name": "풍화된 사암 · 랜덤 3",
+      "name": "갈라진 땅 3 · 기본 방향",
       "file": "waste_09.webp",
       "rect": [
         32,
@@ -151,14 +143,13 @@
         32,
         32
       ],
-      "category": "stones",
-      "family": 3,
-      "position": "랜덤 3",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "기본 방향 3"
     },
     {
       "id": 10,
-      "name": "바람 자국 · 랜덤 1",
+      "name": "갈라진 땅 3 · 90° 회전 · 우측",
       "file": "waste_10.webp",
       "rect": [
         64,
@@ -167,13 +158,12 @@
         32
       ],
       "category": "ground",
-      "family": 4,
-      "position": "랜덤 1",
-      "hidden": true
+      "family": 1,
+      "position": "90° 회전 · 우측 3"
     },
     {
       "id": 11,
-      "name": "바람 자국 · 랜덤 2",
+      "name": "갈라진 땅 3 · 180° 회전 · 아래쪽",
       "file": "waste_11.webp",
       "rect": [
         96,
@@ -182,13 +172,12 @@
         32
       ],
       "category": "ground",
-      "family": 4,
-      "position": "랜덤 2",
-      "hidden": true
+      "family": 1,
+      "position": "180° 회전 · 아래쪽 3"
     },
     {
       "id": 12,
-      "name": "바람 자국 · 랜덤 3",
+      "name": "갈라진 땅 3 · 270° 회전 · 좌측",
       "file": "waste_12.webp",
       "rect": [
         0,
@@ -197,13 +186,12 @@
         32
       ],
       "category": "ground",
-      "family": 4,
-      "position": "랜덤 3",
-      "hidden": true
+      "family": 1,
+      "position": "270° 회전 · 좌측 3"
     },
     {
       "id": 13,
-      "name": "덤불과 사암 · 랜덤 1",
+      "name": "갈라진 땅 4 · 기본 방향",
       "file": "waste_13.webp",
       "rect": [
         32,
@@ -211,14 +199,13 @@
         32,
         32
       ],
-      "category": "mixed",
-      "family": 5,
-      "position": "랜덤 1",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "기본 방향 4"
     },
     {
       "id": 14,
-      "name": "덤불과 사암 · 랜덤 2",
+      "name": "갈라진 땅 4 · 90° 회전 · 우측",
       "file": "waste_14.webp",
       "rect": [
         64,
@@ -226,14 +213,13 @@
         32,
         32
       ],
-      "category": "mixed",
-      "family": 5,
-      "position": "랜덤 2",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "90° 회전 · 우측 4"
     },
     {
       "id": 15,
-      "name": "덤불과 사암 · 랜덤 3",
+      "name": "갈라진 땅 4 · 180° 회전 · 아래쪽",
       "file": "waste_15.webp",
       "rect": [
         96,
@@ -241,14 +227,13 @@
         32,
         32
       ],
-      "category": "mixed",
-      "family": 5,
-      "position": "랜덤 3",
-      "hidden": true
+      "category": "ground",
+      "family": 1,
+      "position": "180° 회전 · 아래쪽 4"
     },
     {
       "id": 16,
-      "name": "갈라진 땅 1 · 기본 방향",
+      "name": "갈라진 땅 4 · 270° 회전 · 좌측",
       "file": "waste_16.webp",
       "rect": [
         0,
@@ -257,12 +242,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "기본 방향 1"
+      "family": 1,
+      "position": "270° 회전 · 좌측 4"
     },
     {
       "id": 17,
-      "name": "갈라진 땅 1 · 90° 회전 · 우측",
+      "name": "갈라진 땅 5 · 기본 방향",
       "file": "waste_17.webp",
       "rect": [
         32,
@@ -271,12 +256,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 1"
+      "family": 1,
+      "position": "기본 방향 5"
     },
     {
       "id": 18,
-      "name": "갈라진 땅 1 · 180° 회전 · 아래쪽",
+      "name": "갈라진 땅 5 · 90° 회전 · 우측",
       "file": "waste_18.webp",
       "rect": [
         64,
@@ -285,12 +270,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 1"
+      "family": 1,
+      "position": "90° 회전 · 우측 5"
     },
     {
       "id": 19,
-      "name": "갈라진 땅 1 · 270° 회전 · 좌측",
+      "name": "갈라진 땅 5 · 180° 회전 · 아래쪽",
       "file": "waste_19.webp",
       "rect": [
         96,
@@ -299,12 +284,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "270° 회전 · 좌측 1"
+      "family": 1,
+      "position": "180° 회전 · 아래쪽 5"
     },
     {
       "id": 20,
-      "name": "갈라진 땅 2 · 기본 방향",
+      "name": "갈라진 땅 5 · 270° 회전 · 좌측",
       "file": "waste_20.webp",
       "rect": [
         0,
@@ -313,12 +298,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "기본 방향 2"
+      "family": 1,
+      "position": "270° 회전 · 좌측 5"
     },
     {
       "id": 21,
-      "name": "갈라진 땅 2 · 90° 회전 · 우측",
+      "name": "갈라진 땅 6 · 기본 방향",
       "file": "waste_21.webp",
       "rect": [
         32,
@@ -327,12 +312,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 2"
+      "family": 1,
+      "position": "기본 방향 6"
     },
     {
       "id": 22,
-      "name": "갈라진 땅 2 · 180° 회전 · 아래쪽",
+      "name": "갈라진 땅 6 · 90° 회전 · 우측",
       "file": "waste_22.webp",
       "rect": [
         64,
@@ -341,12 +326,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 2"
+      "family": 1,
+      "position": "90° 회전 · 우측 6"
     },
     {
       "id": 23,
-      "name": "갈라진 땅 2 · 270° 회전 · 좌측",
+      "name": "갈라진 땅 6 · 180° 회전 · 아래쪽",
       "file": "waste_23.webp",
       "rect": [
         96,
@@ -355,12 +340,12 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "270° 회전 · 좌측 2"
+      "family": 1,
+      "position": "180° 회전 · 아래쪽 6"
     },
     {
       "id": 24,
-      "name": "갈라진 땅 3 · 기본 방향",
+      "name": "갈라진 땅 6 · 270° 회전 · 좌측",
       "file": "waste_24.webp",
       "rect": [
         0,
@@ -369,263 +354,8 @@
         32
       ],
       "category": "ground",
-      "family": 16,
-      "position": "기본 방향 3"
-    },
-    {
-      "id": 25,
-      "name": "갈라진 땅 3 · 90° 회전 · 우측",
-      "file": "waste_25.webp",
-      "rect": [
-        32,
-        192,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 3"
-    },
-    {
-      "id": 26,
-      "name": "갈라진 땅 3 · 180° 회전 · 아래쪽",
-      "file": "waste_26.webp",
-      "rect": [
-        64,
-        192,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 3"
-    },
-    {
-      "id": 27,
-      "name": "갈라진 땅 3 · 270° 회전 · 좌측",
-      "file": "waste_27.webp",
-      "rect": [
-        96,
-        192,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "270° 회전 · 좌측 3"
-    },
-    {
-      "id": 28,
-      "name": "갈라진 땅 4 · 기본 방향",
-      "file": "waste_28.webp",
-      "rect": [
-        0,
-        224,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "기본 방향 4"
-    },
-    {
-      "id": 29,
-      "name": "갈라진 땅 4 · 90° 회전 · 우측",
-      "file": "waste_29.webp",
-      "rect": [
-        32,
-        224,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 4"
-    },
-    {
-      "id": 30,
-      "name": "갈라진 땅 4 · 180° 회전 · 아래쪽",
-      "file": "waste_30.webp",
-      "rect": [
-        64,
-        224,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 4"
-    },
-    {
-      "id": 31,
-      "name": "갈라진 땅 4 · 270° 회전 · 좌측",
-      "file": "waste_31.webp",
-      "rect": [
-        96,
-        224,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "270° 회전 · 좌측 4"
-    },
-    {
-      "id": 32,
-      "name": "갈라진 땅 5 · 기본 방향",
-      "file": "waste_32.webp",
-      "rect": [
-        0,
-        256,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "기본 방향 5"
-    },
-    {
-      "id": 33,
-      "name": "갈라진 땅 5 · 90° 회전 · 우측",
-      "file": "waste_33.webp",
-      "rect": [
-        32,
-        256,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 5"
-    },
-    {
-      "id": 34,
-      "name": "갈라진 땅 5 · 180° 회전 · 아래쪽",
-      "file": "waste_34.webp",
-      "rect": [
-        64,
-        256,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 5"
-    },
-    {
-      "id": 35,
-      "name": "갈라진 땅 5 · 270° 회전 · 좌측",
-      "file": "waste_35.webp",
-      "rect": [
-        96,
-        256,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "270° 회전 · 좌측 5"
-    },
-    {
-      "id": 36,
-      "name": "갈라진 땅 6 · 기본 방향",
-      "file": "waste_36.webp",
-      "rect": [
-        0,
-        288,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "기본 방향 6"
-    },
-    {
-      "id": 37,
-      "name": "갈라진 땅 6 · 90° 회전 · 우측",
-      "file": "waste_37.webp",
-      "rect": [
-        32,
-        288,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "90° 회전 · 우측 6"
-    },
-    {
-      "id": 38,
-      "name": "갈라진 땅 6 · 180° 회전 · 아래쪽",
-      "file": "waste_38.webp",
-      "rect": [
-        64,
-        288,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
-      "position": "180° 회전 · 아래쪽 6"
-    },
-    {
-      "id": 39,
-      "name": "갈라진 땅 6 · 270° 회전 · 좌측",
-      "file": "waste_39.webp",
-      "rect": [
-        96,
-        288,
-        32,
-        32
-      ],
-      "category": "ground",
-      "family": 16,
+      "family": 1,
       "position": "270° 회전 · 좌측 6"
-    },
-    {
-      "id": 40,
-      "name": "선인장 · 모양 4",
-      "file": "waste_40.webp",
-      "rect": [
-        0,
-        320,
-        32,
-        32
-      ],
-      "category": "plants",
-      "family": 2,
-      "position": "모양 4",
-      "hidden": true
-    },
-    {
-      "id": 41,
-      "name": "선인장 · 모양 5",
-      "file": "waste_41.webp",
-      "rect": [
-        32,
-        320,
-        32,
-        32
-      ],
-      "category": "plants",
-      "family": 2,
-      "position": "모양 5",
-      "hidden": true
-    },
-    {
-      "id": 42,
-      "name": "선인장 · 모양 6",
-      "file": "waste_42.webp",
-      "rect": [
-        64,
-        320,
-        32,
-        32
-      ],
-      "category": "plants",
-      "family": 2,
-      "position": "모양 6",
-      "hidden": true
     }
   ]
 }

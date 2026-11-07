@@ -64,10 +64,9 @@ for group,(name,category,draw) in enumerate([('탄 나뭇가지','wood',branch),
         i=len(tiles);tiles.append(s)
         entries.append(dict(id=i,name=f'{name} · 랜덤 {variant}',file=f'burnt_{i:02}.webp',
                             rect=[i%4*32,i//4*32,32,32],category=category,family=family,position=f'랜덤 {variant}'))
-# Reserve the retired three-ember IDs so existing maps keep their other IDs.
-for i in range(10,13):
-    tiles.append(base.copy())
-    entries.append(dict(id=i,file=f'burnt_{i:02}.webp',rect=[i%4*32,i//4*32,32,32],hidden=True))
+# The retired three-ember ids were reserved here as three blanks so existing
+# maps kept their other ids. There are no saved maps, so the ember tiles
+# follow the wood and charcoal directly.
 for count in (1, 2):
     family=len(tiles)
     rng=random.Random(20261020+count)
@@ -85,10 +84,6 @@ for count in (1, 2):
         i=len(tiles);tiles.append(s)
         entries.append(dict(id=i,name=f'불씨 {count}개 · 랜덤 {variant}',file=f'burnt_{i:02}.webp',
                             rect=[i%4*32,i//4*32,32,32],category='embers',family=family,position=f'랜덤 {variant}'))
-for old_id,new_id in [(10,16),(11,17),(12,18)]:
-    tiles[old_id]=tiles[new_id].copy()
-    entries[old_id].update(name=entries[new_id]['name'],category='embers',family=16,
-                           position=entries[new_id]['position'],replacement=new_id)
 visible=[s for entry,s in zip(entries,tiles) if not entry.get('hidden')]
 sheet=Image.new('RGB',(128,((len(tiles)+3)//4)*32),(78,72,64))
 for entry,s in zip(entries,tiles):

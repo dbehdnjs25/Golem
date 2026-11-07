@@ -138,14 +138,10 @@ def cracked(s,shape,pose,rng):
 
 tiles=[base]
 entries=[dict(id=0,name='황무지 기본 땅',file='waste_00.webp',rect=[0,0,32,32],category='ground',family=0,position='기본')]
-groups=[('마른 덤불','plants',scrub),('선인장','plants',cactus),('풍화된 사암','stones',rocks),
-        ('바람 자국','ground',tracks),('덤불과 사암','mixed',mixed)]
-for family,(name,category,draw) in enumerate(groups,start=1):
-    for variant,(x,y) in enumerate([(10,12),(20,17),(13,20)],start=1):
-        s=base.copy();draw(s,x,y,random.Random(40+family*7+variant))
-        i=len(tiles);tiles.append(s)
-        entries.append(dict(id=i,name=f'{name} · 랜덤 {variant}',file=f'waste_{i:02}.webp',
-                            rect=[i%4*32,i//4*32,32,32],category=category,family=family,position=f'랜덤 {variant}',hidden=(family==4)))
+# The scrub, cactus, sandstone, wind-track and mixed families sat here as
+# eighteen entries whose art was overwritten with plain ground, kept only so
+# saved maps would not have their ids shift. There are no saved maps, so the
+# cracked earth follows the ground directly.
 family=len(tiles)
 pose_names=['\uAE30\uBCF8 \uBC29\uD5A5','90\u00B0 \uD68C\uC804 \u00B7 \uC6B0\uCE21','180\u00B0 \uD68C\uC804 \u00B7 \uC544\uB798\uCABD','270\u00B0 \uD68C\uC804 \u00B7 \uC88C\uCE21']
 for shape in range(1,7):
@@ -154,16 +150,6 @@ for shape in range(1,7):
         i=len(tiles);tiles.append(s)
         entries.append(dict(id=i,name=f'\uAC08\uB77C\uC9C4 \uB545 {shape} \u00B7 {pose_name}',file=f'waste_{i:02}.webp',
                             rect=[i%4*32,i//4*32,32,32],category='ground',family=family,position=f'{pose_name} {shape}'))
-# Add more cactus silhouettes while leaving existing tile IDs intact.
-for variant,(x,y) in enumerate([(10,12),(20,17),(13,20)],start=4):
-    s=base.copy();cactus(s,x,y,random.Random(249 if variant==6 else 240+variant))
-    i=len(tiles);tiles.append(s)
-    entries.append(dict(id=i,name=f'\uC120\uC778\uC7A5 \u00B7 \uBAA8\uC591 {variant}',file=f'waste_{i:02}.webp',
-                        rect=[i%4*32,i//4*32,32,32],category='plants',family=2,position=f'\uBAA8\uC591 {variant}'))
-for entry in entries:
-    if entry.get('family') in (1,2,3,4,5):
-        entry['hidden']=True
-        tiles[entry['id']]=base.copy()
 sheet=Image.new('RGB',(128,((len(tiles)+3)//4)*32))
 for entry,s in zip(entries,tiles):
     for y in range(32):
@@ -173,13 +159,12 @@ for entry,s in zip(entries,tiles):
     s.save(root/entry['file'],'WEBP',lossless=True,exact=True)
     with Image.open(root/entry['file']) as saved:assert saved.convert('RGB').tobytes()==s.tobytes()
     sheet.paste(s,tuple(entry['rect'][:2]))
-assert len(tiles)==43
-assert all(tiles[e['id']].tobytes()==base.tobytes() for e in entries if e.get('hidden'))
+assert len(tiles)==25
 sheet.save(root/'wasteland-32.webp','WEBP',lossless=True,exact=True)
-meta=dict(image='wasteland-32.webp',tilewidth=32,tileheight=32,columns=4,tilecount=43,margin=0,spacing=0,tiles=entries)
+meta=dict(image='wasteland-32.webp',tilewidth=32,tileheight=32,columns=4,tilecount=25,margin=0,spacing=0,tiles=entries)
 (root/'tileset.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
 preview=Image.new('RGB',(256,256));rng=random.Random(56)
 for y in range(8):
     for x in range(8):preview.paste(tiles[0] if rng.random()<.6 else rng.choice(tiles[1:]),(x*32,y*32))
 preview.save(root/'variants-preview.png')
-print('Verified: 43 wasteland tiles, cracked earth variants, shared edges, lossless WebP.')
+print('Verified: 25 wasteland tiles, cracked earth variants, shared edges, lossless WebP.')

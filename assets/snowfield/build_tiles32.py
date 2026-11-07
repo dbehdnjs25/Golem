@@ -78,25 +78,17 @@ def snow_mound(s,variant):
 
 tiles=[base]
 entries=[dict(id=0,name='\uC124\uC6D0 \uAE30\uBCF8 \uB545',file='snow_00.webp',rect=[0,0,32,32],category='ground',family=0,position='\uAE30\uBCF8')]
-groups=[('\uB208\uB355\uC774','ground',drift),('\uC5BC\uC74C \uC870\uAC01','ground',ice),
-        ('\uC11C\uB9AC \uD480','plants',frost_grass),('\uC11C\uB9AC \uADE0\uC5F4','ground',frost_crack),
-        ('\uB208 \uB36E\uC778 \uB3CC','stones',stones),('\uC5BC\uC74C\uACFC \uD480','mixed',mixed)]
-for family,(name,category,draw) in enumerate(groups,start=1):
-    for variant,(x,y) in enumerate([(10,12),(21,16),(14,21)],start=1):
-        s=base.copy();draw(s,x,y,random.Random(500+family*13+variant))
-        i=len(tiles);tiles.append(s)
-        entries.append(dict(id=i,name=f'{name} ? {variant}',file=f'snow_{i:02}.webp',
-                            rect=[i%4*32,i//4*32,32,32],category=category,family=family,position=f'\uBCC0\uD615 {variant}'))
-# Add larger snowdrifts after the legacy IDs so saved maps keep their tile meanings.
+# Families 1-6 sat here as eighteen entries whose art was overwritten with plain
+# ground, kept only so saved maps would not have their tile ids shift. There are
+# no saved maps, so they are gone and the drifts follow the ground directly.
+# The editor reads `family` as the id of the group's first tile, so it is taken
+# from the tile count rather than written in by hand.
+family=len(tiles)
 for variant in range(1,7):
     s=base.copy();snow_mound(s,variant)
     i=len(tiles);tiles.append(s)
     entries.append(dict(id=i,name=f'\uB208\uB354\uBBF8 \uBCC0\uD615 {variant}',file=f'snow_{i:02}.webp',
-                        rect=[i%4*32,i//4*32,32,32],category='ground',family=7,position=f'\uD06C\uAE30\uC640 \uBAA8\uC591 {variant}'))
-for entry in entries:
-    if 0<entry.get('family',0)<7:
-        entry['hidden']=True
-        tiles[entry['id']]=base.copy()
+                        rect=[i%4*32,i//4*32,32,32],category='ground',family=family,position=f'\uD06C\uAE30\uC640 \uBAA8\uC591 {variant}'))
 sheet=Image.new('RGB',(128,((len(tiles)+3)//4)*32))
 for entry,s in zip(entries,tiles):
     for y in range(32):
@@ -106,16 +98,15 @@ for entry,s in zip(entries,tiles):
     s.save(root/entry['file'],'WEBP',lossless=True,exact=True)
     with Image.open(root/entry['file']) as saved:assert saved.convert('RGB').tobytes()==s.tobytes()
     sheet.paste(s,tuple(entry['rect'][:2]))
-assert len(tiles)==25
-assert len({tiles[e['id']].tobytes() for e in entries if not e.get('hidden')})==7
-assert all(tiles[e['id']].tobytes()==base.tobytes() for e in entries if e.get('hidden'))
+assert len(tiles)==7
+assert len({t.tobytes() for t in tiles})==7  # every tile is a drawing of its own
 sheet.save(root/'snowfield-32.webp','WEBP',lossless=True,exact=True)
-meta=dict(image='snowfield-32.webp',tilewidth=32,tileheight=32,columns=4,tilecount=25,margin=0,spacing=0,tiles=entries)
+meta=dict(image='snowfield-32.webp',tilewidth=32,tileheight=32,columns=4,tilecount=7,margin=0,spacing=0,tiles=entries)
 (root/'tileset.json').write_text(json.dumps(meta,ensure_ascii=False,indent=2),encoding='utf-8')
 preview=Image.new('RGB',(256,256));r=random.Random(85)
 for y in range(8):
     for x in range(8):preview.paste(tiles[0] if r.random()<.6 else r.choice(tiles[1:]),(x*32,y*32))
 preview.save(root/'variants-preview.png')
-print('Verified: 25 snowfield IDs with 7 visible ground/snowdrift tiles, seamless borders, lossless WebP.')
+print('Verified: 7 snowfield tiles, seamless borders, lossless WebP.')
 
 
