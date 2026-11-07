@@ -1795,13 +1795,38 @@ def test_zooming_keeps_the_player_in_the_middle():
 
 
 def test_the_hud_does_not_zoom_with_the_world():
-    # The gauges are read, not inhabited. Scaled with the field they would
-    # shrink exactly when there is more going on to need them.
+    """The corner is drawn the same at every zoom, pixel for pixel.
+
+    The gauges are read, not inhabited: scaled with the field they would shrink
+    exactly when there is more going on to need them. Drawn onto a blank
+    surface rather than over the world, because every piece of the HUD lets
+    some ground through -- the gauges' backing is dimmed rather than solid and
+    the slot art has stepped corners -- so comparing it in place would be
+    comparing the floor.
+    """
+
+    def hud_at(zoom):
+        scene = PlayScene()
+        scene.camera.set_zoom(zoom)
+        scene.camera.center_on(scene.player.pos)
+        surface = pygame.Surface(config.SCREEN_SIZE, pygame.SRCALPHA)
+        scene._draw_hud(surface)
+        return pygame.image.tobytes(surface, "RGBA")
+
+    assert hud_at(2.0) == hud_at(1.0)
+
+
+def test_the_field_the_world_is_drawn_on_grows_with_the_zoom():
+    # The other half of the same claim: the world DOES change size, and the
+    # HUD above does not, which is only interesting because they are two
+    # different surfaces.
     scene = PlayScene()
-    _wheel(scene, -1)
     surface = pygame.Surface(config.SCREEN_SIZE)
-    scene.draw(surface)
-    assert surface.get_at((12 * config.UI_SCALE, 12 * config.UI_SCALE))[:3] == config.HP_COLOR
+    assert scene._field_surface(surface) is surface  # at 1.0, no second one
+    scene.camera.set_zoom(2.0)
+    field = scene._field_surface(surface)
+    assert field is not surface
+    assert field.get_size() == scene.camera.field_size
 
 
 def test_a_zoomed_out_world_still_gets_drawn():
