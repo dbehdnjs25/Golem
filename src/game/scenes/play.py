@@ -654,6 +654,7 @@ class PlayScene(Scene):
             self.world,
             patches=self.patches,
             marks=self.marks,
+            timers=self.mark_timers,
             from_pos=self.player.pos,
         )
         gimmicks.update_patches(dt, self.patches)

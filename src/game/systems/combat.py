@@ -5,6 +5,7 @@ unit-testable headlessly. Rendering lives in the scene, never here."""
 from __future__ import annotations
 
 import random
+from collections.abc import Iterable
 
 import pygame
 
@@ -26,15 +27,21 @@ from game.systems import gimmicks
 from game.world.map import WorldMap
 
 
-def _trick_of(glyph: Glyph | None) -> str | None:
-    """The gimmick a shot should carry, or None.
+def _trick_carved_on(carved: Iterable[Glyph]) -> str | None:
+    """The gimmick a shot should carry, out of everything cut into the piece.
 
-    Only the SUPREME cut throws the trick. If the first rung already did, the
+    Only the SUPREME cut throws a trick; if the first rung already did, the
     boss would be guarding a bigger number rather than something new.
+
+    Searched rather than read off the front slot. A weapon holds two, so a
+    player who carved a basic and then the supreme they had just won from a
+    boss would have thrown nothing at all. Where two supremes are carved the
+    earlier one wins, which is arbitrary but has to be something.
     """
-    if glyph is None or glyph.tier != SUPREME:
-        return None
-    return glyph.gimmick
+    for glyph in carved:
+        if glyph.tier == SUPREME:
+            return glyph.gimmick
+    return None
 
 
 def fire_weapon(
@@ -61,7 +68,7 @@ def fire_weapon(
         damage=weapon.total_damage,  # base plus whatever is carved on it
         radius=weapon.projectile_radius,
         ttl=weapon.projectile_ttl,
-        gimmick=_trick_of(next(iter(weapon.engraved.glyphs), None)),
+        gimmick=_trick_carved_on(weapon.engraved.glyphs),
     )
     return 1.0 / weapon.fire_rate, [shot]
 
@@ -97,7 +104,7 @@ def fire_staff(
         damage=glyph.power,  # the glyph IS the attack; the staff adds nothing
         radius=config.PROJECTILE_RADIUS,
         ttl=config.PROJECTILE_TTL,
-        gimmick=_trick_of(glyph),
+        gimmick=_trick_carved_on([glyph]),  # a staff throws one at a time
     )
     return 1.0 / config.STAFF_FIRE_RATE, [shot]
 
@@ -116,6 +123,7 @@ def update_projectiles(
     world: WorldMap,
     patches: list[Patch] | None = None,
     marks: list[pygame.Vector2] | None = None,
+    timers: list[float] | None = None,
     from_pos: pygame.Vector2 | None = None,
 ) -> None:
     """Fly, hit, and raise whatever trick the shot was carrying.
@@ -134,7 +142,7 @@ def update_projectiles(
         hit = _first_hit(shot, enemies)
         if hit is not None:
             hit.damage(shot.damage)
-            _raise_trick(shot, hit, patches, marks, from_pos, world)
+            _raise_trick(shot, hit, patches, marks, timers, from_pos, world)
             any_killed = any_killed or hit.is_dead
             continue  # projectile consumed
         surviving.append(shot)
@@ -148,6 +156,7 @@ def _raise_trick(
     hit: Golem,
     patches: list[Patch] | None,
     marks: list[pygame.Vector2] | None,
+    timers: list[float] | None,
     from_pos: pygame.Vector2 | None,
     world: WorldMap,
 ) -> None:
@@ -164,6 +173,7 @@ def _raise_trick(
         away_from=from_pos if from_pos is not None else shot.pos - shot.vel,
         patches=patches,
         marks=marks,
+        timers=timers,
         world=world,
     )
 

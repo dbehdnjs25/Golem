@@ -240,3 +240,77 @@ def test_the_glyph_a_staff_carries_matches_what_it_fits():
     for biome in biomes.RING_BIOMES:
         glyph = _supreme(biome)
         assert WEAPON in glyph.fits and STAFF in glyph.fits
+
+
+# --- two the wiring hid ---------------------------------------------------
+
+
+def test_a_mark_survives_the_frame_it_was_set_in():
+    # mark() filled the marks list and nothing filled the timers beside it, so
+    # the very next update dropped every mark as already expired. Nothing
+    # failed -- the lightning trick simply did nothing in game.
+    marks, timers = [], []
+    gimmicks.mark(pygame.Vector2(CENTRE), marks, timers)
+    gimmicks.update_marks(config.FIXED_DT, marks, timers)
+    assert len(marks) == 1
+    assert len(timers) == len(marks)
+
+
+def test_a_mark_still_fades_eventually():
+    marks, timers = [], []
+    gimmicks.mark(pygame.Vector2(CENTRE), marks, timers)
+    gimmicks.update_marks(config.MARK_SECONDS + 1.0, marks, timers)
+    assert not marks and not timers
+
+
+def test_striking_shock_keeps_the_timer_in_step():
+    patches, marks, timers = [], [], []
+    gimmicks.strike(
+        gimmicks.by_key("shock"),
+        at=pygame.Vector2(CENTRE),
+        victim=_golem(),
+        away_from=pygame.Vector2(CENTRE),
+        patches=patches,
+        marks=marks,
+        timers=timers,
+    )
+    assert len(timers) == len(marks) == 1
+
+
+def test_a_weapon_finds_the_supreme_glyph_wherever_it_sits():
+    # A weapon has two slots. Carved basic-then-supreme, only the first was
+    # read, so the trick a player had just won from a boss threw nothing.
+    weapon = WeaponTool()
+    engraving.engrave(
+        weapon.engraved,
+        next(g for g in glyph_table.glyphs_of(biomes.BURNT_FOREST) if g.tier == glyph_table.BASIC),
+    )
+    supreme = _supreme(biomes.BURNT_FOREST)
+    engraving.engrave(weapon.engraved, supreme)
+    _, shots = combat.fire_weapon(
+        config.FIXED_DT,
+        weapon=weapon,
+        held=True,
+        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
+        player_pos=pygame.Vector2(CENTRE),
+        fire_timer=0.0,
+    )
+    assert shots[0].gimmick == supreme.gimmick
+
+
+def test_two_supreme_glyphs_on_one_weapon_throw_the_first_of_them():
+    # Two is the slot count, so it is reachable. Both would need a rule for
+    # which lands first; one is the honest answer until that rule exists.
+    weapon = WeaponTool()
+    first = _supreme(biomes.BURNT_FOREST)
+    engraving.engrave(weapon.engraved, first)
+    engraving.engrave(weapon.engraved, _supreme(biomes.BOG))
+    _, shots = combat.fire_weapon(
+        config.FIXED_DT,
+        weapon=weapon,
+        held=True,
+        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
+        player_pos=pygame.Vector2(CENTRE),
+        fire_timer=0.0,
+    )
+    assert shots[0].gimmick == first.gimmick

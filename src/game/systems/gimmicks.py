@@ -80,9 +80,21 @@ def shove(body: Body, away_from: pygame.Vector2, world: WorldMap | None = None) 
         world.clamp(body.pos, body.radius)
 
 
-def mark(at: pygame.Vector2, marks: list[pygame.Vector2]) -> None:
-    """Pin a mark to the ground. One alone does nothing."""
+def mark(
+    at: pygame.Vector2,
+    marks: list[pygame.Vector2],
+    timers: list[float] | None = None,
+) -> None:
+    """Pin a mark to the ground. One alone does nothing.
+
+    The timer goes on in the same call. Kept apart, nothing filled the timers
+    list and ``update_marks`` dropped every mark as already expired on the very
+    next frame -- the lightning trick did nothing in game and nothing failed to
+    say so.
+    """
     marks.append(pygame.Vector2(at))
+    if timers is not None:
+        timers.append(config.MARK_SECONDS)
 
 
 # --- what the ground does to whoever is on it -----------------------------
@@ -197,6 +209,7 @@ def strike(
     away_from: pygame.Vector2,
     patches: list[Patch],
     marks: list[pygame.Vector2],
+    timers: list[float] | None = None,
     world: WorldMap | None = None,
 ) -> None:
     """Raise one gimmick at a point, against whoever is standing on it.
@@ -217,7 +230,7 @@ def strike(
     elif gimmick.key == "rot":
         foul(at, patches)
     elif gimmick.key == "shock":
-        mark(at, marks)
+        mark(at, marks, timers)
     elif gimmick.key == "gust":
         # The only one that leaves nothing behind. It moves what it hits, and
         # away from whoever threw it -- toward would be a pull, and the holes
