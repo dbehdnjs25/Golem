@@ -27,7 +27,7 @@ import pygame
 
 from game import config
 from game.entities.core import Core
-from game.entities.enemy import PLAIN_GOLEM, Golem
+from game.entities.enemy import PLAIN_GOLEM, Golem, raid_kinds
 from game.systems.spawn_common import SPAWN_ATTEMPTS, TimedSpawner, near_player
 from game.world.map import WorldMap
 
@@ -62,7 +62,12 @@ class EnemySpawner(TimedSpawner):
         )
         if spot is None:
             return None
-        golem = Golem(pos=spot, scale=scale_at(world.distance_fraction(spot)))
+        # A raid draws from what the player has already beaten: the plain golem
+        # plus one kind per boss down. An ordinary night is plain golems only --
+        # the threat out there is the trip itself, and distance scales that
+        # already.
+        kind = rng.choice(raid_kinds(core.bosses_killed)) if raid else PLAIN_GOLEM
+        golem = Golem(pos=spot, kind=kind, scale=scale_at(world.distance_fraction(spot)))
         enemies.append(golem)
         return golem
 

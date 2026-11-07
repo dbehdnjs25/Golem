@@ -11,7 +11,7 @@ from game.items.item_kinds import BENCH, BLAST_FURNACE, COPPER_INGOT, FINE_BENCH
 def _lit(level: int = 1) -> Core:
     core = Core(pos=pygame.Vector2(0, 0))
     core.ignite()
-    core.bosses_killed = len(config.CORE_LEVEL_CAPS)
+    core.sigils_taken = len(config.CORE_LEVEL_CAPS)  # every cap opened
     while core.level < level:
         core.upgrade()
     return core

@@ -53,7 +53,7 @@ def test_igniting_twice_changes_nothing():
 
 def test_the_full_ward_reaches_its_stated_maximum():
     core = _core()
-    core.bosses_killed = len(config.CORE_LEVEL_CAPS)
+    core.sigils_taken = len(config.CORE_LEVEL_CAPS)  # every cap opened
     core.ignite()
     while core.upgrade():
         pass
@@ -71,7 +71,7 @@ def test_the_ward_grows_by_the_same_ratio_every_level():
     # Absolute growth would make an early level invisible and a late one
     # enormous. A constant ratio makes every upgrade feel the same size.
     core = _core()
-    core.bosses_killed = len(config.CORE_LEVEL_CAPS)
+    core.sigils_taken = len(config.CORE_LEVEL_CAPS)  # every cap opened
     core.ignite()
     ratios = []
     for _ in range(10):
@@ -81,12 +81,12 @@ def test_the_ward_grows_by_the_same_ratio_every_level():
     assert max(ratios) - min(ratios) < 1e-9
 
 
-def test_the_level_cap_starts_at_ten_and_a_boss_opens_each_one():
+def test_the_level_cap_starts_at_ten_and_a_sigil_opens_each_one():
     core = _core()
     core.ignite()
     assert core.level_cap == config.CORE_LEVEL_CAPS[0] == 10
     for killed, cap in enumerate(config.CORE_LEVEL_CAPS[1:], start=1):
-        core.bosses_killed = killed
+        core.sigils_taken = killed
         assert core.level_cap == cap
 
 
@@ -97,7 +97,7 @@ def test_upgrading_stops_dead_at_the_cap():
         pass
     assert core.level == config.CORE_LEVEL_CAPS[0]
     assert core.can_upgrade is False
-    core.bosses_killed = 1  # a boss item lifts it
+    core.sigils_taken = 1  # a sigil carried home lifts it
     assert core.can_upgrade is True
     assert core.upgrade() is True
     assert core.level == config.CORE_LEVEL_CAPS[0] + 1
@@ -120,7 +120,7 @@ def test_the_ward_is_a_circle_around_the_core():
 
 def test_the_ward_stops_growing_at_its_own_cap():
     core = _core()
-    core.bosses_killed = len(config.CORE_LEVEL_CAPS)
+    core.sigils_taken = len(config.CORE_LEVEL_CAPS)  # every cap opened
     core.ignite()
     while core.level < config.WARD_MAX_LEVEL:
         core.upgrade()

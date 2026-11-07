@@ -385,6 +385,11 @@ GOLEM_SPEED_SCALING: Final[float] = 0.25
 # ore out there is better for exactly this reason: distance is the danger.
 GOLEM_SCALE_AT_EDGE: Final[float] = 4.0
 
+# What each biome's golem is worth against a plain one, in ring order. They
+# join the raids as their bosses fall, so the crowd gets heavier along the
+# same ladder the map climbs.
+BIOME_GOLEM_TOUGHNESS: Final[tuple[float, ...]] = (1.6, 2.0, 2.4, 2.9, 3.5)
+
 # --- Bosses ---------------------------------------------------------------
 # One per ring biome, in ring order, which is difficulty order. A boss is the
 # gate at the end of its biome, so the health climbs with the ring; the speeds

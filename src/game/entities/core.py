@@ -25,7 +25,8 @@ class Core:
     sync_radius: float = config.CORE_SYNC_RADIUS
     level: int = 0  # 0 = not yet ignited
     hp: float = 0.0
-    bosses_killed: int = 0
+    bosses_killed: int = 0  # what the raid calendar counts
+    sigils_taken: int = 0  # what the level cap counts -- see offer_sigil
 
     def is_in_sync_range(self, point: pygame.Vector2) -> bool:
         return self.pos.distance_to(point) <= self.sync_radius
@@ -43,9 +44,24 @@ class Core:
 
     @property
     def level_cap(self) -> int:
-        """How high this core can go until another boss drop arrives."""
-        index = min(self.bosses_killed, len(config.CORE_LEVEL_CAPS) - 1)
+        """How high this core can go until another sigil is brought to it.
+
+        Counted from sigils OFFERED, not bosses killed. The kill happens five
+        biomes out; if the cap moved there, the ladder would climb from
+        wherever the player was standing and coming home would never be the
+        thing a victory asks for.
+        """
+        index = min(self.sigils_taken, len(config.CORE_LEVEL_CAPS) - 1)
         return config.CORE_LEVEL_CAPS[index]
+
+    def offer_sigil(self) -> bool:
+        """Give the core a boss's sigil. False when there is no cap left to open."""
+        if not self.ignited:
+            return False  # no ladder before it burns
+        if self.sigils_taken >= len(config.CORE_LEVEL_CAPS) - 1:
+            return False
+        self.sigils_taken += 1
+        return True
 
     @property
     def can_upgrade(self) -> bool:

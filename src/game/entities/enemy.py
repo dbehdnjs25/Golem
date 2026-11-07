@@ -23,6 +23,7 @@ from typing import Protocol
 import pygame
 
 from game import config
+from game.world.biomes import RING_BIOMES, Biome
 from game.world.map import WorldMap
 
 # What a thing is walking towards. The split is the whole classification: the
@@ -58,6 +59,7 @@ class EnemyKind:
     radius: float
     contact_dps: float  # hp/s while touching what it is after
     color: tuple[int, int, int]
+    biome: Biome | None = None  # None is the plain golem, which belongs nowhere
 
 
 PLAIN_GOLEM = EnemyKind(
@@ -71,9 +73,41 @@ PLAIN_GOLEM = EnemyKind(
     color=config.GOLEM_COLOR,
 )
 
-# One for now. The five biome golems join this tuple in step 8, and the raid
-# composition reads from it.
-GOLEM_KINDS: tuple[EnemyKind, ...] = (PLAIN_GOLEM,)
+
+def _biome_golem(biome: Biome, toughness: float) -> EnemyKind:
+    """One biome's golem: the plain row with its numbers raised.
+
+    NUMBERS ONLY, and deliberately. Give these their biome's trick and a raid
+    becomes five bosses at once -- the trick is what the temple is for, and a
+    raid is a crowd, not a boss fight repeated.
+    """
+    return EnemyKind(
+        key=f"{biome.key}_golem",
+        name=f"{biome.name} 골렘",
+        target=TARGET_CORE,
+        hp=PLAIN_GOLEM.hp * toughness,
+        speed=PLAIN_GOLEM.speed,
+        radius=PLAIN_GOLEM.radius * 1.2,
+        contact_dps=PLAIN_GOLEM.contact_dps * toughness,
+        color=biome.color,
+        biome=biome,
+    )
+
+
+# In ring order, which is difficulty order, and they join the raids in the
+# order their bosses fall -- so the crowd thickens the way the map does rather
+# than all at once.
+BIOME_GOLEMS: tuple[EnemyKind, ...] = tuple(
+    _biome_golem(biome, toughness)
+    for biome, toughness in zip(RING_BIOMES, config.BIOME_GOLEM_TOUGHNESS, strict=True)
+)
+
+GOLEM_KINDS: tuple[EnemyKind, ...] = (PLAIN_GOLEM, *BIOME_GOLEMS)
+
+
+def raid_kinds(bosses_killed: int) -> tuple[EnemyKind, ...]:
+    """What a raid may be made of. The plain golem, plus one per boss killed."""
+    return (PLAIN_GOLEM, *BIOME_GOLEMS[: min(bosses_killed, len(BIOME_GOLEMS))])
 
 
 @dataclass

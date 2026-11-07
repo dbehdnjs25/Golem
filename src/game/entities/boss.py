@@ -88,7 +88,9 @@ TRICKS: dict[str, Trick] = {t.key: t for t in _ROWS}
 # --- the five bosses ------------------------------------------------------
 
 
-@dataclass(frozen=True)
+# kw_only because EnemyKind.biome carries a default -- the plain golem belongs
+# to no biome -- and a plain subclass cannot put required fields after it.
+@dataclass(frozen=True, kw_only=True)
 class BossKind(EnemyKind):
     """One boss. An ``EnemyKind`` row with a biome and its tricks attached."""
 

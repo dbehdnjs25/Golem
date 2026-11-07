@@ -32,6 +32,10 @@ class ItemKind:
 # Scattered around the pedestal at the start. Assembling and placing them is what
 # starts day one, so they stack low enough to be felt.
 CORE_SHARD = ItemKind("core_shard", "코어 파편", 16, config.FRAGMENT_COLOR)
+# One falls from every boss. The cap it opens is granted at the core, not
+# where the boss died, so beating one is a trip home rather than a number
+# that ticks up wherever the player happens to be standing.
+CORE_SIGIL = ItemKind("core_sigil", "코어 인장", 1, (150, 235, 200))
 
 # --- Litter ---------------------------------------------------------------------
 # Lying on the ground, free to anyone with hands. The whole bootstrap rests on

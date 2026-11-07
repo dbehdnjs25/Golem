@@ -218,7 +218,7 @@ def test_a_wider_ward_means_a_longer_march_in():
     def mean_distance(level: int) -> float:
         core = _core()
         core.ignite()
-        core.bosses_killed = 5
+        core.sigils_taken = 5  # every cap opened, so the level can climb
         while core.level < level and core.upgrade():
             pass
         spawner = EnemySpawner()
