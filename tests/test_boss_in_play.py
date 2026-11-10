@@ -256,3 +256,43 @@ def test_a_mark_is_drawn_too():
     at = scene.camera.world_to_view(scene.marks[0])
     near = pygame.Rect(int(at.x) - 24, int(at.y) - 24, 48, 48)
     assert _has(surface, near, config.MARK_COLOR)
+
+
+def test_a_winding_charge_shows_the_lane_it_will_run():
+    # A path, not a place: the one blow whose telegraph is a shape you walk
+    # out of sideways rather than a circle you leave.
+    scene, temple = _ready()
+    _call(scene)
+    scene.player.pos.update(temple.pos + pygame.Vector2(200, 0))
+    for _ in range(int((config.BOSS_MOVE_GAP + 0.1) / config.FIXED_DT)):
+        scene.brawl.update(
+            config.FIXED_DT,
+            scene.boss,
+            scene.player,
+            temple.pos,
+            temple.radius,
+            forced="charge" if scene.brawl.move is None else None,
+        )
+    assert scene.brawl.move == "charge"
+    surface = _drawn(scene)
+    # Somewhere along the lane, between the boss and where it is headed.
+    middle = scene.camera.world_to_view(scene.boss.pos.lerp(scene.brawl.aim, 0.5))
+    near = pygame.Rect(int(middle.x) - 60, int(middle.y) - 60, 120, 120)
+    assert _has(surface, near, config.WARNING_COLOR)
+
+
+def test_a_boss_mid_blow_does_not_drift_forward():
+    scene, temple = _ready()
+    _call(scene)
+    scene.player.pos.update(temple.pos + pygame.Vector2(300, 0))
+    for _ in range(int((config.BOSS_MOVE_GAP + 0.1) / config.FIXED_DT)):
+        scene.update(config.FIXED_DT)
+    if scene.brawl.move is None:  # it was between blows; nothing to check
+        return
+    stood = pygame.Vector2(scene.boss.pos)
+    for _ in range(6):
+        scene.update(config.FIXED_DT)
+        if scene.brawl.phase != "wind":
+            break
+    else:
+        assert scene.boss.pos == stood

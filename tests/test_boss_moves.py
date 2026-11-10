@@ -66,11 +66,12 @@ def test_a_blow_winds_up_before_it_lands():
 
 
 def test_it_commits_to_an_aim_when_the_wind_starts():
-    # Fixed at the wind, not re-read at the blow. Tracking you through the
-    # wind-up means the telegraph tells you nothing.
+    # Fixed at the wind, not re-read at the blow: a telegraph that follows you
+    # tells you nothing. The charge is the one exception and has its own test,
+    # because its telegraph is a path rather than a place.
     brawl = boss_moves.Brawl()
     boss, player = _boss(), _player()
-    _run(brawl, boss, player, config.BOSS_MOVE_GAP + 0.05, move="charge")
+    _run(brawl, boss, player, config.BOSS_MOVE_GAP + 0.05, move="slam")
     aimed = pygame.Vector2(brawl.aim)
     player.pos.update(ROOM + pygame.Vector2(0, 400))
     brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
@@ -285,3 +286,54 @@ def test_a_leap_only_lands_when_it_lands():
     assert player.hp == player.max_hp
     _run(brawl, boss, player, config.LEAP_SECONDS)
     assert player.hp < player.max_hp
+
+
+# --- the charge takes aim while it winds ---------------------------------
+
+
+def test_a_charge_follows_you_while_it_winds():
+    # The one blow that tracks. It is the only one whose telegraph is a path
+    # rather than a place, so a path aimed where you no longer are tells you
+    # nothing and the boss simply runs past.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player(ROOM + pygame.Vector2(300, 0))
+    brawl.update(config.BOSS_MOVE_GAP + 0.01, boss, player, ROOM, RADIUS, forced="charge")
+    assert brawl.phase == boss_moves.WIND
+    first = pygame.Vector2(brawl.aim)
+    player.pos.update(ROOM + pygame.Vector2(0, 300))
+    brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
+    assert brawl.aim != first
+    assert brawl.aim == player.pos
+
+
+def test_once_it_is_running_the_line_is_set():
+    # Tracking through the run would be a homing missile, not a charge.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player(ROOM + pygame.Vector2(300, 0))
+    _run(brawl, boss, player, TO_BLOW, move="charge")
+    assert brawl.phase == boss_moves.ACT
+    going = pygame.Vector2(brawl.going)
+    player.pos.update(ROOM + pygame.Vector2(0, 300))
+    brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
+    assert brawl.going == going
+
+
+def test_the_other_blows_still_commit_at_the_wind():
+    for key in ("slam", "sweep", "leap", "grab"):
+        brawl = boss_moves.Brawl()
+        boss, player = _boss(), _player(ROOM + pygame.Vector2(300, 0))
+        brawl.update(config.BOSS_MOVE_GAP + 0.01, boss, player, ROOM, RADIUS, forced=key)
+        aimed = pygame.Vector2(brawl.aim)
+        player.pos.update(ROOM + pygame.Vector2(0, 300))
+        brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
+        assert brawl.aim == aimed, key
+
+
+def test_a_blow_in_progress_says_so():
+    # The scene stops walking the boss while this is true: winding up and
+    # drifting forward at the same time makes the telegraph a lie.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player()
+    assert not brawl.busy
+    brawl.update(config.BOSS_MOVE_GAP + 0.01, boss, player, ROOM, RADIUS, forced="slam")
+    assert brawl.busy

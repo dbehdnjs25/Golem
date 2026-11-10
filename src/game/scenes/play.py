@@ -909,6 +909,7 @@ class PlayScene(Scene):
                 self.camera.world_to_screen(self.core.pos),
                 self.core.radius,
             )
+        self._draw_charge_lane(surface)  # a promise, so under what is real
         self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
         pygame.draw.circle(
@@ -1650,7 +1651,10 @@ class PlayScene(Scene):
         if boss is None or self.boss_temple is None:
             return
         temple = self.boss_temple
-        boss.update(dt, self.player.pos, temple.pos, temple.radius)
+        # It walks only between blows. Stepping forward through its own
+        # wind-up would move the telegraph out from under itself.
+        if self.brawl is None or not self.brawl.busy:
+            boss.update(dt, self.player.pos, temple.pos, temple.radius)
         if self.brawl is not None:
             self.brawl.update(
                 dt, boss, self.player, temple.pos, temple.radius, patches=self.patches
@@ -1705,6 +1709,31 @@ class PlayScene(Scene):
             at = self.camera.world_to_screen(bog.pos)
             pygame.draw.circle(surface, config.MIRE_COLOR, at, bog.radius)
             pygame.draw.circle(surface, config.MIRE_RIM_COLOR, at, bog.radius, 3)
+
+    def _draw_charge_lane(self, surface: pygame.Surface) -> None:
+        """The rectangle a charge is about to run down, while it winds.
+
+        Drawn as an outline in the warning colour, like every other telegraph:
+        it has not happened yet. It is a PATH rather than a place, which is
+        why it is the one blow whose aim keeps turning -- you step out of this
+        one sideways rather than leaving a circle.
+        """
+        brawl = self.brawl
+        if brawl is None or self.boss is None:
+            return
+        if brawl.move != "charge" or brawl.phase != boss_moves.WIND:
+            return
+        toward = brawl.aim - self.boss.pos
+        facing = toward.normalize() if toward.length_squared() else pygame.Vector2(1, 0)
+        across = pygame.Vector2(-facing.y, facing.x) * self.boss.radius
+        near = self.camera.world_to_screen(self.boss.pos)
+        far = self.camera.world_to_screen(self.boss.pos + facing * config.CHARGE_REACH)
+        pygame.draw.polygon(
+            surface,
+            config.WARNING_COLOR,
+            [near + across, far + across, far - across, near - across],
+            3,
+        )
 
     def _draw_tricks(self, surface: pygame.Surface) -> None:
         """What a boss has in the air: announced circles, fronts, and edges.

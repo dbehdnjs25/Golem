@@ -34,6 +34,8 @@ from game.systems.boss_fight import Arm
 
 # The two blows that cross the ground rather than happening where it stands.
 _TRAVELS = ("charge", "leap")
+# And the one that keeps taking aim through its wind-up.
+_TRACKS = ("charge",)
 
 WIND = "wind"
 ACT = "act"
@@ -81,6 +83,17 @@ class Brawl:
     landing: pygame.Vector2 = field(default_factory=pygame.Vector2)
     left: float = 0.0
 
+    @property
+    def busy(self) -> bool:
+        """Whether a blow is under way.
+
+        The scene stops walking the boss while this is true. Winding up
+        and drifting forward at the same time makes the telegraph a lie:
+        the rectangle is drawn from where it stands, and it was not there
+        by the time it ran.
+        """
+        return self.move is not None
+
     def update(
         self,
         dt: float,
@@ -102,6 +115,12 @@ class Brawl:
             player.pos.update(self.arm.caught)
             _hurt(player, config.SLAM_DAMAGE * self._might(boss))
             self.arm.caught = None
+        if self.phase == WIND and self.move in _TRACKS:
+            # The only blow that keeps taking aim. Its telegraph is a PATH
+            # rather than a place, and a path drawn where you no longer are
+            # tells you nothing -- the boss just runs past. Locked the
+            # instant it sets off, or it would be a homing missile.
+            self.aim = pygame.Vector2(player.pos)
         if self.phase == ACT and self.move in _TRAVELS:
             self._travel(dt, boss, player, room, radius)
         self.timer -= dt
@@ -112,6 +131,7 @@ class Brawl:
             return
         if self.phase == WIND:
             self._strike(boss, player, room, radius)
+            return
         elif self.phase == ACT:
             self._land(boss, player)
             self.phase = REST
