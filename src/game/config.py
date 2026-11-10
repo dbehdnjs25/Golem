@@ -608,12 +608,16 @@ RING_REACH: Final[float] = 520.0
 # --- The burnt forest's three ----------------------------------------------
 # Fire falls, then walks at you, then bursts out of the floor.
 EMBER_DROPS: Final[int] = 5
-EMBER_SPREAD: Final[float] = 210.0  # how far from the player they scatter
+# Wide enough that the five do not merge into one blanket. Five circles that
+# between them carpet the room are not a trick, they are a timer on the
+# fight -- the floor has to still have somewhere to stand on it.
+EMBER_SPREAD: Final[float] = 290.0  # how far from the player they scatter
 EMBER_DAMAGE: Final[float] = 16.0
 FLAME_SPEED: Final[float] = 130.0  # px/s; well under PLAYER_SPEED
 FLAME_DAMAGE: Final[float] = 20.0
 ASHHEART_DAMAGE: Final[float] = 24.0
 ASHHEART_EMBERS: Final[int] = 6  # patches left where the ring went
+RING_EMBER_RADIUS: Final[float] = 70.0  # each one, smaller than a drop's
 
 # --- What the tricks leave on the floor, and the boss's own bar ------------
 # The ground a gimmick left has to read as ground rather than as an enemy, so

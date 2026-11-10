@@ -220,3 +220,28 @@ def test_a_trick_nobody_has_written_yet_is_quiet_rather_than_a_crash():
     field = boss_tricks.Field()
     boss_tricks.cast("rotheart", field, pygame.Vector2(HOME), pygame.Vector2(HOME), might=1.0)
     assert not (field.falling or field.walls or field.rings)
+
+
+# --- what is left behind must match what was announced -------------------
+
+
+def test_the_fire_left_behind_is_the_circle_you_were_shown():
+    # It used to be the global patch size, which was larger than the warning:
+    # you stepped out of a ninety-wide circle and the fire that replaced it was
+    # a hundred and twenty. Dodging correctly still burned you.
+    field = boss_tricks.Field()
+    field.falling.append(Falling(pos=pygame.Vector2(HOME), damage=1.0, radius=70.0, leaves=BURNING))
+    patches = _tick(field, _player(HOME + pygame.Vector2(9000, 0)), config.FALL_WARNING + 0.1)
+    assert patches[0].radius == 70.0
+
+
+def test_one_ember_leaves_somewhere_to_stand():
+    # Five circles that between them carpet the room is not a trick, it is a
+    # timer on the fight. The arena has to still have floor in it.
+    import math
+
+    field, player = _cast("ember", boss_at=HOME, player_at=HOME)
+    patches = _tick(field, player, config.FALL_WARNING + 0.2)
+    covered = sum(math.pi * p.radius**2 for p in patches)  # overlap ignored
+    room = math.pi * config.TEMPLE_RADIUS**2
+    assert covered / room < 0.3

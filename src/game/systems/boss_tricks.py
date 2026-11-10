@@ -48,9 +48,20 @@ def _hurt(player: Player, amount: float) -> None:
         player.hp -= amount
 
 
-def _leave(kind: str | None, at: pygame.Vector2, patches: list[Patch]) -> None:
+def _leave(
+    kind: str | None,
+    at: pygame.Vector2,
+    patches: list[Patch],
+    radius: float = config.PATCH_RADIUS,
+) -> None:
+    """Put ground down, the size of whatever put it there.
+
+    The size matters more than it sounds. Taking the global patch radius
+    meant a trick could leave fire wider than the circle it announced, and
+    then stepping correctly out of the warning still burned you.
+    """
     if kind is not None:
-        patches.append(Patch(pos=pygame.Vector2(at), kind=kind))
+        patches.append(Patch(pos=pygame.Vector2(at), kind=kind, radius=radius))
 
 
 # --- running what is on the floor -----------------------------------------
@@ -72,7 +83,7 @@ def _update_falling(dt: float, field: Field, player: Player, patches: list[Patch
     for spot in landed:
         if spot.pos.distance_to(player.pos) <= spot.radius + player.radius:
             _hurt(player, spot.damage)
-        _leave(spot.leaves, spot.pos, patches)
+        _leave(spot.leaves, spot.pos, patches, spot.radius)
         field.falling.remove(spot)
 
 
@@ -119,7 +130,7 @@ def _scatter_behind(ring: Ring, before: float, patches: list[Patch]) -> None:
     angle = (len(ring.dropped) * 137.5) % 360  # spread apart, not in a line
     at = ring.pos + pygame.Vector2(1, 0).rotate(angle) * ring.radius
     ring.dropped.append(at)
-    _leave(ring.leaves, at, patches)
+    _leave(ring.leaves, at, patches, config.RING_EMBER_RADIUS)
 
 
 # --- casting ---------------------------------------------------------------
