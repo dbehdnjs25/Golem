@@ -151,9 +151,12 @@ def _cast(key, boss_at=None, player_at=None):
     return field, player
 
 
-def test_ember_announces_several_places_at_once():
+def test_ember_announces_one_place_and_promises_more():
+    # It used to put all five down at once. One at a time is the point now,
+    # so what the cast leaves immediately is a single circle and a promise.
     field, _ = _cast("ember")
-    assert len(field.falling) == config.EMBER_DROPS
+    assert len(field.falling) == 1
+    assert field.casting[0].left == config.EMBER_DROPS - 1
 
 
 def test_ember_drops_around_where_you_are():
@@ -192,14 +195,16 @@ def test_ashheart_leaves_fire_where_it_went():
 
 def test_the_second_phase_makes_all_three_hit_harder():
     def hurt(key, might):
-        # The same seed both times: ember scatters, and a different scatter
-        # would be comparing luck rather than the multiplier.
+        # Both runs get the same dice. Ember scatters, and a different scatter
+        # would be comparing luck rather than the multiplier -- its beats draw
+        # from the module's own generator, so that is the one to pin.
+        boss_tricks._SPIN.seed(7)
         field = boss_tricks.Field()
         player = _player(HOME)
         boss_tricks.cast(
             key, field, pygame.Vector2(HOME), player.pos, might=might, rng=random.Random(7)
         )
-        _tick(field, player, 3.0)
+        _tick(field, player, 6.0)
         return player.max_hp - player.hp
 
     for key in ("ember", "flame", "ashheart"):
@@ -245,3 +250,57 @@ def test_one_ember_leaves_somewhere_to_stand():
     covered = sum(math.pi * p.radius**2 for p in patches)  # overlap ignored
     room = math.pi * config.TEMPLE_RADIUS**2
     assert covered / room < 0.3
+
+
+# --- one at a time, while the boss stands there --------------------------
+
+
+def test_ember_drops_one_at_a_time():
+    # Five circles at once is a place to not be. One after another is a thing
+    # to walk away from, and the walking is what the trick is for.
+    field, player = _cast("ember")
+    assert len(field.falling) == 1
+    _tick(field, player, config.EMBER_INTERVAL * 1.1)
+    assert len(field.falling) >= 1
+    assert field.casting  # more still to come
+
+
+def test_ember_keeps_going_until_it_has_dropped_them_all():
+    field, player = _cast("ember")
+    seen = 0
+    patches = []
+    for _ in range(int((config.EMBER_INTERVAL * config.EMBER_DROPS + 2.0) / config.FIXED_DT)):
+        before = len(patches)
+        boss_tricks.update(config.FIXED_DT, field, player, patches)
+        seen += len(patches) - before
+    assert seen == config.EMBER_DROPS
+    assert not field.casting
+
+
+def test_each_one_lands_near_where_you_are_when_it_appears():
+    # They follow, so standing still collects all five. Walking is the answer.
+    field = boss_tricks.Field()
+    player = _player(HOME)
+    boss_tricks.cast("ember", field, pygame.Vector2(HOME), player.pos, might=1.0)
+    player.pos.update(HOME + pygame.Vector2(2000, 0))
+    _tick(field, player, config.EMBER_INTERVAL * 1.5)
+    latest = field.falling[-1]
+    assert latest.pos.distance_to(player.pos) < config.EMBER_SPREAD + 1
+
+
+def test_casting_says_how_long_the_boss_is_busy():
+    # The boss stands still for its own channel; the number it stands for has
+    # to come from the trick rather than be guessed at the call site.
+    field = boss_tricks.Field()
+    held = boss_tricks.cast("ember", field, pygame.Vector2(HOME), pygame.Vector2(HOME))
+    assert held >= config.EMBER_INTERVAL * (config.EMBER_DROPS - 1)
+
+
+def test_an_instant_trick_holds_nobody():
+    field = boss_tricks.Field()
+    assert boss_tricks.cast("flame", field, pygame.Vector2(HOME), pygame.Vector2(HOME)) == 0.0
+
+
+def test_an_unbuilt_trick_holds_nobody_either():
+    field = boss_tricks.Field()
+    assert boss_tricks.cast("rotheart", field, pygame.Vector2(HOME), pygame.Vector2(HOME)) == 0.0

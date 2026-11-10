@@ -337,3 +337,17 @@ def test_a_blow_in_progress_says_so():
     assert not brawl.busy
     brawl.update(config.BOSS_MOVE_GAP + 0.01, boss, player, ROOM, RADIUS, forced="slam")
     assert brawl.busy
+
+
+def test_a_channel_keeps_the_boss_put_for_its_whole_length():
+    # Ember lays one circle at a time. Able to walk out of its own channel,
+    # the boss would be handing over a free hit rather than taking a risk.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player()
+    _run(brawl, boss, player, TO_BLOW, move="ember")
+    assert brawl.phase == boss_moves.ACT
+    stood = pygame.Vector2(boss.pos)
+    held_for = config.EMBER_INTERVAL * (config.EMBER_DROPS - 1)
+    _run(brawl, boss, player, held_for * 0.8)
+    assert brawl.busy
+    assert boss.pos == stood  # the scene stops walking it while busy

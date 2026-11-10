@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import random
+from dataclasses import dataclass
 
 import pygame
 
@@ -25,6 +26,22 @@ from game.entities.patch import BURNING, Patch
 from game.entities.player import Player
 
 
+@dataclass
+class Casting:
+    """A trick that lays itself down a beat at a time.
+
+    Kept here rather than on the boss because what matters to each beat is
+    where the player is NOW -- the whole point of a channel is that it
+    follows -- and this is the thing that gets told that every frame.
+    """
+
+    beat: str  # which maker to call each time
+    left: int
+    every: float
+    might: float = 1.0
+    timer: float = 0.0
+
+
 class Field:
     """Everything a boss has put on the floor. One per fight."""
 
@@ -32,15 +49,17 @@ class Field:
         self.falling: list[Falling] = []
         self.walls: list[Wall] = []
         self.rings: list[Ring] = []
+        self.casting: list[Casting] = []
 
     def clear(self) -> None:
         self.falling.clear()
         self.walls.clear()
         self.rings.clear()
+        self.casting.clear()
 
     @property
     def busy(self) -> bool:
-        return bool(self.falling or self.walls or self.rings)
+        return bool(self.falling or self.walls or self.rings or self.casting)
 
 
 def _hurt(player: Player, amount: float) -> None:
@@ -69,9 +88,23 @@ def _leave(
 
 def update(dt: float, field: Field, player: Player, patches: list[Patch]) -> None:
     """Advance every hazard and settle what it does."""
+    _update_casting(dt, field, player)
     _update_falling(dt, field, player, patches)
     _update_walls(dt, field, player)
     _update_rings(dt, field, player, patches)
+
+
+def _update_casting(dt: float, field: Field, player: Player) -> None:
+    """Lay down the next beat of anything still casting."""
+    for cast_in_progress in list(field.casting):
+        cast_in_progress.timer -= dt
+        if cast_in_progress.timer > 0:
+            continue
+        _BEATS[cast_in_progress.beat](field, player.pos, cast_in_progress.might)
+        cast_in_progress.left -= 1
+        cast_in_progress.timer = cast_in_progress.every
+        if cast_in_progress.left <= 0:
+            field.casting.remove(cast_in_progress)
 
 
 def _update_falling(dt: float, field: Field, player: Player, patches: list[Patch]) -> None:
@@ -143,13 +176,38 @@ def cast(
     target: pygame.Vector2,
     might: float = 1.0,
     rng: random.Random | None = None,
-) -> bool:
-    """Throw the trick ``key``. False when nobody has built it yet."""
+) -> float:
+    """Throw the trick ``key``, and say how long the boss is busy with it.
+
+    Zero for the instant ones and for the ten nobody has built yet. The
+    number has to come from the trick rather than be guessed where it is
+    called: only the trick knows whether it is a throw or a channel.
+    """
     maker = _CASTS.get(key)
     if maker is None:
-        return False
-    maker(field, pygame.Vector2(boss_pos), pygame.Vector2(target), might, rng or random.Random())
-    return True
+        return 0.0
+    return maker(
+        field, pygame.Vector2(boss_pos), pygame.Vector2(target), might, rng or random.Random()
+    )
+
+
+def _ember_beat(field: Field, at: pygame.Vector2, might: float) -> None:
+    """One circle, around wherever the player is standing right now.
+
+    Sometimes directly on them, and that is deliberate: the warning is long
+    enough to walk out of, so a circle underfoot is a reason to move rather
+    than a hit. Kept always to one side, standing perfectly still would be the
+    safest thing to do, which is the opposite of what this asks.
+    """
+    angle = _SPIN.uniform(0, 360)
+    reach = _SPIN.uniform(0, config.EMBER_SPREAD)
+    field.falling.append(
+        Falling(
+            pos=at + pygame.Vector2(1, 0).rotate(angle) * reach,
+            damage=config.EMBER_DAMAGE * might,
+            leaves=BURNING,
+        )
+    )
 
 
 def _ember(
@@ -158,23 +216,25 @@ def _ember(
     target: pygame.Vector2,
     might: float,
     rng: random.Random,
-) -> None:
-    """Shot into the sky, coming down around where you stood.
+) -> float:
+    """Shot into the sky, coming down one at a time around whoever moved.
 
-    Scattered rather than stacked on the player: one circle to step out of is
-    a dodge, several overlapping is a place to not be, and the second is what
-    makes a floor of lava matter.
+    The boss holds still for the whole of it -- a channel it could walk out of
+    would be a free hit rather than a commitment -- and each circle appears
+    beside the player as its turn comes, so standing still collects all five.
+    Walking away IS the answer to this one.
     """
-    for _ in range(config.EMBER_DROPS):
-        angle = rng.uniform(0, 360)
-        reach = rng.uniform(0, config.EMBER_SPREAD)
-        field.falling.append(
-            Falling(
-                pos=target + pygame.Vector2(1, 0).rotate(angle) * reach,
-                damage=config.EMBER_DAMAGE * might,
-                leaves=BURNING,
-            )
+    _ember_beat(field, target, might)  # the first lands with the cast
+    field.casting.append(
+        Casting(
+            beat="ember",
+            left=config.EMBER_DROPS - 1,
+            every=config.EMBER_INTERVAL,
+            might=might,
+            timer=config.EMBER_INTERVAL,
         )
+    )
+    return config.EMBER_INTERVAL * (config.EMBER_DROPS - 1)
 
 
 def _flame(
@@ -183,7 +243,7 @@ def _flame(
     target: pygame.Vector2,
     might: float,
     rng: random.Random,
-) -> None:
+) -> float:
     """One front, walking at where you were. Slower than you are."""
     toward = target - boss_pos
     facing = toward.normalize() if toward.length_squared() else pygame.Vector2(1, 0)
@@ -194,6 +254,7 @@ def _flame(
             damage=config.FLAME_DAMAGE * might,
         )
     )
+    return 0.0  # thrown and forgotten; the wall lives on its own
 
 
 def _ashheart(
@@ -202,7 +263,7 @@ def _ashheart(
     target: pygame.Vector2,
     might: float,
     rng: random.Random,
-) -> None:
+) -> float:
     """The floor struck, and fire opening out of it in every direction."""
     field.rings.append(
         Ring(
@@ -211,7 +272,16 @@ def _ashheart(
             leaves=BURNING,
         )
     )
+    return 0.0  # one strike; the ring opens out by itself
 
+
+# One generator for every beat of every channel. The casts take an injected
+# one, but a beat happens frames later with nobody holding the dice.
+_SPIN = random.Random()
+
+_BEATS = {
+    "ember": _ember_beat,
+}
 
 # Ten of the fifteen are still names in the design. They land here as they are
 # built; until then ``cast`` returns False and the boss simply does nothing

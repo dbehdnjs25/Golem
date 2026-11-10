@@ -82,6 +82,7 @@ class Brawl:
     takeoff: pygame.Vector2 = field(default_factory=pygame.Vector2)
     landing: pygame.Vector2 = field(default_factory=pygame.Vector2)
     left: float = 0.0
+    held: float = 0.0  # how long the element trick just cast keeps the boss put
 
     @property
     def busy(self) -> bool:
@@ -154,6 +155,7 @@ class Brawl:
         self.aim = pygame.Vector2(player.pos)
         self.struck = False
         self.landed = False
+        self.held = 0.0
         self.thrown += 1
 
     # --- the blow -----------------------------------------------------
@@ -176,7 +178,12 @@ class Brawl:
         else:
             # An element trick. Unbuilt ones cast nothing and the beat simply
             # passes, which is what keeps a half-finished design playable.
-            boss_tricks.cast(self.move or "", self.tricks, boss.pos, self.aim, might, self.rng)
+            # Whatever it is, IT says how long the boss is held: a channel is a
+            # commitment, and a boss that could walk out of its own would be
+            # handing the player a free hit instead of taking a risk.
+            self.held = boss_tricks.cast(
+                self.move or "", self.tricks, boss.pos, self.aim, might, self.rng
+            )
         self.takeoff = pygame.Vector2(boss.pos)
         self.struck = self.move not in _TRAVELS  # travellers strike en route
         self.phase = ACT
@@ -185,7 +192,7 @@ class Brawl:
         elif self.move == "charge":
             self.timer = config.CHARGE_REACH / config.CHARGE_SPEED
         else:
-            self.timer = 0.0
+            self.timer = self.held
 
     def _slam(self, boss: Boss, player: Player, might: float) -> None:
         """A ring around its own feet. The one blow that asks you to be away."""

@@ -608,6 +608,11 @@ RING_REACH: Final[float] = 520.0
 # --- The burnt forest's three ----------------------------------------------
 # Fire falls, then walks at you, then bursts out of the floor.
 EMBER_DROPS: Final[int] = 5
+# One at a time rather than five at once. Five circles together are a
+# place to not be; five in a row are a thing to walk away from, and each
+# appears beside wherever the player is standing when its turn comes -- so
+# the walking is the trick. The boss holds still for the whole of it.
+EMBER_INTERVAL: Final[float] = 0.45  # seconds between one circle and the next
 # Wide enough that the five do not merge into one blanket. Five circles that
 # between them carpet the room are not a trick, they are a timer on the
 # fight -- the floor has to still have somewhere to stand on it.
