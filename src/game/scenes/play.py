@@ -53,6 +53,7 @@ from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.render.floor import Floor
 from game.systems import (
     arena,
+    boss_moves,
     carrying,
     combat,
     consume,
@@ -369,6 +370,7 @@ class PlayScene(Scene):
         self.arena = arena.Ground()
         self.boss: Boss | None = None  # at most one, and only inside a temple
         self.boss_temple: Temple | None = None  # which room it is holding
+        self.brawl: boss_moves.Brawl | None = None  # its hands, while it has any
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
@@ -1504,6 +1506,7 @@ class PlayScene(Scene):
         kind = BOSS_KINDS[biomes.RING_BIOMES.index(temple.biome)]
         self.boss = Boss(pos=pygame.Vector2(temple.pos), kind=kind)
         self.boss_temple = temple
+        self.brawl = boss_moves.Brawl(rng=self.rng)
         self._say(f"{kind.name}{_subject_particle(kind.name)} 일어난다")
 
     def _open_structure(self) -> None:
@@ -1647,6 +1650,8 @@ class PlayScene(Scene):
             return
         temple = self.boss_temple
         boss.update(dt, self.player.pos, temple.pos, temple.radius)
+        if self.brawl is not None:
+            self.brawl.update(dt, boss, self.player, temple.pos, temple.radius)
         reach = boss.radius + self.player.radius
         if boss.pos.distance_to(self.player.pos) <= reach and self.player.iframe_timer <= 0:
             self.player.hp -= boss.contact_dps * dt
@@ -1667,6 +1672,7 @@ class PlayScene(Scene):
         arena.release(self.arena)
         self.boss = None
         self.boss_temple = None
+        self.brawl = None
         carrying.store(spoils.drop_of(boss.kind), 1, self.backpack, self.hotbar)
         self._say(
             f"{boss.kind.name}{_object_particle(boss.kind.name)} 쓰러뜨렸다"

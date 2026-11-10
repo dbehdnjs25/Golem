@@ -565,6 +565,29 @@ PROJECTILE_SPEED: Final[float] = 520.0  # px/s
 PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
 PROJECTILE_RADIUS: Final[float] = 4.0
 
+# --- The five blows a boss has, element aside ------------------------------
+# Every one is wind, act, rest. The wind is the whole reason a boss is a fight
+# rather than a wall: it commits the boss to an aim before anything lands, so
+# each blow can be read and stepped out of.
+BOSS_MOVE_GAP: Final[float] = 2.2  # seconds of quiet between blows
+BOSS_WIND: Final[float] = 0.75  # the telegraph, shared by all five
+BOSS_REST: Final[float] = 0.55  # after the blow, before the gap starts again
+
+CHARGE_SPEED: Final[float] = 620.0  # px/s while running
+CHARGE_REACH: Final[float] = 560.0  # how far it runs before pulling up
+CHARGE_DAMAGE: Final[float] = 18.0
+
+SLAM_RADIUS: Final[float] = 160.0
+SLAM_DAMAGE: Final[float] = 22.0
+
+SWEEP_RANGE: Final[float] = 230.0
+SWEEP_ARC: Final[float] = 110.0  # degrees, centred on where it committed
+SWEEP_DAMAGE: Final[float] = 16.0
+
+LEAP_SECONDS: Final[float] = 0.5  # in the air
+LEAP_RADIUS: Final[float] = 150.0
+LEAP_DAMAGE: Final[float] = 20.0
+
 # --- What the tricks leave on the floor, and the boss's own bar ------------
 # The ground a gimmick left has to read as ground rather than as an enemy, so
 # these sit near their biome's own colour and are drawn under everything that
