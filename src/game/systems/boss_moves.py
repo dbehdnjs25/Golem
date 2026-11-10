@@ -27,8 +27,13 @@ import pygame
 
 from game import config
 from game.entities.boss import Boss
+from game.entities.patch import Patch
 from game.entities.player import Player
+from game.systems import boss_tricks
 from game.systems.boss_fight import Arm
+
+# The two blows that cross the ground rather than happening where it stands.
+_TRAVELS = ("charge", "leap")
 
 WIND = "wind"
 ACT = "act"
@@ -59,12 +64,22 @@ class Brawl:
 
     rng: random.Random = field(default_factory=random.Random)
     arm: Arm = field(default_factory=Arm)
+    tricks: boss_tricks.Field = field(default_factory=boss_tricks.Field)
     move: str | None = None
     phase: str = REST
     timer: float = config.BOSS_MOVE_GAP
     aim: pygame.Vector2 = field(default_factory=pygame.Vector2)
-    struck: bool = False  # whether the current blow has landed its ACT
+    struck: bool = False  # whether this blow has connected
+    landed: bool = False  # whether this blow has finished its ACT beat
     thrown: int = 0  # how many blows have been started, ever
+    # Where a travelling blow is going and how much of it is left. A charge
+    # and a leap cross the ground over their ACT beat; resolved in one frame
+    # they were teleports, with nothing passing over the ground in between
+    # and so nothing to step out of.
+    going: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    takeoff: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    landing: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    left: float = 0.0
 
     def update(
         self,
@@ -74,17 +89,21 @@ class Brawl:
         room: pygame.Vector2,
         radius: float,
         forced: str | None = None,
+        patches: list[Patch] | None = None,
     ) -> None:
         """Advance the clock, and whatever is in flight.
 
-        ``forced`` picks the next blow instead of the dice. For tests and the
+        ``forced`` picks the next move instead of the dice. For tests and the
         tuning scripts; the game never passes it.
         """
+        boss_tricks.update(dt, self.tricks, player, patches if patches is not None else [])
         self.arm.update(dt, boss.pos, player.pos)
         if self.arm.caught is not None:
             player.pos.update(self.arm.caught)
             _hurt(player, config.SLAM_DAMAGE * self._might(boss))
             self.arm.caught = None
+        if self.phase == ACT and self.move in _TRAVELS:
+            self._travel(dt, boss, player, room, radius)
         self.timer -= dt
         if self.timer > 0:
             return
@@ -94,6 +113,7 @@ class Brawl:
         if self.phase == WIND:
             self._strike(boss, player, room, radius)
         elif self.phase == ACT:
+            self._land(boss, player)
             self.phase = REST
             self.timer = config.BOSS_REST
         else:
@@ -107,11 +127,13 @@ class Brawl:
             # would hand back the window that dodging the arm just bought.
             self.timer = config.BOSS_REST
             return
-        self.move = forced if forced is not None else self.rng.choice(boss.commons_now)
+        choices = (*boss.commons_now, *boss.tricks_now)
+        self.move = forced if forced is not None else self.rng.choice(choices)
         self.phase = WIND
         self.timer = config.BOSS_WIND
         self.aim = pygame.Vector2(player.pos)
         self.struck = False
+        self.landed = False
         self.thrown += 1
 
     # --- the blow -----------------------------------------------------
@@ -126,14 +148,24 @@ class Brawl:
         elif self.move == "sweep":
             self._sweep(boss, player, might)
         elif self.move == "charge":
-            self._charge(boss, player, room, radius, might)
+            self._charge(boss)
         elif self.move == "leap":
-            self._leap(boss, player, room, radius, might)
+            self._leap(boss, room, radius)
         elif self.move == "grab":
             self.arm.throw(boss.pos, self.aim)
-        self.struck = True
+        else:
+            # An element trick. Unbuilt ones cast nothing and the beat simply
+            # passes, which is what keeps a half-finished design playable.
+            boss_tricks.cast(self.move or "", self.tricks, boss.pos, self.aim, might, self.rng)
+        self.takeoff = pygame.Vector2(boss.pos)
+        self.struck = self.move not in _TRAVELS  # travellers strike en route
         self.phase = ACT
-        self.timer = config.LEAP_SECONDS if self.move == "leap" else 0.0
+        if self.move == "leap":
+            self.timer = config.LEAP_SECONDS
+        elif self.move == "charge":
+            self.timer = config.CHARGE_REACH / config.CHARGE_SPEED
+        else:
+            self.timer = 0.0
 
     def _slam(self, boss: Boss, player: Player, might: float) -> None:
         """A ring around its own feet. The one blow that asks you to be away."""
@@ -153,48 +185,60 @@ class Brawl:
         ):
             _hurt(player, config.SWEEP_DAMAGE * might)
 
-    def _charge(
-        self,
-        boss: Boss,
-        player: Player,
-        room: pygame.Vector2,
-        radius: float,
-        might: float,
-    ) -> None:
-        """Straight through where you were, and it hurts along the way.
+    def _charge(self, boss: Boss) -> None:
+        """Set off. The running happens during the ACT beat."""
+        self.going = _facing(self.aim, boss.pos)
+        self.left = config.CHARGE_REACH
 
-        Resolved in one step rather than animated across frames: the line it
-        runs is what matters, and a player who was on that line was on it when
-        the wind ended.
+    def _leap(self, boss: Boss, room: pygame.Vector2, radius: float) -> None:
+        """Take off toward where you were standing.
+
+        The air time is the warning, so nothing happens until it comes down.
+        Hurt on take-off, the jump itself would be the blow and there would be
+        nothing to step out of.
         """
-        facing = _facing(self.aim, boss.pos)
-        start = pygame.Vector2(boss.pos)
-        boss.pos += facing * config.CHARGE_REACH
-        offset = boss.pos - room
-        held = radius - boss.radius
-        if offset.length() > held:  # pulled up at the wall
-            boss.pos.update(room + offset.normalize() * held)
-        if _near_line(player.pos, start, boss.pos) <= boss.radius + player.radius:
-            _hurt(player, config.CHARGE_DAMAGE * might)
-
-    def _leap(
-        self,
-        boss: Boss,
-        player: Player,
-        room: pygame.Vector2,
-        radius: float,
-        might: float,
-    ) -> None:
-        """Onto where you were standing. The ACT beat is the time in the air,
-        so the landing is the thing to step out of rather than the jump."""
         landing = pygame.Vector2(self.aim)
         offset = landing - room
         held = radius - boss.radius
         if offset.length() > held:
             landing = room + offset.normalize() * held
-        boss.pos.update(landing)
+        self.landing = landing
+        self.left = config.LEAP_SECONDS
+
+    # --- crossing the ground ----------------------------------------------
+    def _travel(
+        self, dt: float, boss: Boss, player: Player, room: pygame.Vector2, radius: float
+    ) -> None:
+        """Move a charge or a leap along, one frame at a time."""
+        if self.move == "charge":
+            step = min(self.left, config.CHARGE_SPEED * dt)
+            was = pygame.Vector2(boss.pos)
+            boss.pos += self.going * step
+            self.left -= step
+            offset = boss.pos - room
+            held = radius - boss.radius
+            if offset.length() > held:  # pulled up at the wall
+                boss.pos.update(room + offset.normalize() * held)
+                self.left = 0.0
+            caught = _near_line(player.pos, was, boss.pos) <= boss.radius + player.radius
+            if not self.struck and caught:
+                _hurt(player, config.CHARGE_DAMAGE * self._might(boss))
+                self.struck = True  # once per charge, not once per frame
+            if self.left <= 0:
+                self.timer = min(self.timer, 0.0)
+            return
+        self.left -= dt
+        share = 1.0 - max(0.0, self.left) / config.LEAP_SECONDS
+        boss.pos.update(self.takeoff.lerp(self.landing, min(1.0, share)))
+
+    def _land(self, boss: Boss, player: Player) -> None:
+        """The end of the ACT beat: what a leap does when it comes down."""
+        self.landed = True
+        if self.move != "leap":
+            return
+        boss.pos.update(self.landing)
         if boss.pos.distance_to(player.pos) <= config.LEAP_RADIUS + player.radius:
-            _hurt(player, config.LEAP_DAMAGE * might)
+            _hurt(player, config.LEAP_DAMAGE * self._might(boss))
 
 
 def _near_line(point: pygame.Vector2, a: pygame.Vector2, b: pygame.Vector2) -> float:

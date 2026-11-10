@@ -76,7 +76,7 @@ _ROWS: tuple[Trick, ...] = (
     Trick("miasma", "독기", BOG, 1, "붙어라"),
     Trick("venom", "맹독", BOG, 2, "네가 깐 땅을 피해라"),
     Trick("rotheart", "부패심", BOG, 3, "깔아둔 것이 전부 계산서"),
-    # 황무지 -- an orb that sits, rods that chain, a bolt that bounces back
+    # 사막 -- an orb that sits, rods that chain, a bolt that bounces back
     Trick("static", "정전기", WASTELAND, 1, "구슬에서 떨어져라"),
     Trick("strike", "낙뢰", WASTELAND, 2, "이어진 선을 비켜라"),
     Trick("thunderheart", "뇌신핵", WASTELAND, 3, "치운 자리에서 싸워라"),

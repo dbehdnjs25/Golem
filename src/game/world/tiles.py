@@ -70,10 +70,11 @@ class TileSheet:
 def _folder(key: str) -> Path:
     """The asset folder for a biome key, which may be spelled either way.
 
-    The editor writes ``burnt-forest`` where the biome table says
-    ``burnt_forest``; the rest match.
+    The burnt-forest directory is hyphenated, and the desert keeps the old
+    ``wasteland`` save key while its assets live in ``desert``.
     """
-    for name in (key, key.replace("_", "-")):
+    aliases = {"wasteland": "desert"}
+    for name in (aliases.get(key, key), key, key.replace("_", "-")):
         if (_ASSETS / name / "tiles32" / "tileset.json").exists():
             return _ASSETS / name / "tiles32"
     raise FileNotFoundError(f"no tileset for biome {key!r}")

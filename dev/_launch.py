@@ -42,9 +42,18 @@ def weapon_of(scene: PlayScene) -> WeaponTool:
     raise SystemExit("no weapon in the hotbar; the scene's opening kit changed")
 
 
-def run(label: str, value: float, tune: Callable[[PlayScene], None]) -> None:
-    """Build a scene, turn the one knob, say so, and play."""
-    scene = PlayScene()
+def run(
+    label: str,
+    value: float,
+    tune: Callable[[PlayScene], None],
+    scene: PlayScene | None = None,
+) -> None:
+    """Build a scene, turn the one knob, say so, and play.
+
+    ``scene`` is for the scripts that need a scene set up before the knob --
+    standing somewhere, or a subclass that changes a rule.
+    """
+    scene = PlayScene() if scene is None else scene
     tune(scene)
     print(f"{label} = {value:g}")
     Game().run(scene)

@@ -909,6 +909,7 @@ class PlayScene(Scene):
                 self.camera.world_to_screen(self.core.pos),
                 self.core.radius,
             )
+        self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
         pygame.draw.circle(
             surface,
@@ -1651,7 +1652,9 @@ class PlayScene(Scene):
         temple = self.boss_temple
         boss.update(dt, self.player.pos, temple.pos, temple.radius)
         if self.brawl is not None:
-            self.brawl.update(dt, boss, self.player, temple.pos, temple.radius)
+            self.brawl.update(
+                dt, boss, self.player, temple.pos, temple.radius, patches=self.patches
+            )
         reach = boss.radius + self.player.radius
         if boss.pos.distance_to(self.player.pos) <= reach and self.player.iframe_timer <= 0:
             self.player.hp -= boss.contact_dps * dt
@@ -1702,6 +1705,33 @@ class PlayScene(Scene):
             at = self.camera.world_to_screen(bog.pos)
             pygame.draw.circle(surface, config.MIRE_COLOR, at, bog.radius)
             pygame.draw.circle(surface, config.MIRE_RIM_COLOR, at, bog.radius, 3)
+
+    def _draw_tricks(self, surface: pygame.Surface) -> None:
+        """What a boss has in the air: announced circles, fronts, and edges.
+
+        Over the floor and under everything alive. An announced circle is the
+        only one drawn as an outline -- it has not happened yet, and a filled
+        one would read as a thing already on the ground.
+        """
+        if self.brawl is None:
+            return
+        field = self.brawl.tricks
+        for spot in field.falling:
+            at = self.camera.world_to_screen(spot.pos)
+            # Closing in as the warning runs out, so how long is left is read
+            # from the shape rather than counted.
+            left = max(0.0, spot.left / config.FALL_WARNING)
+            pygame.draw.circle(surface, config.WARNING_COLOR, at, int(spot.radius), 3)
+            pygame.draw.circle(surface, config.WARNING_COLOR, at, int(spot.radius * (1 - left)), 2)
+        for wall in field.walls:
+            facing = wall.vel.normalize() if wall.vel.length_squared() else pygame.Vector2(1, 0)
+            across = pygame.Vector2(-facing.y, facing.x) * (wall.width / 2)
+            at = self.camera.world_to_screen(wall.pos)
+            pygame.draw.line(surface, config.FLAME_COLOR, at - across, at + across, int(wall.reach))
+        for ring in field.rings:
+            if ring.radius >= 1:
+                at = self.camera.world_to_screen(ring.pos)
+                pygame.draw.circle(surface, config.FLAME_COLOR, at, int(ring.radius), 6)
 
     def _draw_boss(self, surface: pygame.Surface) -> None:
         """The thing itself, in its biome's colour and far bigger than a golem.

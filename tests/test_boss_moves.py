@@ -82,20 +82,36 @@ def test_every_common_can_be_thrown():
         brawl = boss_moves.Brawl()
         boss, player = _boss(), _player()
         _run(brawl, boss, player, config.BOSS_MOVE_GAP + 2.5, move=key)
-        assert brawl.struck, key  # it reached its blow
+        assert brawl.landed, key  # it got all the way through its act beat
 
 
 def test_it_only_throws_what_its_kind_holds():
+    # Its two blows and, in the first phase, the one element trick it opens
+    # with. Nothing from another boss's list and nothing from its own second
+    # phase.
     for index, kind in enumerate(BOSS_KINDS):
         brawl = boss_moves.Brawl()
         boss, player = _boss(index), _player()
+        allowed = set(kind.commons) | {kind.tricks[0]}
         seen = set()
         for _ in range(4000):
             brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
             if brawl.move is not None:
                 seen.add(brawl.move)
-        assert seen <= set(kind.commons), (kind.key, seen)
+        assert seen <= allowed, (kind.key, seen)
         assert seen  # and it does throw
+
+
+def test_the_second_phase_puts_its_other_two_in_the_mix():
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player()
+    boss.damage(boss.kind.hp * 0.6)
+    seen = set()
+    for _ in range(8000):
+        brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS)
+        if brawl.move is not None:
+            seen.add(brawl.move)
+    assert set(boss.kind.tricks) <= seen
 
 
 def test_a_dodging_player_takes_nothing():
@@ -225,3 +241,47 @@ def test_the_second_phase_hits_harder():
         return player.max_hp - player.hp
 
     assert damage_done(True) > damage_done(False)
+
+
+# --- it moves, rather than arriving --------------------------------------
+
+
+def _biggest_step(brawl, boss, player, seconds, move):
+    """The furthest the boss travels in any single frame."""
+    worst = 0.0
+    for _ in range(int(seconds / config.FIXED_DT)):
+        was = pygame.Vector2(boss.pos)
+        brawl.update(config.FIXED_DT, boss, player, ROOM, RADIUS, forced=move)
+        if brawl.move is not None:
+            move = None
+        worst = max(worst, was.distance_to(boss.pos))
+    return worst
+
+
+def test_a_charge_runs_rather_than_arriving():
+    # It used to resolve in one frame, which on screen is a teleport: the boss
+    # is here, then it is five hundred pixels away, and nothing was dodgeable
+    # because nothing crossed the ground in between.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player(ROOM + pygame.Vector2(300, 0))
+    step = _biggest_step(brawl, boss, player, TO_BLOW + 2.5, "charge")
+    assert step <= config.CHARGE_SPEED * config.FIXED_DT * 1.5
+
+
+def test_a_leap_takes_to_the_air_rather_than_blinking():
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player(ROOM + pygame.Vector2(350, 0))
+    step = _biggest_step(brawl, boss, player, TO_BLOW + 2.5, "leap")
+    through_the_air = 350 / config.LEAP_SECONDS
+    assert step <= through_the_air * config.FIXED_DT * 1.5
+
+
+def test_a_leap_only_lands_when_it_lands():
+    # The air time is the warning. Hurt on take-off, the jump itself would be
+    # the blow and there would be nothing to step out of.
+    brawl = boss_moves.Brawl()
+    boss, player = _boss(), _player(ROOM + pygame.Vector2(350, 0))
+    _run(brawl, boss, player, TO_BLOW + config.LEAP_SECONDS * 0.4, move="leap")
+    assert player.hp == player.max_hp
+    _run(brawl, boss, player, config.LEAP_SECONDS)
+    assert player.hp < player.max_hp

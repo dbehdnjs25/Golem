@@ -588,6 +588,33 @@ LEAP_SECONDS: Final[float] = 0.5  # in the air
 LEAP_RADIUS: Final[float] = 150.0
 LEAP_DAMAGE: Final[float] = 20.0
 
+# --- The shapes a boss's trick comes in ------------------------------------
+# A circle announced on the floor before it becomes a blow. The warning IS the
+# trick: told where and given time, a hit is a choice rather than a tax.
+FALL_WARNING: Final[float] = 0.9  # seconds between the circle and the blow
+FALL_RADIUS: Final[float] = 90.0
+
+# A front that travels. Slower than a walk on purpose -- what it asks is to be
+# gone round, and anything faster than the player is a hit with extra steps.
+WALL_WIDTH: Final[float] = 170.0
+WALL_REACH: Final[float] = 60.0  # how thick it is along its own travel
+WALL_SECONDS: Final[float] = 6.0
+
+# An edge opening out of a point. Where it started is where it is not, which
+# makes closing in the answer to one.
+RING_SPEED: Final[float] = 430.0
+RING_REACH: Final[float] = 520.0
+
+# --- The burnt forest's three ----------------------------------------------
+# Fire falls, then walks at you, then bursts out of the floor.
+EMBER_DROPS: Final[int] = 5
+EMBER_SPREAD: Final[float] = 210.0  # how far from the player they scatter
+EMBER_DAMAGE: Final[float] = 16.0
+FLAME_SPEED: Final[float] = 130.0  # px/s; well under PLAYER_SPEED
+FLAME_DAMAGE: Final[float] = 20.0
+ASHHEART_DAMAGE: Final[float] = 24.0
+ASHHEART_EMBERS: Final[int] = 6  # patches left where the ring went
+
 # --- What the tricks leave on the floor, and the boss's own bar ------------
 # The ground a gimmick left has to read as ground rather than as an enemy, so
 # these sit near their biome's own colour and are drawn under everything that
@@ -609,6 +636,12 @@ BOSS_BAR_MARGIN: Final[int] = 160 * UI_SCALE
 BOSS_BAR_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
 BOSS_PHASE2_COLOR: Final[tuple[int, int, int]] = (255, 196, 92)
 BOSS_BAR_BG: Final[tuple[int, int, int]] = (38, 32, 36)
+
+# An announced circle, and the fire itself. The warning is deliberately not the
+# colour of the thing it warns about: one is a promise and one is a blow, and
+# the moment they look alike the telegraph stops being readable.
+WARNING_COLOR: Final[tuple[int, int, int]] = (255, 236, 150)
+FLAME_COLOR: Final[tuple[int, int, int]] = (236, 112, 44)
 
 # --- Combat: colours (RGB) ----------------------------------------------------
 GOLEM_COLOR: Final[tuple[int, int, int]] = (230, 80, 90)
