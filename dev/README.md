@@ -8,6 +8,9 @@ Each one changes **one number** and then starts the real game, real window and
 all. You are playing the actual game with that number set.
 
 ```bash
+python dev/magic.py         # a staff in hand, every shape already found
+python dev/magic.py 1       # the same, standing on the burnt forest's altar
+python dev/boss.py 1        # an altar, unkillable, no staff
 python dev/damage.py 50     # the weapon hits for 50
 python dev/speed.py 400     # the player walks at 400 px/s
 python dev/stamina.py 400   # the wind holds 400
