@@ -51,6 +51,7 @@ from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_KINDS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.render.floor import Floor
+from game.render.resources import resource_image
 from game.systems import (
     arena,
     boss_moves,
@@ -105,6 +106,31 @@ def _ui_asset(name: str) -> pygame.Surface:
             )
         _ui_images[name] = art
     return _ui_images[name]
+
+
+def _blit_nine_slice(
+    surface: pygame.Surface, image: pygame.Surface, rect: pygame.Rect, border: int
+) -> None:
+    """Stretch a pixel frame while keeping its corners at their native size."""
+    sw, sh = image.get_size()
+    pieces = (
+        (pygame.Rect(0, 0, border, border), pygame.Rect(rect.left, rect.top, border, border)),
+        (pygame.Rect(border, 0, sw - 2 * border, border), pygame.Rect(rect.left + border, rect.top, rect.width - 2 * border, border)),
+        (pygame.Rect(sw - border, 0, border, border), pygame.Rect(rect.right - border, rect.top, border, border)),
+        (pygame.Rect(0, border, border, sh - 2 * border), pygame.Rect(rect.left, rect.top + border, border, rect.height - 2 * border)),
+        (pygame.Rect(border, border, sw - 2 * border, sh - 2 * border), pygame.Rect(rect.left + border, rect.top + border, rect.width - 2 * border, rect.height - 2 * border)),
+        (pygame.Rect(sw - border, border, border, sh - 2 * border), pygame.Rect(rect.right - border, rect.top + border, border, rect.height - 2 * border)),
+        (pygame.Rect(0, sh - border, border, border), pygame.Rect(rect.left, rect.bottom - border, border, border)),
+        (pygame.Rect(border, sh - border, sw - 2 * border, border), pygame.Rect(rect.left + border, rect.bottom - border, rect.width - 2 * border, border)),
+        (pygame.Rect(sw - border, sh - border, border, border), pygame.Rect(rect.right - border, rect.bottom - border, border, border)),
+    )
+    for source, target in pieces:
+        if target.width <= 0 or target.height <= 0:
+            continue
+        patch = image.subsurface(source)
+        if patch.get_size() != target.size:
+            patch = pygame.transform.scale(patch, target.size)
+        surface.blit(patch, target.topleft)
 
 
 def _has_final_consonant(word: str) -> bool:
@@ -1223,13 +1249,13 @@ class PlayScene(Scene):
             self._draw_contents(surface, rect.inflate(-10, -10), slot)
 
     def _draw_contents(self, surface: pygame.Surface, rect: pygame.Rect, slot: object) -> None:
-        """A coloured block stands in for an icon until there is art.
-
-        A stack shows its kind's colour; a tool shows a neutral one, since tools
-        are not catalogue rows and have no colour of their own.
-        """
+        """Resource icons with stack meters, or colour blocks for other items."""
         if isinstance(slot, Stack):
-            pygame.draw.rect(surface, slot.kind.color, rect, border_radius=2)
+            art = resource_image(slot.kind, min(rect.size))
+            if art is None:
+                pygame.draw.rect(surface, slot.kind.color, rect, border_radius=2)
+            else:
+                surface.blit(art, art.get_rect(center=rect.center))
             filled = max(1, int(rect.width * slot.count / slot.kind.stack_max))
             pygame.draw.rect(
                 surface, config.WHITE, pygame.Rect(rect.left, rect.bottom - 3, filled, 3)
@@ -1308,7 +1334,7 @@ class PlayScene(Scene):
                 pygame.draw.circle(surface, config.WHITE, at, config.STATION_RADIUS + 3, 2)
 
     def _draw_nodes(self, surface: pygame.Surface) -> None:
-        """Nodes in the colour of what they hold, and a ring on the one aimed at.
+        """Resource sprites or coloured nodes, with a ring on the one aimed at.
 
         The ring is red when the tool in hand cannot take it. Without that,
         being under-equipped looks exactly like the game ignoring the click.
@@ -1332,7 +1358,11 @@ class PlayScene(Scene):
         )
         for node in self.fragments:
             at = self.camera.world_to_screen(node.pos)
-            pygame.draw.circle(surface, node.kind.color, at, config.FRAGMENT_RADIUS)
+            art = resource_image(node.kind)
+            if art is None:
+                pygame.draw.circle(surface, node.kind.color, at, config.FRAGMENT_RADIUS)
+            else:
+                surface.blit(art, art.get_rect(center=(round(at.x), round(at.y))))
             held = yield_of(node.kind)
             if held is not node.kind:
                 pygame.draw.circle(surface, held.color, at, config.FRAGMENT_RADIUS * 0.45)
@@ -1340,7 +1370,8 @@ class PlayScene(Scene):
             if node is aimed:
                 usable = mining.can_take(tool, node.kind)
                 ring = config.WHITE if usable else config.BLOCKED_COLOR
-                pygame.draw.circle(surface, ring, at, config.FRAGMENT_RADIUS + 4, 2)
+                radius = art.get_width() / 2 + 2 if art is not None else config.FRAGMENT_RADIUS + 4
+                pygame.draw.circle(surface, ring, at, radius, 2)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
         """The ward's rim, or the empty pedestal waiting for the shards."""
