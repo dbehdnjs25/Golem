@@ -69,7 +69,7 @@ from game.systems import (
     weather,
 )
 from game.systems.beast_spawner import BeastSpawner
-from game.systems.camera import LOCKED, Camera, edge_marker
+from game.systems.camera import Camera, edge_marker
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
@@ -404,7 +404,6 @@ class PlayScene(Scene):
             offset=pygame.Vector2(0, 0),
             view_size=config.SCREEN_SIZE,
             world_size=config.WORLD_SIZE,
-            mode=LOCKED,
         )
         self.camera.center_on(self.player.pos)
         # No base inventory: without a pack the hotbar is all there is.
@@ -531,8 +530,6 @@ class PlayScene(Scene):
                 self.hotbar.select(3)
             elif event.key == pygame.K_5:
                 self.hotbar.select(4)
-            elif event.key == pygame.K_y:
-                self.camera.toggle_lock(self.player.pos)
             elif event.key == pygame.K_SPACE:
                 self._dodge_pressed = True
             elif event.key == pygame.K_e:
@@ -669,7 +666,7 @@ class PlayScene(Scene):
 
         # The camera keeps following even while down, so the wait shows the
         # world carrying on rather than a frozen frame.
-        self.camera.update(dt, self.player.pos, self._mouse_screen, self._mouse_held)
+        self.camera.update(dt, self.player.pos)
 
         if not down:
             self._update_living(dt, dodge, sync)

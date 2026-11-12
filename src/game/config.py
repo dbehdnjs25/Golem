@@ -92,8 +92,6 @@ BACKPACK_SLOTS: Final[int] = 20  # the basic pack; better ones hold more
 CORE_STORE_SLOTS: Final[int] = 40  # the store at the core, never carried
 
 # --- Camera -----------------------------------------------------------------
-CAMERA_PAN_SPEED: Final[float] = 400.0  # px/s free-pan speed
-CAMERA_EDGE_MARGIN: Final[int] = 40  # px band at screen edge that pans
 
 # --- Spawner ----------------------------------------------------------------
 SPAWN_INTERVAL: Final[float] = 2.0  # seconds between spawn attempts

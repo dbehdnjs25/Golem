@@ -14,7 +14,7 @@ from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
 from game.scenes.play import PlayScene, _ui_asset
 from game.systems import consume, raids
-from game.systems.camera import FREE, Camera
+from game.systems.camera import Camera
 from game.world import biomes, mires
 
 
@@ -45,15 +45,6 @@ def test_number_keys_select_hotbar():
     assert scene.hotbar.selected == 1
     scene.handle_event(_key_event(pygame.K_1))
     assert scene.hotbar.selected == 0
-
-
-def test_y_toggles_camera_lock():
-    scene = PlayScene()
-    start_mode = scene.camera.mode
-    scene.handle_event(_key_event(pygame.K_y))
-    assert scene.camera.mode != start_mode
-    scene.handle_event(_key_event(pygame.K_y))
-    assert scene.camera.mode == start_mode
 
 
 def test_movement_key_moves_player():
@@ -306,7 +297,6 @@ def test_outside_the_map_is_painted_void():
     surface = pygame.Surface(config.SCREEN_SIZE)
     # Park the camera on the world box's top-left corner, which is outside the
     # inscribed circle.
-    scene.camera.mode = FREE
     scene.camera.offset = pygame.Vector2(0, 0)
     scene.draw(surface)
     assert surface.get_at((2, 2))[:3] == config.VOID_COLOR
@@ -719,10 +709,7 @@ def test_lighting_it_makes_it_show():
 
 
 def test_the_core_gets_a_pointer_when_it_is_off_screen():
-    from game.systems.camera import FREE
-
     scene = PlayScene()
-    scene.camera.mode = FREE
     scene.camera.offset = pygame.Vector2(scene.core.pos) + pygame.Vector2(8_000, 8_000)
     surface = pygame.Surface(config.SCREEN_SIZE)
     scene.draw(surface)

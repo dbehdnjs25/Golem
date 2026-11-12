@@ -1,14 +1,18 @@
-"""World<->screen transform with two modes: LOCKED follows the player;
-FREE pans when the mouse hits a screen edge (League-of-Legends style, toggled
-with Y). Pure math given its inputs, so it is fully testable headlessly.
+"""World<->screen transform. It follows the player, and that is all.
+
+There used to be a second mode that panned when the mouse touched a screen
+edge. It went with the key that turned it on: reachable no other way, every
+line of it was unreachable the moment that binding left.
+
+Pure math given its inputs, so it is fully testable headlessly.
 
 Zoom is a scale between the FIELD -- the stretch of world being drawn -- and the
 screen it ends up on. ``view_size`` stays the screen; ``field_size`` is what the
 zoom makes of it, and that is the surface the world is drawn onto before being
 scaled down to the window. So ``world_to_screen`` answers in field pixels and
-``screen_to_world`` takes real screen pixels, undoing the zoom itself: mining and
-the free camera both read the mouse, and both would aim at the wrong spot if
-that division lived at the call sites.
+``screen_to_world`` takes real screen pixels, undoing the zoom itself: mining
+reads the mouse, and it would aim at the wrong spot if that division lived at
+the call site.
 """
 
 from __future__ import annotations
@@ -17,18 +21,12 @@ from dataclasses import dataclass
 
 import pygame
 
-from game import config
-
-FREE = "free"
-LOCKED = "locked"
-
 
 @dataclass
 class Camera:
     offset: pygame.Vector2  # world coord shown at the view's top-left
     view_size: tuple[int, int]
     world_size: tuple[int, int]
-    mode: str = LOCKED
     zoom: float = 1.0
 
     # The zoom only ever REDUCES how much world is on screen. 1.0 draws the
@@ -97,40 +95,11 @@ class Camera:
         self.offset = pygame.Vector2(point) - pygame.Vector2(field_w / 2, field_h / 2)
         self._clamp()
 
-    def toggle_lock(self, player_pos: pygame.Vector2) -> None:
-        if self.mode == LOCKED:
-            self.mode = FREE
-        else:
-            self.mode = LOCKED
-            self.center_on(player_pos)
-
-    def update(
-        self,
-        dt: float,
-        player_pos: pygame.Vector2,
-        mouse_screen: tuple[int, int] | pygame.Vector2,
-        mining_held: bool,
-    ) -> None:
-        if self.mode == LOCKED:
-            self.center_on(player_pos)
-            return
-        if mining_held:
-            return  # sharing the mouse with mining: don't pan while channelling
-        view_w, view_h = self.view_size
-        margin = config.CAMERA_EDGE_MARGIN
-        mouse_x, mouse_y = mouse_screen[0], mouse_screen[1]
-        direction = pygame.Vector2(0, 0)
-        if mouse_x < margin:
-            direction.x = -1
-        elif mouse_x > view_w - margin:
-            direction.x = 1
-        if mouse_y < margin:
-            direction.y = -1
-        elif mouse_y > view_h - margin:
-            direction.y = 1
-        if direction.length_squared() > 0:
-            self.offset += direction * config.CAMERA_PAN_SPEED * dt
-            self._clamp()
+    def update(self, dt: float, player_pos: pygame.Vector2) -> None:
+        """Follow the player. The ``dt`` is kept because every other system's
+        update takes one, and a single odd signature is worse than an unused
+        argument."""
+        self.center_on(player_pos)
 
 
 def edge_marker(
