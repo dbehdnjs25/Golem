@@ -5,6 +5,7 @@ from pathlib import Path
 import pygame
 
 from game.items.item_kinds import COPPER_ORE, GOLD_ORE, IRON_ORE, STONE, WOOD, ZINC_ORE, ItemKind
+from game.render.trees import tree_image
 
 _ROOT = Path(__file__).resolve().parents[3] / "assets" / "resources"
 _FILES = {
@@ -21,11 +22,15 @@ _images: dict[tuple[ItemKind, int], pygame.Surface] = {}
 def resource_image(kind: ItemKind, size: int = 32) -> pygame.Surface | None:
     """Return alpha art at the requested size, or None for unillustrated kinds."""
     filename = _FILES.get(kind)
-    if filename is None:
-        return None
     key = (kind, size)
     if key not in _images:
-        if size == 32:
+        if filename is None:
+            tree = tree_image(kind)
+            if tree is None:
+                return None
+            scale = size / max(tree.get_size())
+            image = pygame.transform.scale(tree, (max(1, round(tree.get_width() * scale)), size))
+        elif size == 32:
             image = pygame.image.load(str(_ROOT / filename))
             if pygame.display.get_surface() is not None:
                 image = image.convert_alpha()
