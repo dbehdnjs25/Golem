@@ -1,80 +1,59 @@
-"""The staff: nothing but what is carved on it.
+"""The staff: what lets a shape become a spell.
 
-A weapon hits on its own and a glyph makes it hit harder. A staff does not.
-With nothing cut into it, it is useless rather than weak -- that is the spec's
-line and it is what makes the whole glyph ladder worth climbing.
+Nothing is cut into it. The glyphs live with the player -- in the grimoire and
+in their hand -- so a staff holds no magic of its own and is useless without
+someone who knows a shape. That is still the spec's line; only where the
+knowing lives has moved.
 
-What stops the best glyph being simply the right answer is strain. Power and
-strain climb together, so the supreme cut hits hardest and empties the staff
-fastest, and the basic cut is the only one that can be thrown all night. The
-choice is a budget, not a number.
+There is one. No grades, because what makes a player better at magic is the
+shapes they have found and whether their hand can draw a five-stroke figure
+while something is charging them -- and a staff that quietly raised those
+numbers would be answering a question the hand is supposed to answer.
 
-Slots come from biome material: a better staff is a staff with more room on
-it. Never from the ore grade -- the two ladders stay apart.
+What stops the best shape from simply being the right answer is strain. Power
+and strain climb together with the rung, so the supreme shape hits hardest and
+empties the staff fastest, and the basic one is the only thing that can be
+thrown all night. The choice is a budget, and now a hand as well.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from game import config
-from game.items.engraving import Engraved
-from game.items.glyphs import STAFF, Glyph
-from game.items.item_kinds import (
-    GREATER_STAFF_ITEM,
-    STAFF_ITEM,
-    SUPREME_STAFF_ITEM,
-    ItemKind,
-)
-
-STAFF_SLOTS = 1
-GREATER_STAFF_SLOTS = 2
-SUPREME_STAFF_SLOTS = 3
+from game.items.glyphs import Glyph
+from game.items.item_kinds import STAFF_ITEM, ItemKind
 
 
 @dataclass
 class Staff:
-    slots: int = STAFF_SLOTS
-    engraved: Engraved = field(init=False)
     strain: float = 0.0
     lockout: float = 0.0  # seconds left before it will answer again
-    chosen: int = 0
     name: str = "지팡이"
-
-    def __post_init__(self) -> None:
-        self.engraved = Engraved(kind=STAFF, slots=self.slots)
 
     @property
     def overloaded(self) -> bool:
         return self.lockout > 0
 
     @property
-    def ready(self) -> Glyph | None:
-        """The glyph it would throw, or None if there is nothing to throw."""
-        carved = self.engraved.glyphs
-        if not carved or self.overloaded:
-            return None
-        return carved[min(self.chosen, len(carved) - 1)]
+    def heat(self) -> float:
+        """How full it is, for anything showing it to the player."""
+        return min(1.0, self.strain / config.STAFF_STRAIN_MAX)
 
-    def choose(self, index: int) -> None:
-        """Pick which carved glyph to throw.
+    def power_of(self, glyph: Glyph) -> float:
+        return glyph.power
 
-        Out of range raises rather than wrapping: wrapping would quietly throw
-        the wrong magic, which in a fight is worse than nothing happening.
-        """
-        if not 0 <= index < len(self.engraved.glyphs):
-            raise IndexError(f"no glyph at slot {index}")
-        self.chosen = index
+    def range_of(self) -> float:
+        return config.PROJECTILE_TTL
 
-    def fire(self) -> Glyph | None:
-        """Throw, and pay for it. None if it cannot.
+    def fire(self, glyph: Glyph) -> Glyph | None:
+        """Throw ``glyph``, and pay for it. None while locked out.
 
         The strain lands AFTER the throw, so the shot that tips it over still
-        goes out -- a staff that silently ate the last shot before locking
-        would read as a dropped input.
+        goes out -- a staff that silently ate the last one before locking
+        would read as a dropped input rather than a cost.
         """
-        glyph = self.ready
-        if glyph is None:
+        if self.overloaded:
             return None
         self.strain += glyph.strain
         if self.strain >= config.STAFF_STRAIN_MAX:
@@ -87,7 +66,7 @@ class Staff:
 
         Coming back from an overload drains the strain completely rather than
         resuming where it stopped: otherwise the staff locks again on the next
-        shot, over and over, and the lockout stops being a setback and becomes
+        throw, over and over, and the lockout stops being a setback and becomes
         the normal state.
         """
         if self.overloaded:
@@ -98,10 +77,6 @@ class Staff:
         self.strain = max(0.0, self.strain - config.STAFF_COOLING * dt)
 
 
-# Which staff item means how much room. Crafting the better one IS the upgrade:
-# there is no second step where the player has to install it.
-STAFF_KINDS: dict[ItemKind, int] = {
-    STAFF_ITEM: STAFF_SLOTS,
-    GREATER_STAFF_ITEM: GREATER_STAFF_SLOTS,
-    SUPREME_STAFF_ITEM: SUPREME_STAFF_SLOTS,
-}
+# What counts as a staff in hand. One entry, kept as a set so the scene's
+# question stays "is this a staff?" rather than "is this THE staff?".
+STAFF_ITEMS: frozenset[ItemKind] = frozenset({STAFF_ITEM})

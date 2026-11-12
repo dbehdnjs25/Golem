@@ -1,8 +1,12 @@
 """The player throwing what the boss threw.
 
-This is what the whole step was for: the thing done to you becomes the thing in
-your hand. So the two sides have to reach the same function -- written twice it
-would be wrong twice, and the wrong one would be whichever got less play.
+This is what the whole boss step was for: the thing done to you becomes the
+thing in your hand. So the two sides have to reach the same function -- written
+twice it would be wrong twice, and the wrong one would be whichever side got
+less play.
+
+Nothing is carved any more. A shape is drawn, and if the player has found that
+shape and is holding a staff, it goes out.
 """
 
 import inspect
@@ -12,17 +16,18 @@ import pygame
 from game import config
 from game.entities.enemy import Golem
 from game.entities.patch import BURNING, FROST, SLUDGE
-from game.items import engraving
+from game.entities.projectile import Projectile
 from game.items import glyphs as glyph_table
-from game.items.glyphs import STAFF, WEAPON
-from game.items.staff import Staff
-from game.items.tools import WeaponTool
+from game.items import strokes
+from game.items.item_kinds import ITEM_KINDS
+from game.scenes.play import PlayScene
 from game.systems import combat, gimmicks
 from game.world import biomes
 from game.world.map import WorldMap
 
 WORLD = WorldMap(rotation=0.0)
 CENTRE = WORLD.center
+SHOOTER = pygame.Vector2(CENTRE) + pygame.Vector2(-200, 0)
 
 
 def _supreme(biome):
@@ -44,9 +49,7 @@ def test_the_boss_and_the_player_call_the_same_function():
     assert {"gimmick", "at", "victim", "away_from"} <= taken
 
 
-def test_every_gimmick_can_be_struck_at_a_point():
-    # The boss aims it at the player; the player aims it where the shot landed.
-    # Both are a point and a thing standing on it.
+def test_every_gimmick_does_something_when_struck():
     for gimmick in gimmicks.GIMMICKS:
         patches, marks = [], []
         golem = _golem()
@@ -59,47 +62,32 @@ def test_every_gimmick_can_be_struck_at_a_point():
             patches=patches,
             marks=marks,
         )
-        # Every one of them does SOMETHING: leaves ground, sets a mark, or
-        # moves what it hit. A gimmick that did none would be a dud nobody
-        # would notice was broken.
+        # Leaves ground, sets a mark, or moves what it hit. One that did none
+        # would be a dud nobody would notice was broken.
         assert patches or marks or golem.pos != stood, gimmick.key
 
 
 def test_a_shove_works_on_whatever_is_standing_there():
-    # It used to take a Player by name. The player throws it at golems now.
     golem = _golem()
     before = pygame.Vector2(golem.pos)
     gimmicks.shove(golem, pygame.Vector2(CENTRE) + pygame.Vector2(-100, 0))
     assert golem.pos != before
 
 
-# --- the five supreme glyphs each raise their own trick ------------------
-
-
-SHOOTER = pygame.Vector2(CENTRE) + pygame.Vector2(-200, 0)
+# --- a shot carrying a trick ---------------------------------------------
 
 
 def _fire_into(glyph, enemies, patches, marks):
-    """Carve a weapon, fire it, and walk the shot into a golem.
-
-    Through the real path rather than a hand-built Projectile, so that what
-    decides whether a trick rides on the shot is the code that decides it in
-    the game and not this helper's opinion.
-    """
-    weapon = WeaponTool()
-    engraving.engrave(weapon.engraved, glyph)
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=weapon,
-        held=True,
-        aim_world=pygame.Vector2(enemies[0].pos),
-        player_pos=pygame.Vector2(SHOOTER),
-        fire_timer=0.0,
+    """Put one shot carrying ``glyph``'s trick through a golem."""
+    shot = Projectile(
+        pos=pygame.Vector2(enemies[0].pos),
+        vel=pygame.Vector2(0, 0),
+        damage=glyph.power,
+        gimmick=glyph.gimmick if glyph.tier == glyph_table.SUPREME else None,
     )
-    shots[0].pos.update(enemies[0].pos)
     combat.update_projectiles(
         config.FIXED_DT,
-        shots,
+        [shot],
         enemies,
         WORLD,
         patches=patches,
@@ -133,7 +121,6 @@ def test_the_wasteland_supreme_leaves_a_mark():
 
 
 def test_the_wind_plateau_supreme_moves_what_it_hits():
-    # Nothing is left on the ground; the golem is somewhere else instead.
     patches, marks = [], []
     golem = _golem()
     before = pygame.Vector2(golem.pos)
@@ -143,19 +130,14 @@ def test_the_wind_plateau_supreme_moves_what_it_hits():
 
 
 def test_it_is_thrown_away_from_the_one_who_fired():
-    # Shoved toward the player it would be a pull, and the plateau's holes are
-    # on the far side.
     patches, marks = [], []
     golem = _golem()
     _fire_into(_supreme(biomes.WIND_PLATEAU), [golem], patches, marks)
     assert golem.pos.distance_to(SHOOTER) > CENTRE.distance_to(SHOOTER)
 
 
-# --- the lower cuts are damage and nothing else --------------------------
-
-
-def test_a_basic_glyph_leaves_nothing_behind():
-    # The ladder has to mean something. If the first cut already threw the
+def test_a_lesser_cut_leaves_nothing_behind():
+    # The ladder has to mean something. If the first shape already threw the
     # trick, the boss would be guarding a bigger number.
     for biome in biomes.RING_BIOMES:
         for tier in (glyph_table.BASIC, glyph_table.GREATER):
@@ -165,7 +147,7 @@ def test_a_basic_glyph_leaves_nothing_behind():
             assert not patches and not marks, (biome.key, tier)
 
 
-def test_a_lower_glyph_still_hurts():
+def test_a_lesser_cut_still_hurts():
     glyph = next(g for g in glyph_table.glyphs_of(biomes.BOG) if g.tier == glyph_table.BASIC)
     enemies = [_golem()]
     before = enemies[0].hp
@@ -173,57 +155,90 @@ def test_a_lower_glyph_still_hurts():
     assert not enemies or enemies[0].hp < before
 
 
-# --- what the weapon and the staff put on a shot -------------------------
+# --- drawing one in the game ---------------------------------------------
 
 
-def test_a_weapon_carved_with_a_supreme_glyph_throws_it():
-    weapon = WeaponTool()
+def _armed(glyph) -> PlayScene:
+    """A scene holding a staff, knowing ``glyph``, aiming to the right."""
+    from game.items.item_kinds import STAFF_ITEM
+
+    scene = PlayScene()
+    scene.hotbar.add(STAFF_ITEM, 1)
+    for index, slot in enumerate(scene.hotbar.slots):
+        if slot is not None and getattr(slot, "kind", None) is STAFF_ITEM:
+            scene.hotbar.select(index)
+    scene.grimoire.learn(glyph)
+    scene._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT // 2)
+    return scene
+
+
+def _draw(scene: PlayScene, glyph) -> None:
+    keys = {
+        strokes.UP: pygame.K_UP,
+        strokes.DOWN: pygame.K_DOWN,
+        strokes.LEFT: pygame.K_LEFT,
+        strokes.RIGHT: pygame.K_RIGHT,
+    }
+    for way in strokes.SHAPES[glyph.key]:
+        scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=keys[way]))
+        scene.update(config.FIXED_DT)
+    for _ in range(int(strokes.SETTLE / config.FIXED_DT) + 2):
+        scene.update(config.FIXED_DT)
+
+
+def test_drawing_a_known_shape_with_a_staff_throws_it():
     glyph = _supreme(biomes.BURNT_FOREST)
-    engraving.engrave(weapon.engraved, glyph)
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=weapon,
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
+    scene = _armed(glyph)
+    _draw(scene, glyph)
+    assert scene.projectiles
+    assert scene.projectiles[-1].gimmick == glyph.gimmick
+
+
+def test_a_shape_the_player_has_not_found_throws_nothing():
+    glyph = _supreme(biomes.BURNT_FOREST)
+    scene = _armed(glyph)
+    scene.grimoire.learned.clear()
+    _draw(scene, glyph)
+    assert not scene.projectiles
+
+
+def test_drawing_bare_handed_throws_nothing():
+    # The staff is what makes a shape a spell. Without one the hand still
+    # moves and nothing comes of it.
+    glyph = _supreme(biomes.BURNT_FOREST)
+    scene = _armed(glyph)
+    for index, slot in enumerate(scene.hotbar.slots):
+        if getattr(slot, "kind", None) is not ITEM_KINDS["staff"]:
+            scene.hotbar.select(index)  # anything but the staff
+            break
+    assert not scene.holding_staff
+    _draw(scene, glyph)
+    assert not scene.projectiles
+
+
+def test_a_lesser_shape_throws_without_a_trick():
+    glyph = next(
+        g for g in glyph_table.glyphs_of(biomes.BURNT_FOREST) if g.tier == glyph_table.BASIC
     )
-    assert shots and shots[0].gimmick == glyph.gimmick
+    scene = _armed(glyph)
+    _draw(scene, glyph)
+    assert scene.projectiles
+    assert scene.projectiles[-1].gimmick is None
 
 
-def test_a_weapon_carved_with_a_lesser_glyph_throws_only_damage():
-    weapon = WeaponTool()
-    engraving.engrave(
-        weapon.engraved,
-        next(g for g in glyph_table.glyphs_of(biomes.BURNT_FOREST) if g.tier == glyph_table.BASIC),
-    )
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=weapon,
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
-    )
-    assert shots and shots[0].gimmick is None
+def test_throwing_heats_the_staff():
+    glyph = _supreme(biomes.BURNT_FOREST)
+    scene = _armed(glyph)
+    _draw(scene, glyph)
+    assert scene.staff.strain > 0
 
 
-def test_a_staff_throws_the_trick_of_whatever_it_fires():
-    staff = Staff(slots=3)
-    glyph = _supreme(biomes.WASTELAND)
-    engraving.engrave(staff.engraved, glyph)
-    _, shots = combat.fire_staff(
-        config.FIXED_DT,
-        staff=staff,
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
-    )
-    assert shots and shots[0].gimmick == glyph.gimmick
+def test_a_weapon_shot_carries_no_trick_at_all():
+    # Glyphs used to be carved onto weapons. They are not any more, and a
+    # weapon shot that still threw one would be the old system surviving in
+    # the one place nobody looks.
+    from game.items.tools import WeaponTool
 
-
-def test_a_bare_weapon_throws_no_trick():
     _, shots = combat.fire_weapon(
         config.FIXED_DT,
         weapon=WeaponTool(),
@@ -233,84 +248,3 @@ def test_a_bare_weapon_throws_no_trick():
         fire_timer=0.0,
     )
     assert shots and shots[0].gimmick is None
-
-
-def test_the_glyph_a_staff_carries_matches_what_it_fits():
-    # Both tools take the supreme cuts; nothing here narrows that.
-    for biome in biomes.RING_BIOMES:
-        glyph = _supreme(biome)
-        assert WEAPON in glyph.fits and STAFF in glyph.fits
-
-
-# --- two the wiring hid ---------------------------------------------------
-
-
-def test_a_mark_survives_the_frame_it_was_set_in():
-    # mark() filled the marks list and nothing filled the timers beside it, so
-    # the very next update dropped every mark as already expired. Nothing
-    # failed -- the lightning trick simply did nothing in game.
-    marks, timers = [], []
-    gimmicks.mark(pygame.Vector2(CENTRE), marks, timers)
-    gimmicks.update_marks(config.FIXED_DT, marks, timers)
-    assert len(marks) == 1
-    assert len(timers) == len(marks)
-
-
-def test_a_mark_still_fades_eventually():
-    marks, timers = [], []
-    gimmicks.mark(pygame.Vector2(CENTRE), marks, timers)
-    gimmicks.update_marks(config.MARK_SECONDS + 1.0, marks, timers)
-    assert not marks and not timers
-
-
-def test_striking_shock_keeps_the_timer_in_step():
-    patches, marks, timers = [], [], []
-    gimmicks.strike(
-        gimmicks.by_key("shock"),
-        at=pygame.Vector2(CENTRE),
-        victim=_golem(),
-        away_from=pygame.Vector2(CENTRE),
-        patches=patches,
-        marks=marks,
-        timers=timers,
-    )
-    assert len(timers) == len(marks) == 1
-
-
-def test_a_weapon_finds_the_supreme_glyph_wherever_it_sits():
-    # A weapon has two slots. Carved basic-then-supreme, only the first was
-    # read, so the trick a player had just won from a boss threw nothing.
-    weapon = WeaponTool()
-    engraving.engrave(
-        weapon.engraved,
-        next(g for g in glyph_table.glyphs_of(biomes.BURNT_FOREST) if g.tier == glyph_table.BASIC),
-    )
-    supreme = _supreme(biomes.BURNT_FOREST)
-    engraving.engrave(weapon.engraved, supreme)
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=weapon,
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
-    )
-    assert shots[0].gimmick == supreme.gimmick
-
-
-def test_two_supreme_glyphs_on_one_weapon_throw_the_first_of_them():
-    # Two is the slot count, so it is reachable. Both would need a rule for
-    # which lands first; one is the honest answer until that rule exists.
-    weapon = WeaponTool()
-    first = _supreme(biomes.BURNT_FOREST)
-    engraving.engrave(weapon.engraved, first)
-    engraving.engrave(weapon.engraved, _supreme(biomes.BOG))
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=weapon,
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
-    )
-    assert shots[0].gimmick == first.gimmick

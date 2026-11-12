@@ -103,8 +103,6 @@ WIND_DETECTOR = ItemKind("wind_detector", "바람 탐지기", 1, (190, 190, 175)
 BOG_DETECTOR = ItemKind("bog_detector", "늪지 탐지기", 1, (110, 140, 85))
 WASTELAND_DETECTOR = ItemKind("wasteland_detector", "사막 탐지기", 1, (220, 200, 110))
 STAFF_ITEM = ItemKind("staff", "지팡이", 1, (140, 110, 170))
-GREATER_STAFF_ITEM = ItemKind("greater_staff", "상급 지팡이", 1, (170, 130, 210))
-SUPREME_STAFF_ITEM = ItemKind("supreme_staff", "최상급 지팡이", 1, (210, 160, 250))
 CHISEL = ItemKind("chisel", "새김 도구", 8, (205, 185, 150))
 WORN_PACK = ItemKind("worn_pack", "낡은 배낭", 1, (120, 95, 70))
 LEATHER_PACK = ItemKind("leather_pack", "가죽 배낭", 1, (160, 115, 75))
@@ -204,8 +202,6 @@ CATALOGUE: tuple[ItemKind, ...] = (
     BOG_DETECTOR,
     WASTELAND_DETECTOR,
     STAFF_ITEM,
-    GREATER_STAFF_ITEM,
-    SUPREME_STAFF_ITEM,
     WORN_PACK,
     LEATHER_PACK,
     HIDE,

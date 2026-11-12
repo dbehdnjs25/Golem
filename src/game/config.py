@@ -644,6 +644,13 @@ BOSS_BAR_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
 BOSS_PHASE2_COLOR: Final[tuple[int, int, int]] = (255, 196, 92)
 BOSS_BAR_BG: Final[tuple[int, int, int]] = (38, 32, 36)
 
+# The shapes the player knows, listed down the right edge while a staff is in
+# hand. Drawn as lines rather than spelled out in arrows: copying a picture is
+# the same motion the hand will make, where reading "right, down, left" is a
+# translation first.
+SPELLBOOK_WIDTH: Final[int] = 120
+SPELLBOOK_ROW: Final[int] = 26
+
 # An announced circle, and the fire itself. The warning is deliberately not the
 # colour of the thing it warns about: one is a promise and one is a blow, and
 # the moment they look alike the telegraph stops being readable.

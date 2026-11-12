@@ -170,21 +170,6 @@ def test_the_chisel_is_reachable_and_cheap():
     assert sum(n for _, n in recipe.inputs) <= 4
 
 
-def test_the_best_staff_asks_for_a_tour_of_the_ring():
-    # The one thing in the game that wants material from several biomes at
-    # once. The glyphs pull a player around the ring; this is what the trip
-    # leaves them holding.
-    recipe = _by_output(ITEM_KINDS["supreme_staff"])
-    wanted = {kind for kind, _ in recipe.inputs}
-    assert len(wanted & BIOME_MATERIALS) >= 3
-
-
-def test_each_staff_eats_the_one_below_it():
-    for better, worse in (("greater_staff", "staff"), ("supreme_staff", "greater_staff")):
-        inputs = {kind for kind, _ in _by_output(ITEM_KINDS[better]).inputs}
-        assert ITEM_KINDS[worse] in inputs
-
-
 def test_charred_wood_is_a_shortcut_to_charcoal():
     # The reason to walk into the burnt forest. Ordinary charcoal is three logs
     # burned for twelve seconds; this wood is already half burnt, so the fire
@@ -230,3 +215,17 @@ def test_every_biome_timber_trims_down_to_ordinary_wood():
         )
         assert trim.station == recipes.BENCH_S
         assert trim.seconds == 0
+
+
+def test_there_is_one_staff_and_no_upgrade_for_it():
+    """What makes a player better at magic is shapes and a steady hand.
+
+    A craftable staff that quietly raised the numbers would be answering that
+    for them, so the ladder that used to run through three staffs is gone and
+    the tour of the ring is paid for by the detectors instead.
+    """
+    from game.items.item_kinds import STAFF_ITEM
+    from game.items.recipes import RECIPES
+
+    staffs = [r for r in RECIPES if "staff" in r.output.key]
+    assert [r.output for r in staffs] == [STAFF_ITEM]

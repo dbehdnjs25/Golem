@@ -10,7 +10,7 @@ nobody can see. So an element is strength and spectacle, never scissors-beats-
 paper, and there is one fewer table to balance.
 
 Pure data. Knowing a glyph is free and permanent; the cost is in the carving,
-which lives in ``items/engraving``.
+which lives in ``items/strokes``.
 """
 
 from __future__ import annotations

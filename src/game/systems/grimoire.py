@@ -3,7 +3,7 @@
 Learning is free and permanent: open a ruin, read what is inside, and it is
 yours for the rest of the run. Nothing is spent and nothing can be lost.
 
-The cost lives in the carving instead -- see ``items/engraving``. That split is
+The cost lives in the drawing instead -- see ``items/strokes``. That split is
 the spec's, and it is what makes a glyph a collectible rather than a
 consumable: the drawing is knowledge, the chisel is the price of using it.
 """

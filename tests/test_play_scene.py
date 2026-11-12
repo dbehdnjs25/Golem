@@ -12,7 +12,7 @@ from game.inventory.storage import Container
 from game.items import glyphs as glyph_table
 from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
-from game.scenes.play import PlayScene, _ui_asset
+from game.scenes.play import _BAR_W, _BAR_X, PlayScene, _ui_asset
 from game.systems import consume, raids
 from game.systems.camera import Camera
 from game.world import biomes, mires
@@ -968,90 +968,11 @@ def _ready_to_carve(scene) -> None:
     scene.hotbar.add(ITEM_KINDS["chisel"], 1)
 
 
-def test_carving_adds_its_power_to_what_the_weapon_lands_for():
-    # The whole point. Without this the glyphs are a collection and nothing
-    # else -- an engraved weapon has to actually hit harder.
-    scene = PlayScene()
-    _ready_to_carve(scene)
-    fire = glyph_table.BURNT_GLYPHS[0]
-    weapon = scene.hotbar.active_tool
-    before = weapon.total_damage
-
-    scene.carve(fire)
-
-    assert weapon.engraved.glyphs == [fire]
-    assert weapon.total_damage == before + fire.power
-
-
-def test_three_cuts_and_the_chisel_is_gone():
-    scene = PlayScene()
-    _ready_to_carve(scene)
-    for glyph in glyph_table.GLYPHS[:3]:
-        scene.grimoire.learn(glyph)
-    scene.hotbar.slots[4].engraved.slots = 9  # room enough to spend the tool
-
-    for n, glyph in enumerate(glyph_table.GLYPHS[:3], start=1):
-        assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 1, f"gone after {n - 1}"
-        scene.carve(glyph)
-    assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 0
-    assert scene.chisel_left == config.CHISEL_USES  # the next one starts fresh
-
-
-def test_carving_without_a_chisel_does_nothing_and_says_so():
-    scene = PlayScene()
-    scene.hotbar.select(4)
-    fire = glyph_table.BURNT_GLYPHS[0]
-    scene.grimoire.learn(fire)
-
-    scene.carve(fire)
-
-    assert scene.hotbar.active_tool.engraved.glyphs == []
-    assert "새김 도구" in scene.note
-
-
-def test_an_unknown_glyph_cannot_be_carved_even_by_calling_straight_in():
-    scene = PlayScene()
-    _ready_to_carve(scene)
-    unknown = glyph_table.SNOWFIELD_GLYPHS[0]
-    scene.carve(unknown)
-    assert scene.hotbar.active_tool.engraved.glyphs == []
-    assert scene.hotbar.count(ITEM_KINDS["chisel"]) == 1  # nothing spent either
-
-
-def test_the_rows_list_refusals_rather_than_hiding_them():
-    # Hidden, the player cannot tell a lost drawing from a wrong thing held.
-    scene = PlayScene()
-    _ready_to_carve(scene)
-    swift = glyph_table.LESSER_SWIFT
-    scene.grimoire.learn(swift)
-    assert len(scene.carve_rows()) == 2
-
-
-def test_holding_a_pickaxe_offers_nothing_to_carve():
-    scene = PlayScene()
-    scene.grimoire.learn(glyph_table.BURNT_GLYPHS[0])
-    scene.hotbar.select(0)
-    scene.hotbar.slots[0] = Stack(ITEM_KINDS["stone_pick"], 1)
-    assert scene.carve_target is None
-    assert scene.carve_rows() == []
-    assert "새길 수 없" in scene.carve_header()
-
-
-def test_the_carving_screen_pauses_the_world_like_the_others():
-    scene = PlayScene()
-    scene.core.ignite()
-    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
-    assert scene.carve_open
-    where = pygame.Vector2(scene.player.pos)
-    scene.update(config.FIXED_DT)
-    assert scene.player.pos == where
-
-
 def test_only_one_screen_at_a_time():
     scene = PlayScene()
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_c))
-    assert scene.craft_open and not scene.carve_open
+    assert scene.craft_open and not scene.grid_open
 
 
 # --- the staff ------------------------------------------------------------
@@ -1066,21 +987,6 @@ def _with_staff(scene, kind: str = "staff"):
 def test_holding_a_staff_is_read_off_the_item():
     scene = _with_staff(PlayScene())
     assert scene.holding_staff
-    assert scene.carve_target is scene.staff.engraved
-
-
-def test_a_better_staff_widens_the_one_you_already_own():
-    # Carried on the item, every glyph already cut in would be thrown out with
-    # the old staff. Nobody would take that upgrade.
-    scene = _with_staff(PlayScene())
-    ember = glyph_table.BURNT_GLYPHS[0]
-    scene.grimoire.learn(ember)
-    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
-    scene.carve(ember)
-
-    _with_staff(scene, "supreme_staff")
-    assert scene.carve_target.slots == 3
-    assert scene.staff.engraved.glyphs == [ember]  # the cut survived
 
 
 def test_a_bare_staff_fires_nothing():
@@ -1089,21 +995,6 @@ def test_a_bare_staff_fires_nothing():
     for _ in range(60):
         scene.update(config.FIXED_DT)
     assert scene.projectiles == []
-
-
-def test_a_carved_staff_throws_its_glyph():
-    scene = _with_staff(PlayScene())
-    ember = glyph_table.BURNT_GLYPHS[0]
-    scene.grimoire.learn(ember)
-    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
-    scene.carve(ember)
-
-    scene._mouse_held = True
-    scene._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT // 2)
-    for _ in range(10):
-        scene.update(config.FIXED_DT)
-    assert scene.projectiles
-    assert scene.projectiles[0].damage == ember.power
 
 
 def test_the_staff_cools_while_something_else_is_in_hand():
@@ -1416,7 +1307,11 @@ def test_the_gauges_do_not_sit_on_top_of_each_other():
     surface = pygame.Surface(config.SCREEN_SIZE)
     scene.draw(surface)
     # The stamina bar's own row must still be its own colour.
-    assert surface.get_at((12 * config.UI_SCALE, 30 * config.UI_SCALE))[:3] == config.WIND_COLOR
+    # Somewhere in the gauge column rather than at one pixel: the bars get
+    # redrawn, and a test that pins their exact rows fails for the wrong
+    # reason every time they do.
+    column = pygame.Rect(0, 0, _BAR_X + _BAR_W, 90 * config.UI_SCALE)
+    assert _has_ink(surface, column, config.WIND_COLOR)
 
 
 def test_the_object_particle_follows_the_word():

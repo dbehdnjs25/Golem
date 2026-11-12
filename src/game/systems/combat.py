@@ -5,7 +5,7 @@ unit-testable headlessly. Rendering lives in the scene, never here."""
 from __future__ import annotations
 
 import random
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 from typing import Protocol
 
 import pygame
@@ -20,29 +20,10 @@ from game.entities.patch import Patch
 from game.entities.player import Player
 from game.entities.projectile import Projectile
 from game.inventory.storage import Container
-from game.items.glyphs import SUPREME, Glyph
 from game.items.item_kinds import ItemKind
-from game.items.staff import Staff
 from game.items.tools import WeaponTool
 from game.systems import gimmicks
 from game.world.map import WorldMap
-
-
-def _trick_carved_on(carved: Iterable[Glyph]) -> str | None:
-    """The gimmick a shot should carry, out of everything cut into the piece.
-
-    Only the SUPREME cut throws a trick; if the first rung already did, the
-    boss would be guarding a bigger number rather than something new.
-
-    Searched rather than read off the front slot. A weapon holds two, so a
-    player who carved a basic and then the supreme they had just won from a
-    boss would have thrown nothing at all. Where two supremes are carved the
-    earlier one wins, which is arbitrary but has to be something.
-    """
-    for glyph in carved:
-        if glyph.tier == SUPREME:
-            return glyph.gimmick
-    return None
 
 
 def fire_weapon(
@@ -66,48 +47,13 @@ def fire_weapon(
     shot = Projectile(
         pos=pygame.Vector2(player_pos),
         vel=velocity,
-        damage=weapon.total_damage,  # base plus whatever is carved on it
+        damage=weapon.total_damage,
         radius=weapon.projectile_radius,
         ttl=weapon.projectile_ttl,
-        gimmick=_trick_carved_on(weapon.engraved.glyphs),
+        # No gimmick. A weapon shot is a weapon shot; the tricks ride on
+        # shapes the player draws, which the scene throws itself.
     )
     return 1.0 / weapon.fire_rate, [shot]
-
-
-def fire_staff(
-    dt: float,
-    *,
-    staff: Staff,
-    held: bool,
-    aim_world: pygame.Vector2,
-    player_pos: pygame.Vector2,
-    fire_timer: float,
-) -> tuple[float, list[Projectile]]:
-    """Throw whatever is carved on the staff, if it will.
-
-    ``staff.update`` runs whether or not the trigger is down: strain has to
-    cool while the player runs away, which is the only thing that makes a
-    lockout survivable.
-    """
-    staff.update(dt)
-    fire_timer -= dt
-    if not held or fire_timer > 0:
-        return fire_timer, []
-    aim = aim_world - player_pos
-    if aim.length_squared() == 0:
-        return fire_timer, []
-    glyph = staff.fire()
-    if glyph is None:
-        return fire_timer, []  # empty, or locked out
-    shot = Projectile(
-        pos=pygame.Vector2(player_pos),
-        vel=aim.normalize() * config.PROJECTILE_SPEED,
-        damage=glyph.power,  # the glyph IS the attack; the staff adds nothing
-        radius=config.PROJECTILE_RADIUS,
-        ttl=config.PROJECTILE_TTL,
-        gimmick=_trick_carved_on([glyph]),  # a staff throws one at a time
-    )
-    return 1.0 / config.STAFF_FIRE_RATE, [shot]
 
 
 class Hurtable(Protocol):

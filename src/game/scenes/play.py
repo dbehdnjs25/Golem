@@ -30,12 +30,9 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items import engraving, grades
 from game.items import glyphs as glyph_table
-from game.items.engraving import Engraved
-from game.items.glyphs import Glyph
+from game.items import grades, strokes
 from game.items.item_kinds import (
-    CHISEL,
     CORE_SHARD,
     CORE_SIGIL,
     GRASS,
@@ -48,10 +45,11 @@ from game.items.item_kinds import (
     yield_of,
 )
 from game.items.recipes import STATION_OF, Recipe
-from game.items.staff import STAFF_KINDS, Staff
+from game.items.staff import STAFF_ITEMS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.render.floor import Floor
 from game.render.resources import resource_image
+from game.render.trees import tree_image
 from game.systems import (
     arena,
     boss_moves,
@@ -60,6 +58,7 @@ from game.systems import (
     consume,
     crafting,
     detector,
+    drawing,
     falling,
     gimmicks,
     mining,
@@ -115,14 +114,43 @@ def _blit_nine_slice(
     sw, sh = image.get_size()
     pieces = (
         (pygame.Rect(0, 0, border, border), pygame.Rect(rect.left, rect.top, border, border)),
-        (pygame.Rect(border, 0, sw - 2 * border, border), pygame.Rect(rect.left + border, rect.top, rect.width - 2 * border, border)),
-        (pygame.Rect(sw - border, 0, border, border), pygame.Rect(rect.right - border, rect.top, border, border)),
-        (pygame.Rect(0, border, border, sh - 2 * border), pygame.Rect(rect.left, rect.top + border, border, rect.height - 2 * border)),
-        (pygame.Rect(border, border, sw - 2 * border, sh - 2 * border), pygame.Rect(rect.left + border, rect.top + border, rect.width - 2 * border, rect.height - 2 * border)),
-        (pygame.Rect(sw - border, border, border, sh - 2 * border), pygame.Rect(rect.right - border, rect.top + border, border, rect.height - 2 * border)),
-        (pygame.Rect(0, sh - border, border, border), pygame.Rect(rect.left, rect.bottom - border, border, border)),
-        (pygame.Rect(border, sh - border, sw - 2 * border, border), pygame.Rect(rect.left + border, rect.bottom - border, rect.width - 2 * border, border)),
-        (pygame.Rect(sw - border, sh - border, border, border), pygame.Rect(rect.right - border, rect.bottom - border, border, border)),
+        (
+            pygame.Rect(border, 0, sw - 2 * border, border),
+            pygame.Rect(rect.left + border, rect.top, rect.width - 2 * border, border),
+        ),
+        (
+            pygame.Rect(sw - border, 0, border, border),
+            pygame.Rect(rect.right - border, rect.top, border, border),
+        ),
+        (
+            pygame.Rect(0, border, border, sh - 2 * border),
+            pygame.Rect(rect.left, rect.top + border, border, rect.height - 2 * border),
+        ),
+        (
+            pygame.Rect(border, border, sw - 2 * border, sh - 2 * border),
+            pygame.Rect(
+                rect.left + border,
+                rect.top + border,
+                rect.width - 2 * border,
+                rect.height - 2 * border,
+            ),
+        ),
+        (
+            pygame.Rect(sw - border, border, border, sh - 2 * border),
+            pygame.Rect(rect.right - border, rect.top + border, border, rect.height - 2 * border),
+        ),
+        (
+            pygame.Rect(0, sh - border, border, border),
+            pygame.Rect(rect.left, rect.bottom - border, border, border),
+        ),
+        (
+            pygame.Rect(border, sh - border, sw - 2 * border, border),
+            pygame.Rect(rect.left + border, rect.bottom - border, rect.width - 2 * border, border),
+        ),
+        (
+            pygame.Rect(sw - border, sh - border, border, border),
+            pygame.Rect(rect.right - border, rect.bottom - border, border, border),
+        ),
     )
     for source, target in pieces:
         if target.width <= 0 or target.height <= 0:
@@ -237,6 +265,38 @@ def _draw_bar(
     """A left-anchored gauge filled to ``frac`` (0..1) of its width."""
     pygame.draw.rect(surface, bg, pygame.Rect(_BAR_X, y, _BAR_W, height))
     pygame.draw.rect(surface, color, pygame.Rect(_BAR_X, y, int(_BAR_W * frac), height))
+
+
+def _draw_gauge_asset(
+    surface: pygame.Surface,
+    name: str,
+    y: int,
+    frac: float,
+    color: tuple[int, int, int],
+    *,
+    icon: str | None = None,
+) -> None:
+    """Draw a framed resource gauge with its fill clipped inside the pixel frame."""
+    scale = config.UI_SCALE
+    art = _ui_asset(name)
+    rect = art.get_rect(topleft=(_BAR_X, y))
+    surface.blit(art, rect)
+    left = 13 * scale if icon else 3 * scale
+    top = (2 if rect.height >= 16 else 1) * scale
+    inner_height = max(scale, rect.height - 2 * top)
+    inner_width = max(0, rect.width - left - 3 * scale)
+    width = int(inner_width * min(1.0, max(0.0, frac)))
+    if width:
+        _draw_pixel_round_right(
+            surface,
+            pygame.Rect(rect.left + left, rect.top + top, width, inner_height),
+            color,
+            scale,
+            1,
+        )
+    if icon:
+        symbol = _ui_asset(icon)
+        surface.blit(symbol, (rect.left + 2 * scale, rect.top))
 
 
 def _draw_pixel_round_rect(
@@ -404,14 +464,13 @@ class PlayScene(Scene):
         self.grimoire = Grimoire()
         self.note = ""  # a line that fades; see _say
         self.note_left = 0.0
-        # Cuts left on the chisel in hand. On the scene rather than on the item
-        # because a stack of chisels is a stack of FRESH ones -- only the one
-        # actually being used is part-worn.
-        self.chisel_left = config.CHISEL_USES
-        # One staff, upgraded in place. The item in a slot is a token for it, the
-        # same way the chisel's remaining cuts live here: what matters about a
-        # staff is what is carved on it, and that cannot ride in a Stack.
+        # One staff, upgraded in place: the item in a slot is a token for it,
+        # since what matters about a staff -- how hot it is right now -- cannot
+        # ride in a Stack.
         self.staff = Staff()
+        # The shape being drawn. Not on the staff, because the hand is the
+        # player's and goes on drawing whether or not one is being held.
+        self.drawing = drawing.Drawing()
         self.structures = structures.place(self.world, self.rng)
         self.lava = lava.place(self.world, self.rng)
         self.mires = mires.place(self.world, self.rng)
@@ -440,7 +499,6 @@ class PlayScene(Scene):
         self.grid = Grid()
         self.grid_open = False
         self.craft_open = False
-        self.carve_open = False
         self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # Nothing but the weapon. Wood comes off a tree with bare hands, and the
@@ -564,8 +622,13 @@ class PlayScene(Scene):
                 self._toggle_grid()
             elif event.key == pygame.K_c:
                 self._toggle_craft()
-            elif event.key == pygame.K_g:
-                self._toggle_carve()
+            elif strokes.of_key(event.key) is not None:
+                # Arrow keys draw. WASD is already walking, so both hands work
+                # at once -- which is the whole reason a spell is drawn rather
+                # than picked off a list.
+                way = strokes.of_key(event.key)
+                if way is not None:
+                    self.drawing.stroke(way)
             elif event.key == pygame.K_f:
                 self._eat_held()
             elif event.key == pygame.K_ESCAPE and self.manager is not None:
@@ -584,9 +647,6 @@ class PlayScene(Scene):
                 return
             if self.craft_open:
                 self._click_craft(pygame.Vector2(event.pos))
-                return
-            if self.carve_open:
-                self._click_carve(pygame.Vector2(event.pos))
                 return
             if self._try_place(pygame.Vector2(event.pos)):
                 return
@@ -678,7 +738,7 @@ class PlayScene(Scene):
         for station in self.stations:
             station.update(dt)
 
-        if self.grid_open or self.craft_open or self.carve_open:
+        if self.grid_open or self.craft_open:
             return  # the world waits while a screen is open
 
         down = self._respawn_timer > 0
@@ -782,27 +842,18 @@ class PlayScene(Scene):
             player=self.player,
         )
         self._wear_if_pack(mined)
-        if self.holding_staff:
-            self._fire_timer, shots = combat.fire_staff(
-                dt,
-                staff=self.staff,
-                held=self._mouse_held,
-                aim_world=aim_world,
-                player_pos=self.player.pos,
-                fire_timer=self._fire_timer,
-            )
-        else:
-            # Cooling even while slung. A staff put away to swing something
-            # else should not come back out exactly as hot as it went in.
-            self.staff.update(dt)
-            self._fire_timer, shots = combat.fire_weapon(
-                dt,
-                weapon=tool,
-                held=self._mouse_held,
-                aim_world=aim_world,
-                player_pos=self.player.pos,
-                fire_timer=self._fire_timer,
-            )
+        # Magic is drawn, not clicked, so the mouse always means the weapon --
+        # and the staff always cools, slung or in hand: put away to swing
+        # something else, it should not come back out as hot as it went in.
+        self._cast_drawn(dt)
+        self._fire_timer, shots = combat.fire_weapon(
+            dt,
+            weapon=tool,
+            held=self._mouse_held,
+            aim_world=aim_world,
+            player_pos=self.player.pos,
+            fire_timer=self._fire_timer,
+        )
         self.projectiles.extend(shots)
         survival.update_regen(dt, self.player, self.core)
         survival.update_mire(
@@ -864,6 +915,8 @@ class PlayScene(Scene):
         self._draw_burning(surface)
         self._draw_raid_edge(surface)
         self._draw_boss_bar(surface)
+        self._draw_spellbook(surface)
+        self._draw_drawing(surface)
         self._draw_hud(surface)
         # Markers last, so one is never lost behind the gauges. A ruin you
         # cannot see is a ruin you walk past. Each label carries its own
@@ -872,7 +925,6 @@ class PlayScene(Scene):
         self._draw_detector(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
-        self._draw_carve(surface)
 
     def _field_surface(self, surface: pygame.Surface) -> pygame.Surface:
         """The surface the world is drawn onto, kept between frames.
@@ -957,17 +1009,8 @@ class PlayScene(Scene):
             if self.grid_open:
                 self.grid.close(self.backpack, self.hotbar)
             self.grid_open = False
-            self.carve_open = False
 
     # --- the carving screen -----------------------------------------------
-    def _toggle_carve(self) -> None:
-        self.carve_open = not self.carve_open
-        if self.carve_open:
-            if self.grid_open:
-                self.grid.close(self.backpack, self.hotbar)
-            self.grid_open = False
-            self.craft_open = False
-
     def flagged_ruins(self) -> list[Structure]:
         """Unopened ruins close enough to be worth pointing at."""
         return [
@@ -979,123 +1022,45 @@ class PlayScene(Scene):
     @property
     def holding_staff(self) -> bool:
         held = self.hotbar.active_stack
-        return held is not None and held.kind in STAFF_KINDS
+        return held is not None and held.kind in STAFF_ITEMS
 
-    @property
-    def staff_slots(self) -> int:
-        """How much room the staff in hand has, read off the item itself."""
-        held = self.hotbar.active_stack
-        return STAFF_KINDS.get(held.kind, 0) if held is not None else 0
+    def _cast_drawn(self, dt: float) -> None:
+        """Finish a shape, and throw it if it can be thrown.
 
-    @property
-    def carve_target(self) -> Engraved | None:
-        """What is cut into the thing in hand, if it is the sort that takes it.
-
-        The held item rather than a separate equipment screen: the hotbar is
-        already where tools live, and a second place to pick a weapon from
-        would be a screen whose whole job is choosing between one option.
+        Everything can fail quietly except the last line. A shape nobody knows
+        and a shape drawn bare-handed are both just nothing happening; a shape
+        the player HAS learned, drawn with a staff in hand that is locked out,
+        is the one case worth a word -- otherwise an overload reads as the
+        drawing having failed.
         """
-        if self.holding_staff:
-            # A better staff widens the one the player owns. Carried on the
-            # item instead, every glyph already cut in would be thrown out with
-            # the old staff -- not an upgrade anyone would take.
-            self.staff.engraved.slots = max(self.staff.engraved.slots, self.staff_slots)
-            return self.staff.engraved
-        held = self.hotbar.active_tool
-        piece = getattr(held, "engraved", None)
-        return piece if isinstance(piece, Engraved) else None
-
-    def carve_rows(self) -> list[tuple[Glyph, str | None]]:
-        """Every learned glyph, each with the reason it cannot go on, or None.
-
-        Refused ones are listed too. A list that quietly hid what does not fit
-        would leave the player wondering whether they had lost a drawing or
-        were simply holding the wrong thing.
-        """
-        piece = self.carve_target
-        if piece is None:
-            return []
-        return [
-            (glyph, engraving.can_engrave(piece, glyph, self.grimoire))
-            for glyph in self.grimoire.known()
-        ]
-
-    def _click_carve(self, at: pygame.Vector2) -> None:
-        for index, (glyph, refusal) in enumerate(self.carve_rows()):
-            if not self._carve_row_rect(index).collidepoint(at):
-                continue
-            if refusal is not None:
-                self._say(refusal)
-            else:
-                self.carve(glyph)
+        self.staff.update(dt)
+        glyph = self.drawing.update(dt)
+        if glyph is None:
             return
-
-    def carve(self, glyph: Glyph) -> None:
-        """Cut it in, wearing the chisel down by one."""
-        piece = self.carve_target
-        if piece is None:
+        if not self.holding_staff:
             return
-        if engraving.can_engrave(piece, glyph, self.grimoire) is not None:
+        if not self.grimoire.knows(glyph):
+            self._say("모르는 모양이다")
             return
-        if self._carried(CHISEL) <= 0:
-            self._say("새김 도구가 없다")
+        if self.staff.overloaded:
+            self._say(f"지팡이가 식는 중 · {self.staff.lockout:.1f}초")
             return
-        engraving.engrave(piece, glyph, self.grimoire)
-        self.chisel_left -= 1
-        if self.chisel_left <= 0:
-            self._spend(CHISEL, 1)
-            self.chisel_left = config.CHISEL_USES
-            self._say(f"{glyph.name}{_object_particle(glyph.name)} 새겼다 · 도구가 부서졌다")
-        else:
-            self._say(
-                f"{glyph.name}{_object_particle(glyph.name)} 새겼다 · {self.chisel_left}회 남음"
+        thrown = self.staff.fire(glyph)
+        if thrown is None:
+            return
+        aim = self.camera.screen_to_world(self._mouse_screen) - self.player.pos
+        if aim.length_squared() == 0:
+            return
+        self.projectiles.append(
+            Projectile(
+                pos=pygame.Vector2(self.player.pos),
+                vel=aim.normalize() * config.PROJECTILE_SPEED,
+                damage=self.staff.power_of(thrown),
+                radius=config.PROJECTILE_RADIUS,
+                ttl=self.staff.range_of(),
+                gimmick=thrown.gimmick if thrown.tier == glyph_table.SUPREME else None,
             )
-
-    def _carve_panel(self) -> pygame.Rect:
-        rows = max(1, min(len(self.carve_rows()), config.CRAFT_ROWS_VISIBLE))
-        panel = pygame.Rect(0, 0, 520, rows * config.CRAFT_ROW_HEIGHT + 48)
-        panel.center = (config.SCREEN_WIDTH // 2, config.SCREEN_HEIGHT // 2)
-        return panel
-
-    def _carve_row_rect(self, index: int) -> pygame.Rect:
-        panel = self._carve_panel()
-        return pygame.Rect(
-            panel.left + 10,
-            panel.top + 36 + index * config.CRAFT_ROW_HEIGHT,
-            panel.width - 20,
-            config.CRAFT_ROW_HEIGHT - 2,
         )
-
-    def carve_header(self) -> str:
-        piece = self.carve_target
-        if piece is None:
-            return "손에 든 것엔 새길 수 없다"
-        left = self.chisel_left if self._carried(CHISEL) else 0
-        return f"칸 {len(piece.glyphs)}/{piece.slots} · 새김 도구 {left}회"
-
-    def _draw_carve(self, surface: pygame.Surface) -> None:
-        if not self.carve_open:
-            return
-        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        overlay.fill((0, 0, 0, 140))
-        surface.blit(overlay, (0, 0))
-        panel = self._carve_panel()
-        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
-        surface.blit(
-            _font(14).render(self.carve_header(), True, config.WHITE),
-            (panel.left + 12, panel.top + 12),
-        )
-        for index, (glyph, refusal) in enumerate(self.carve_rows()):
-            rect = self._carve_row_rect(index)
-            pygame.draw.rect(surface, (48, 48, 62), rect, border_radius=3)
-            ink = config.WHITE if refusal is None else (132, 128, 145)
-            swatch = pygame.Rect(rect.left + 6, rect.top + 5, 14, 14)
-            colour = glyph.biome.color if glyph.biome is not None else (150, 150, 165)
-            pygame.draw.rect(surface, colour, swatch, border_radius=2)
-            surface.blit(_font(14).render(glyph.name, True, ink), (swatch.right + 8, rect.top + 4))
-            tail = refusal.split(": ")[-1] if refusal else f"+{glyph.power:.0f}"
-            label = _font(12).render(tail, True, ink)
-            surface.blit(label, (rect.right - label.get_width() - 8, rect.top + 6))
 
     def _craft_rows(self) -> list[tuple[Recipe, bool]]:
         """What is offered where the player is standing, affordable first.
@@ -1218,33 +1183,75 @@ class PlayScene(Scene):
         if not self.grid_open:
             return
         rows = self._pack_rows()
-        panel = pygame.Rect(0, 0, *config.SCREEN_SIZE).inflate(-80, -80)
+        grid_x, grid_y = self._grid_origin()
+        step = config.GRID_CELL + config.GRID_GAP
+        grid_width = config.GRID_COLS * step - config.GRID_GAP
+        grid_bottom = grid_y + (rows + 1) * step + config.GRID_CELL
+        panel = pygame.Rect(
+            grid_x - 24,
+            grid_y - 52,
+            grid_width + 48,
+            grid_bottom - grid_y + 64,
+        )
         overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 140))
         surface.blit(overlay, (0, 0))
-        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
+        _blit_nine_slice(surface, _ui_asset("inventory_panel.png"), panel, 8)
+        header = pygame.Rect(panel.left + 8, panel.top + 8, panel.width - 16, 36)
+        _blit_nine_slice(surface, _ui_asset("inventory_header.png"), header, 6)
+        bag = _ui_asset("backpack_icon.png")
+        surface.blit(bag, (header.left + 8, header.centery - bag.get_height() // 2))
+        title = _font(14 * config.UI_SCALE).render("인벤토리", True, config.WHITE)
+        surface.blit(title, (header.left + 48, header.centery - title.get_height() // 2))
+        hovered: object | None = None
 
         for row in range(rows):
             for col in range(config.GRID_COLS):
                 index = row * config.GRID_COLS + col
                 if self.backpack is None or index >= self.backpack.size:
                     break
-                self._draw_cell(surface, self._cell_rect(row, col), self.backpack.slots[index])
-        for col, slot in enumerate(self.hotbar.slots):
+                rect = self._cell_rect(row, col)
+                slot = self.backpack.slots[index]
+                self._draw_cell(surface, rect, slot)
+                if slot is not None and rect.collidepoint(self._mouse_screen):
+                    hovered = slot
+        # The hotbar holds tools as well as stacks, so its slots are wider than
+        # the pack's. Named apart rather than reusing the loop above's, which
+        # mypy had already pinned to the narrower one.
+        for col, belt_slot in enumerate(self.hotbar.slots):
             rect = self._cell_rect(rows + 1, col)
-            self._draw_cell(surface, rect, slot)
-            if col == self.hotbar.selected:
-                pygame.draw.rect(surface, config.WHITE, rect.inflate(6, 6), 2)
+            self._draw_cell(surface, rect, belt_slot, selected=col == self.hotbar.selected)
+            if belt_slot is not None and rect.collidepoint(self._mouse_screen):
+                hovered = belt_slot
 
         held = self.grid.held
         if held is not None:
             at = pygame.Rect(0, 0, config.GRID_CELL - 10, config.GRID_CELL - 10)
             at.center = (int(self._mouse_screen.x), int(self._mouse_screen.y))
             self._draw_contents(surface, at, held)
+        elif hovered is not None:
+            self._draw_item_tooltip(surface, hovered)
 
-    def _draw_cell(self, surface: pygame.Surface, rect: pygame.Rect, slot: object) -> None:
-        pygame.draw.rect(surface, (58, 58, 74), rect, border_radius=3)
-        pygame.draw.rect(surface, (90, 90, 110), rect, 1, border_radius=3)
+    def _draw_item_tooltip(self, surface: pygame.Surface, slot: object) -> None:
+        name = slot.kind.name if isinstance(slot, Stack) else getattr(slot, "name", "")
+        if not name:
+            return
+        image = _ui_asset("item_tooltip.png")
+        left = min(int(self._mouse_screen.x) + 18, surface.get_width() - image.get_width() - 8)
+        top = min(int(self._mouse_screen.y) + 18, surface.get_height() - image.get_height() - 8)
+        left, top = max(8, left), max(8, top)
+        surface.blit(image, (left, top))
+        label = name if not isinstance(slot, Stack) else f"{name}  x{slot.count}"
+        text = _font(11 * config.UI_SCALE).render(label, True, config.WHITE)
+        surface.blit(
+            text, (left + 12 * config.UI_SCALE, top + (image.get_height() - text.get_height()) // 2)
+        )
+
+    def _draw_cell(
+        self, surface: pygame.Surface, rect: pygame.Rect, slot: object, *, selected: bool = False
+    ) -> None:
+        image = _ui_asset("inventory_slot_selected.png" if selected else "inventory_slot.png")
+        surface.blit(image, rect)
         if slot is not None:
             self._draw_contents(surface, rect.inflate(-10, -10), slot)
 
@@ -1356,10 +1363,17 @@ class PlayScene(Scene):
             if isinstance(tool, MiningTool)
             else None
         )
-        for node in self.fragments:
+        for node in sorted(self.fragments, key=lambda fragment: fragment.pos.y):
             at = self.camera.world_to_screen(node.pos)
-            art = resource_image(node.kind)
-            if art is None:
+            tree = tree_image(node.kind)
+            art = tree if tree is not None else resource_image(node.kind)
+            if tree is not None:
+                # The harvest target stays at the trunk, below the canopy.
+                surface.blit(
+                    tree,
+                    tree.get_rect(midbottom=(round(at.x), round(at.y + config.FRAGMENT_RADIUS))),
+                )
+            elif art is None:
                 pygame.draw.circle(surface, node.kind.color, at, config.FRAGMENT_RADIUS)
             else:
                 surface.blit(art, art.get_rect(center=(round(at.x), round(at.y))))
@@ -1370,7 +1384,11 @@ class PlayScene(Scene):
             if node is aimed:
                 usable = mining.can_take(tool, node.kind)
                 ring = config.WHITE if usable else config.BLOCKED_COLOR
-                radius = art.get_width() / 2 + 2 if art is not None else config.FRAGMENT_RADIUS + 4
+                radius = (
+                    art.get_width() / 2 + 2
+                    if art is not None and tree is None
+                    else config.FRAGMENT_RADIUS + 4
+                )
                 pygame.draw.circle(surface, ring, at, radius, 2)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
@@ -1806,6 +1824,99 @@ class PlayScene(Scene):
         if boss.phase == 2:
             pygame.draw.circle(surface, config.BOSS_PHASE2_COLOR, at, boss.radius + 7, 3)
 
+    def _draw_spellbook(self, surface: pygame.Surface) -> None:
+        """Every shape the player has found, down the right-hand edge.
+
+        Only while a staff is held, because only then is a shape worth
+        anything -- and a list that is always up is a list nobody reads.
+
+        The shapes are drawn rather than spelled out in arrows. A player
+        copying a picture is doing the same thing their hand will do; a player
+        reading "오른쪽 아래 왼쪽" is translating first.
+        """
+        if not self.holding_staff:
+            return
+        known = [g for g in glyph_table.GLYPHS if self.grimoire.knows(g)]
+        if not known:
+            return
+        scale = config.UI_SCALE
+        step = config.SPELLBOOK_ROW * scale
+        width = config.SPELLBOOK_WIDTH * scale
+        top = config.BOSS_BAR_Y + config.BOSS_BAR_H + 10 * scale
+        left = surface.get_width() - width - 10 * scale
+
+        backing = pygame.Surface((width, step * len(known) + 8 * scale), pygame.SRCALPHA)
+        backing.fill((0, 0, 0, config.HUD_BACKING))
+        surface.blit(backing, (left, top))
+
+        for row, glyph in enumerate(known):
+            at = top + 4 * scale + row * step
+            name = _font(10 * scale).render(glyph.name, True, config.WHITE)
+            surface.blit(name, (left + 6 * scale, at + (step - name.get_height()) // 2))
+            self._draw_shape(
+                surface,
+                strokes.SHAPES[glyph.key],
+                pygame.Rect(
+                    left + 46 * scale, at + 2 * scale, width - 52 * scale, step - 4 * scale
+                ),
+                glyph.biome.color if glyph.biome is not None else config.WHITE,
+            )
+
+    def _draw_shape(
+        self,
+        surface: pygame.Surface,
+        shape: tuple[str, ...],
+        box: pygame.Rect,
+        colour: tuple[int, int, int],
+    ) -> None:
+        """One shape, drawn as the line it is.
+
+        Scaled to fit its box rather than drawn at a fixed stroke length, so a
+        five-stroke figure and a three-stroke one take the same room and the
+        list stays a list.
+        """
+        ways = {
+            strokes.UP: (0, -1),
+            strokes.DOWN: (0, 1),
+            strokes.LEFT: (-1, 0),
+            strokes.RIGHT: (1, 0),
+        }
+        points = [pygame.Vector2(0, 0)]
+        for way in shape:
+            step = pygame.Vector2(ways[way])
+            points.append(points[-1] + step)
+        xs = [p.x for p in points]
+        ys = [p.y for p in points]
+        span_x = max(1.0, max(xs) - min(xs))
+        span_y = max(1.0, max(ys) - min(ys))
+        unit = min(box.width / span_x, box.height / span_y)
+        origin = pygame.Vector2(
+            box.centerx - (min(xs) + max(xs)) / 2 * unit,
+            box.centery - (min(ys) + max(ys)) / 2 * unit,
+        )
+        drawn = [origin + p * unit for p in points]
+        pygame.draw.lines(surface, colour, False, drawn, 2 * config.UI_SCALE)
+        # A dot where the hand starts, so a shape and its mirror are not the
+        # same picture.
+        pygame.draw.circle(surface, config.WHITE, drawn[0], 2 * config.UI_SCALE)
+
+    def _draw_drawing(self, surface: pygame.Surface) -> None:
+        """What is being drawn right now, under the book it is being copied from."""
+        if not self.drawing.drawn:
+            return
+        scale = config.UI_SCALE
+        box = pygame.Rect(0, 0, 70 * scale, 70 * scale)
+        box.bottomright = (
+            surface.get_width() - 10 * scale,
+            surface.get_height() - 10 * scale,
+        )
+        backing = pygame.Surface(box.size, pygame.SRCALPHA)
+        backing.fill((0, 0, 0, config.HUD_BACKING))
+        surface.blit(backing, box.topleft)
+        self._draw_shape(
+            surface, self.drawing.drawn, box.inflate(-12 * scale, -12 * scale), config.WARNING_COLOR
+        )
+
     def _draw_boss_bar(self, surface: pygame.Surface) -> None:
         """One bar across the top, only while a boss is up.
 
@@ -1821,11 +1932,13 @@ class PlayScene(Scene):
         width = surface.get_width() - margin * 2
         left, top = margin, config.BOSS_BAR_Y
         height = config.BOSS_BAR_H
-        pygame.draw.rect(surface, config.BOSS_BAR_BG, (left, top, width, height))
-        left_over = max(0.0, boss.hp / boss.kind.hp)
+        bar_rect = pygame.Rect(left, top, width, height)
+        _blit_nine_slice(surface, _ui_asset("boss_bar.png"), bar_rect, 4)
+        left_over = min(1.0, max(0.0, boss.hp / boss.kind.hp))
         colour = config.BOSS_PHASE2_COLOR if boss.phase == 2 else config.BOSS_BAR_COLOR
-        pygame.draw.rect(surface, colour, (left, top, int(width * left_over), height))
-        pygame.draw.rect(surface, config.WHITE, (left, top, width, height), 2)
+        fill = pygame.Rect(left + 8, top + 6, int((width - 16) * left_over), height - 12)
+        if fill.width > 0:
+            _draw_pixel_round_right(surface, fill, colour, config.UI_SCALE, 1)
         # Inside the bar rather than under it: under it the name sat exactly
         # where the notes come up, and the two overlapped the moment a boss
         # was called -- which is when a note is most likely to be on screen.
@@ -1989,16 +2102,22 @@ class PlayScene(Scene):
         _draw_health_bar(surface, 10 * config.UI_SCALE, hp_frac)
         # stamina, directly under health: the two things a body runs out of
         wind = self.player.stamina / self.player.max_stamina
-        _draw_bar(surface, 26 * config.UI_SCALE, 9 * config.UI_SCALE, wind, self.wind_colour)
+        _draw_gauge_asset(
+            surface,
+            "stamina_bar.png",
+            26 * config.UI_SCALE,
+            wind,
+            self.wind_colour,
+            icon="stamina_icon.png",
+        )
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
-        _draw_bar(
+        _draw_gauge_asset(
             surface,
+            "dodge_bar.png",
             38 * config.UI_SCALE,
-            5 * config.UI_SCALE,
             ready,
             (120, 160, 220),
-            bg=(40, 40, 55),
         )
         # the core's own health, at the foot of the stack -- only once it can
         # be hurt

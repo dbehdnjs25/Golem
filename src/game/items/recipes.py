@@ -43,7 +43,6 @@ from game.items.item_kinds import (
     GOLD_ORE,
     GOLD_PICK,
     GRASS,
-    GREATER_STAFF_ITEM,
     HEARTH,
     HIDE,
     IRON_AXE,
@@ -66,7 +65,6 @@ from game.items.item_kinds import (
     STONE,
     STONE_AXE,
     STONE_PICK,
-    SUPREME_STAFF_ITEM,
     THUNDER_STONE,
     TWIG,
     TWISTED_WOOD,
@@ -134,21 +132,10 @@ RECIPES: tuple[Recipe, ...] = (
     _tool(IRON_AXE, IRON_INGOT),
     _tool(GOLD_PICK, GOLD_INGOT),
     _tool(GOLD_AXE, GOLD_INGOT),
-    # Each upgrade eats the one below it and a wider spread of biome material,
-    # so the staff with the most room on it is the reward for having toured
-    # the whole ring -- which is the only thing in the game that asks for that.
-    Recipe(
-        GREATER_STAFF_ITEM,
-        1,
-        ((STAFF_ITEM, 1), (OBSIDIAN, 4), (FROST_CRYSTAL, 4)),
-        FINE_S,
-    ),
-    Recipe(
-        SUPREME_STAFF_ITEM,
-        1,
-        ((GREATER_STAFF_ITEM, 1), (WEATHERED_STONE, 6), (BOG_MOSS, 6), (THUNDER_STONE, 6)),
-        FINE_S,
-    ),
+    # There is one staff and no upgrade for it. What makes a player better
+    # at magic is the shapes they have found and whether their hand can
+    # draw a five-stroke figure under pressure, and a craftable staff that
+    # quietly raised the numbers would be answering that for them.
     # One per biome, out of that biome's own material. Which means the fifth
     # temple can only be found after mining in the fifth biome -- the detectors
     # chain the tour rather than handing out the whole map at once.
