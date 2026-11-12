@@ -48,8 +48,8 @@ from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_ITEMS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.render.floor import Floor
-from game.render.resources import resource_image
-from game.render.trees import tree_image
+from game.render.resources import resource_image, world_resource_image
+from game.render.trees import tree_image, tree_shadow
 from game.systems import (
     arena,
     boss_moves,
@@ -377,7 +377,9 @@ def _draw_health_bar(surface: pygame.Surface, y: int, frac: float) -> None:
     # background begins flush against that edge and only its top/bottom/right
     # frame lines are drawn.
     body_x = x + icon_size
-    body_width = _BAR_W
+    # Match the other HUD gauges' overall right edge: the heart tile is part
+    # of the health gauge's width rather than extra width added to it.
+    body_width = _BAR_W - icon_size
     _draw_pixel_round_right(
         surface, pygame.Rect(body_x, y, body_width, height), frame_light, scale, 3
     )
@@ -1366,9 +1368,11 @@ class PlayScene(Scene):
         for node in sorted(self.fragments, key=lambda fragment: fragment.pos.y):
             at = self.camera.world_to_screen(node.pos)
             tree = tree_image(node.kind)
-            art = tree if tree is not None else resource_image(node.kind)
+            art = tree if tree is not None else world_resource_image(node.kind)
             if tree is not None:
                 # The harvest target stays at the trunk, below the canopy.
+                shadow = tree_shadow()
+                surface.blit(shadow, shadow.get_rect(center=(round(at.x + 4), round(at.y + 5))))
                 surface.blit(
                     tree,
                     tree.get_rect(midbottom=(round(at.x), round(at.y + config.FRAGMENT_RADIUS))),
@@ -1851,13 +1855,13 @@ class PlayScene(Scene):
 
         for row, glyph in enumerate(known):
             at = top + 4 * scale + row * step
-            name = _font(10 * scale).render(glyph.name, True, config.WHITE)
-            surface.blit(name, (left + 6 * scale, at + (step - name.get_height()) // 2))
+            name = _font(8 * scale).render(glyph.name, True, config.WHITE)
+            surface.blit(name, (left + 5 * scale, at + (step - name.get_height()) // 2))
             self._draw_shape(
                 surface,
                 strokes.SHAPES[glyph.key],
                 pygame.Rect(
-                    left + 46 * scale, at + 2 * scale, width - 52 * scale, step - 4 * scale
+                    left + 40 * scale, at + 2 * scale, width - 45 * scale, step - 4 * scale
                 ),
                 glyph.biome.color if glyph.biome is not None else config.WHITE,
             )
@@ -2105,7 +2109,7 @@ class PlayScene(Scene):
         _draw_gauge_asset(
             surface,
             "stamina_bar.png",
-            26 * config.UI_SCALE,
+            28 * config.UI_SCALE,
             wind,
             self.wind_colour,
             icon="stamina_icon.png",
@@ -2115,7 +2119,7 @@ class PlayScene(Scene):
         _draw_gauge_asset(
             surface,
             "dodge_bar.png",
-            38 * config.UI_SCALE,
+            40 * config.UI_SCALE,
             ready,
             (120, 160, 220),
         )
@@ -2124,7 +2128,7 @@ class PlayScene(Scene):
         if self.core.ignited:
             _draw_bar(
                 surface,
-                48 * config.UI_SCALE,
+                52 * config.UI_SCALE,
                 8 * config.UI_SCALE,
                 self.core.hp / self.core.max_hp,
                 config.CORE_COLOR,

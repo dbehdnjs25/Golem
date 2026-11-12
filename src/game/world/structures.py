@@ -17,7 +17,7 @@ import random
 import pygame
 
 from game import config
-from game.entities.structure import BIOME_RUIN, GRASS_RUIN, GRASS_VAULT, Structure
+from game.entities.structure import BIOME_RUIN, GRASS_VAULT, Structure
 from game.items import glyphs
 from game.items.glyphs import Glyph
 from game.world.biomes import Biome
@@ -27,18 +27,17 @@ _ATTEMPTS = 60
 
 
 def place(world: WorldMap, rng: random.Random) -> list[Structure]:
-    """One home for every basic glyph, plus spares out in the ring.
+    """One home for every basic shape, plus spares out in the ring.
 
-    The grassland pair goes down first because it is the tutorial: an open
-    ruin and a watched vault, holding two cuts of one gimmick.
+    The vault goes down first because it is the tutorial. It holds one
+    biome's basic shape -- the same thing that biome's own ruin holds, out
+    past a three-minute walk -- so the lesson is two prices for one reward
+    rather than a better reward, and it is taught in the safe land.
     """
     sites: list[Structure] = []
-    weak, strong = sorted(glyphs.glyphs_of(None), key=lambda g: g.power)
-    _add(sites, world, rng, GRASS_RUIN, weak, None)
-    _add(sites, world, rng, GRASS_VAULT, strong, None)
-    for glyph in glyphs.basic_glyphs():
-        if glyph.biome is None:
-            continue  # the grassland pair, placed above
+    basics = glyphs.basic_glyphs()
+    _add(sites, world, rng, GRASS_VAULT, rng.choice(basics), None)
+    for glyph in basics:
         # Two chances each, so one awkward sector is not a shut biome.
         for _ in range(config.STRUCTURES_PER_BIOME):
             _add(sites, world, rng, BIOME_RUIN, glyph, glyph.biome)

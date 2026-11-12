@@ -45,14 +45,11 @@ def test_power_climbs_with_the_tier_inside_a_biome():
         assert powers[0] < powers[-1]  # strictly worth climbing
 
 
-def test_the_grassland_offers_a_weak_and_a_strong_cut_of_the_same_thing():
-    # The spec's two grassland sites: an unguarded small one and a guarded big
-    # one with "the same gimmick, stronger".
-    plain = glyphs.glyphs_of(None)
-    assert len(plain) == 2
-    weak, strong = sorted(plain, key=lambda g: g.power)
-    assert weak.gimmick == strong.gimmick
-    assert strong.power > weak.power
+def test_the_grassland_has_no_shapes_of_its_own():
+    # It used to hold an elementless pair. They were two more shapes to keep
+    # straight for a gimmick that was not an element, and the shapes are the
+    # part a player carries in their head.
+    assert glyphs.glyphs_of(None) == ()
 
 
 def test_the_supreme_glyphs_are_not_lying_about_where_they_come_from():
@@ -79,8 +76,10 @@ def test_glyphs_of_an_unknown_biome_is_empty_not_an_error():
 
 
 def test_the_catalogue_is_the_size_the_spec_asks_for():
-    # Two grassland cuts plus three per ring biome.
-    assert len(GLYPHS) == 2 + 3 * len(biomes.RING_BIOMES)
+    # Three per ring biome and nothing else. The grassland's elementless pair
+    # is gone: they were two more shapes to carry for a gimmick that was not
+    # an element.
+    assert len(GLYPHS) == 3 * len(biomes.RING_BIOMES)
 
 
 def test_a_glyph_is_a_plain_row():

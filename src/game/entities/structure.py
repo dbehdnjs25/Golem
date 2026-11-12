@@ -2,11 +2,12 @@
 
 Three sorts, which are the spec's first three sources of magic:
 
-- a grassland ruin, open to anyone, holding the weak cut
-- a grassland vault with a golem over it, holding the strong cut of the same
-  gimmick -- the lesson that a guarded site is worth the fight, taught in the
-  safe land before any biome asks the player to believe it
-- a biome ruin, holding that biome's basic glyph
+- a grassland vault with a golem over it, holding one biome's basic shape --
+  the same thing that biome's own ruin holds, bought with a fight instead of
+  a three-minute walk. Two prices for one reward, which is the lesson that a
+  guarded site is worth it, taught in the safe land before any biome asks
+  the player to believe it
+- a biome ruin, holding that biome's basic shape
 
 Opened once and then it is scenery. The drawing is learned permanently, so
 there is nothing left to come back for.
@@ -21,7 +22,6 @@ import pygame
 from game import config
 from game.items.glyphs import Glyph
 
-GRASS_RUIN = "grass_ruin"
 GRASS_VAULT = "grass_vault"
 BIOME_RUIN = "biome_ruin"
 

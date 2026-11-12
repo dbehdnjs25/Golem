@@ -21,9 +21,8 @@ A player who knows the basic is already most of the way through the hand they
 will need later.
 
 Fire and lightning both open to the right, because there are four directions
-and five elements; so do ice and swift, downward. Each pair parts on the
-second stroke, and the elemental one parts the right way round: fire turns
-down, lightning turns up.
+and five elements. They part on the second stroke, and part the right way
+round: fire turns down, lightning turns up.
 """
 
 from __future__ import annotations
@@ -39,7 +38,7 @@ RIGHT = "right"
 
 # Seconds of stillness that end a shape. Long enough to think between strokes,
 # short enough that a spell follows the hand rather than trailing it.
-SETTLE = 0.40
+SETTLE = 0.35
 
 _BY_KEY = {
     pygame.K_UP: UP,
@@ -58,9 +57,6 @@ def of_key(key: int) -> str | None:
 # rather than generated: these are things a player has to remember, and a table
 # you can read is a table you can tune when one of them feels wrong.
 SHAPES: dict[str, tuple[str, ...]] = {
-    # 초원 -- no element, so it takes an opening nobody else uses
-    "swift_lesser": (DOWN, LEFT, UP),
-    "swift_greater": (DOWN, LEFT, UP, RIGHT),
     # 불 -- turns down first, the way fire falls
     "burnt_forest_basic": (RIGHT, DOWN, LEFT),
     "burnt_forest_greater": (RIGHT, DOWN, LEFT, UP),

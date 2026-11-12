@@ -90,40 +90,6 @@ def _ladder(biome: Biome, gimmick: str, names: tuple[str, str, str]) -> tuple[Gl
     )
 
 
-# The grassland has no element, so its two glyphs are utility: the same gimmick
-# cut weakly in an unguarded ruin and strongly in one a golem stands over. That
-# pairing is the spec's, and it is what teaches the player that a guarded site
-# is worth the fight before any biome asks them to believe it.
-LESSER_SWIFT = Glyph(
-    key="swift_lesser",
-    name="신속1",
-    biome=None,
-    element=None,
-    tier=BASIC,
-    gimmick="swift",
-    power=config.GLYPH_POWER_BASIC * 0.6,
-    strain=0.0,
-    fits=frozenset({WEAPON}),
-    source=FROM_STRUCTURE,
-)
-GREATER_SWIFT = Glyph(
-    key="swift_greater",
-    name="신속2",
-    biome=None,
-    element=None,
-    tier=GREATER,
-    gimmick="swift",
-    power=config.GLYPH_POWER_GREATER * 0.6,
-    strain=0.0,
-    fits=frozenset({WEAPON}),
-    source=FROM_STRUCTURE,
-)
-
-# Named for what they are and which rung, rather than for what they look
-# like. Seventeen poetic names were seventeen things to keep straight at a
-# glance, and "잿불심" says nothing about being the fire one or the last
-# one. The shapes are the part worth memorising; the names only have to
-# point.
 BURNT_GLYPHS = _ladder(BURNT_FOREST, "burn", ("불1", "불2", "불3"))
 SNOWFIELD_GLYPHS = _ladder(SNOWFIELD, "chill", ("얼음1", "얼음2", "얼음3"))
 WIND_GLYPHS = _ladder(WIND_PLATEAU, "gust", ("바람1", "바람2", "바람3"))
@@ -131,8 +97,6 @@ BOG_GLYPHS = _ladder(BOG, "rot", ("독1", "독2", "독3"))
 WASTELAND_GLYPHS = _ladder(WASTELAND, "shock", ("번개1", "번개2", "번개3"))
 
 GLYPHS: tuple[Glyph, ...] = (
-    LESSER_SWIFT,
-    GREATER_SWIFT,
     *BURNT_GLYPHS,
     *SNOWFIELD_GLYPHS,
     *WIND_GLYPHS,
@@ -146,9 +110,9 @@ GLYPH_BY_KEY: dict[str, Glyph] = {glyph.key: glyph for glyph in GLYPHS}
 def glyphs_of(biome: Biome | None) -> tuple[Glyph, ...]:
     """Every glyph belonging to ``biome``.
 
-    The grassland is spelled both ways -- ``None`` and the GRASSLAND row -- and
-    both mean the elementless pair, because callers come at this holding either
-    one and neither is wrong.
+    The grassland has none. It used to hold an elementless pair, which was two
+    more shapes to keep straight for a gimmick that was not an element -- and
+    the shapes are the part a player has to carry in their head.
     """
     wanted = None if biome is None or biome is GRASSLAND else biome
     return tuple(g for g in GLYPHS if g.biome is wanted)

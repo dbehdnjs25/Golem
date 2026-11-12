@@ -648,8 +648,8 @@ BOSS_BAR_BG: Final[tuple[int, int, int]] = (38, 32, 36)
 # hand. Drawn as lines rather than spelled out in arrows: copying a picture is
 # the same motion the hand will make, where reading "right, down, left" is a
 # translation first.
-SPELLBOOK_WIDTH: Final[int] = 120
-SPELLBOOK_ROW: Final[int] = 26
+SPELLBOOK_WIDTH: Final[int] = 84
+SPELLBOOK_ROW: Final[int] = 18
 
 # An announced circle, and the fire itself. The warning is deliberately not the
 # colour of the thing it warns about: one is a promise and one is a blow, and
