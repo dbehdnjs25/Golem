@@ -96,7 +96,7 @@ def _ladder(biome: Biome, gimmick: str, names: tuple[str, str, str]) -> tuple[Gl
 # is worth the fight before any biome asks them to believe it.
 LESSER_SWIFT = Glyph(
     key="swift_lesser",
-    name="잔 신속",
+    name="신속1",
     biome=None,
     element=None,
     tier=BASIC,
@@ -108,7 +108,7 @@ LESSER_SWIFT = Glyph(
 )
 GREATER_SWIFT = Glyph(
     key="swift_greater",
-    name="신속",
+    name="신속2",
     biome=None,
     element=None,
     tier=GREATER,
@@ -119,11 +119,16 @@ GREATER_SWIFT = Glyph(
     source=FROM_STRUCTURE,
 )
 
-BURNT_GLYPHS = _ladder(BURNT_FOREST, "burn", ("불씨", "화염", "잿불심"))
-SNOWFIELD_GLYPHS = _ladder(SNOWFIELD, "chill", ("서리", "한파", "절대영도"))
-WIND_GLYPHS = _ladder(WIND_PLATEAU, "gust", ("산들바람", "돌풍", "폭풍핵"))
-BOG_GLYPHS = _ladder(BOG, "rot", ("독기", "맹독", "부패심"))
-WASTELAND_GLYPHS = _ladder(WASTELAND, "shock", ("정전기", "낙뢰", "뇌신핵"))
+# Named for what they are and which rung, rather than for what they look
+# like. Seventeen poetic names were seventeen things to keep straight at a
+# glance, and "잿불심" says nothing about being the fire one or the last
+# one. The shapes are the part worth memorising; the names only have to
+# point.
+BURNT_GLYPHS = _ladder(BURNT_FOREST, "burn", ("불1", "불2", "불3"))
+SNOWFIELD_GLYPHS = _ladder(SNOWFIELD, "chill", ("얼음1", "얼음2", "얼음3"))
+WIND_GLYPHS = _ladder(WIND_PLATEAU, "gust", ("바람1", "바람2", "바람3"))
+BOG_GLYPHS = _ladder(BOG, "rot", ("독1", "독2", "독3"))
+WASTELAND_GLYPHS = _ladder(WASTELAND, "shock", ("번개1", "번개2", "번개3"))
 
 GLYPHS: tuple[Glyph, ...] = (
     LESSER_SWIFT,

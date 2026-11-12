@@ -61,25 +61,25 @@ class Trick:
 
 _ROWS: tuple[Trick, ...] = (
     # 불탄 숲 -- fire falls, then walks at you, then bursts out of the floor
-    Trick("ember", "불씨", BURNT_FOREST, 1, "떨어지는 자리를 비켜라"),
-    Trick("flame", "화염", BURNT_FOREST, 2, "다가오는 벽을 돌아가라"),
-    Trick("ashheart", "잿불심", BURNT_FOREST, 3, "내려칠 때 멀리 있어라"),
+    Trick("ember", "불1", BURNT_FOREST, 1, "떨어지는 자리를 비켜라"),
+    Trick("flame", "불2", BURNT_FOREST, 2, "다가오는 벽을 돌아가라"),
+    Trick("ashheart", "불3", BURNT_FOREST, 3, "내려칠 때 멀리 있어라"),
     # 설원 -- thrown and splitting, swept and freezing, dropped on a mark
-    Trick("frost", "서리", SNOWFIELD, 1, "벽에 붙지 마라"),
-    Trick("coldsnap", "한파", SNOWFIELD, 2, "부채꼴 밖으로"),
-    Trick("absolute", "절대영도", SNOWFIELD, 3, "예고된 자리에서 비켜라"),
+    Trick("frost", "얼음1", SNOWFIELD, 1, "벽에 붙지 마라"),
+    Trick("coldsnap", "얼음2", SNOWFIELD, 2, "부채꼴 밖으로"),
+    Trick("absolute", "얼음3", SNOWFIELD, 3, "예고된 자리에서 비켜라"),
     # 바람 고원 -- a growing whirl, the whole floor flowing, rings in sequence
-    Trick("breeze", "산들바람", WIND_PLATEAU, 1, "커지기 전에 피해라"),
-    Trick("gale", "돌풍", WIND_PLATEAU, 2, "흐름을 거슬러 서라"),
-    Trick("stormcore", "폭풍핵", WIND_PLATEAU, 3, "터지는 순서를 읽어라"),
+    Trick("breeze", "바람1", WIND_PLATEAU, 1, "커지기 전에 피해라"),
+    Trick("gale", "바람2", WIND_PLATEAU, 2, "흐름을 거슬러 서라"),
+    Trick("stormcore", "바람3", WIND_PLATEAU, 3, "터지는 순서를 읽어라"),
     # 늪지 -- a cone that pools, three lobs, and the floor erupting
-    Trick("miasma", "독기", BOG, 1, "붙어라"),
-    Trick("venom", "맹독", BOG, 2, "네가 깐 땅을 피해라"),
-    Trick("rotheart", "부패심", BOG, 3, "깔아둔 것이 전부 계산서"),
+    Trick("miasma", "독1", BOG, 1, "붙어라"),
+    Trick("venom", "독2", BOG, 2, "네가 깐 땅을 피해라"),
+    Trick("rotheart", "독3", BOG, 3, "깔아둔 것이 전부 계산서"),
     # 사막 -- an orb that sits, rods that chain, a bolt that bounces back
-    Trick("static", "정전기", WASTELAND, 1, "구슬에서 떨어져라"),
-    Trick("strike", "낙뢰", WASTELAND, 2, "이어진 선을 비켜라"),
-    Trick("thunderheart", "뇌신핵", WASTELAND, 3, "치운 자리에서 싸워라"),
+    Trick("static", "번개1", WASTELAND, 1, "구슬에서 떨어져라"),
+    Trick("strike", "번개2", WASTELAND, 2, "이어진 선을 비켜라"),
+    Trick("thunderheart", "번개3", WASTELAND, 3, "치운 자리에서 싸워라"),
 )
 
 TRICKS: dict[str, Trick] = {t.key: t for t in _ROWS}
