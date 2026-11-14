@@ -616,6 +616,77 @@ PILLAR_RADIUS: Final[float] = 54.0
 PILLAR_HP: Final[float] = 60.0
 PILLAR_SECONDS: Final[float] = 9.0
 
+# A circle that stays, and bills per second for being in it. The first shape
+# here that is a PLACE rather than an event, which is what lets wind grow and
+# an orb sit there humming.
+ZONE_SECONDS: Final[float] = 4.0
+
+# Something thrown at a place rather than in a direction. The arc IS the
+# warning, so the flight has to be long enough to read as one.
+LOB_SECONDS: Final[float] = 0.95
+LOB_RADIUS: Final[float] = 76.0
+LOB_ARC: Final[float] = 90.0  # how high it is drawn at the peak; drawing only
+
+# A rod stuck in the ground: not in the way, but it fires from somewhere else.
+# Breakable on purpose -- the desert's supreme trick is made of whatever the
+# player left standing.
+ROD_RADIUS: Final[float] = 18.0
+ROD_HP: Final[float] = 35.0
+ROD_SECONDS: Final[float] = 24.0  # it rusts out eventually even if ignored
+ROD_SPARK: Final[float] = 5.0  # seconds between one line and the next
+
+# A line between two points. Warned as a thread, then fired.
+BEAM_WIDTH: Final[float] = 26.0
+BEAM_WARNING: Final[float] = 0.55
+BEAM_SECONDS: Final[float] = 0.3  # how long it hangs in the air after firing
+
+# --- The wind plateau's three ----------------------------------------------
+# A whirl that grows, the whole floor flowing, and circles that burst in order.
+BREEZE_RADIUS: Final[float] = 60.0  # where it starts; small enough to ignore
+BREEZE_GROW: Final[float] = 95.0  # px/s -- which is why ignoring it is wrong
+BREEZE_PULL: Final[float] = 150.0  # under PLAYER_SPEED, so it can be walked out of
+BREEZE_DPS: Final[float] = 13.0
+BREEZE_SECONDS: Final[float] = 3.6
+GALE_DRIFT: Final[float] = 170.0  # px/s across the whole room, one way
+GALE_DPS: Final[float] = 5.0  # the push is the trick; the damage is a reminder
+GALE_SECONDS: Final[float] = 3.0
+STORMCORE_BURSTS: Final[int] = 6
+STORMCORE_STEP: Final[float] = 0.4  # seconds between one burst and the next
+STORMCORE_SPREAD: Final[float] = 300.0  # how far out the ring of them sits
+STORMCORE_DAMAGE: Final[float] = 20.0
+
+# --- The bog's three -------------------------------------------------------
+# A cone that pools at its far end, three lobs, and the bill for all of it.
+MIASMA_RANGE: Final[float] = 420.0
+MIASMA_ARC: Final[float] = 70.0  # degrees of the cone
+MIASMA_PUFFS: Final[int] = 4  # graded along the range, widening as they go
+MIASMA_NEAR: Final[float] = 0.4  # the share of the range that is safe underfoot
+MIASMA_DAMAGE: Final[float] = 15.0
+VENOM_LOBS: Final[int] = 3
+VENOM_SPREAD: Final[float] = 210.0  # how far around the player they come down
+VENOM_DAMAGE: Final[float] = 19.0
+ROTHEART_DAMAGE: Final[float] = 22.0  # at every pool already on the floor
+ROTHEART_WARNING: Final[float] = 0.75  # shorter than a drop: it is already there
+
+# --- The desert's three ----------------------------------------------------
+# An orb that sits, rods that chain, and one line through everything left up.
+STATIC_SPEED: Final[float] = 300.0
+STATIC_SETTLE: Final[float] = 0.8  # seconds of flight before it stops
+STATIC_RADIUS: Final[float] = 105.0
+STATIC_DPS: Final[float] = 17.0
+STATIC_SECONDS: Final[float] = 6.0
+STATIC_SHOCK: Final[float] = 2.0  # seconds a body keeps the charge
+STRIKE_RODS: Final[int] = 3  # thrown out per cast, on top of the starter
+STRIKE_REACH: Final[float] = 0.82  # the share of the room's radius they fly to
+STRIKE_DAMAGE: Final[float] = 17.0
+STRIKE_APART: Final[float] = 70.0  # degrees two rods must differ by to be joined
+THUNDERHEART_DAMAGE: Final[float] = 15.0  # per line -- the count is the threat
+
+# Being shocked: no dodging. Not slower, not blinded. Taking the escape away
+# is the only cost that makes standing beside a humming orb the real mistake
+# rather than a sum of damage per second.
+SHOCK_COLOR: Final[tuple[int, int, int]] = (240, 228, 120)
+
 # --- The snowfield's three -------------------------------------------------
 # Ice is thrown, swept and dropped.
 FROST_SPEED: Final[float] = 420.0

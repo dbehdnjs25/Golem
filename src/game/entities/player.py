@@ -30,6 +30,9 @@ class Player:
     # recover between presses and the cost would never be felt.
     stamina_hold: float = 0.0
     burn_timer: float = 0.0  # seconds of fire still on them; see systems/status
+    # Seconds of charge still on them. Being shocked takes the dodge away
+    # and nothing else -- see systems/status.
+    shock_timer: float = 0.0
     # Where they are actually heading, which on ice is not where they are
     # pushing. Off ice this is simply the input, recomputed every step.
     slide: pygame.Vector2 = field(default_factory=lambda: pygame.Vector2(0, 0))
@@ -37,6 +40,10 @@ class Player:
     @property
     def burning(self) -> bool:
         return self.burn_timer > 0
+
+    @property
+    def shocked(self) -> bool:
+        return self.shock_timer > 0
 
     @property
     def winded(self) -> bool:
@@ -104,7 +111,15 @@ class Player:
         # A dodge with nothing left simply does not happen: not a slow one and
         # not a cheap one. The i-frames ARE the move, so a half-priced version
         # would be a half-priced escape. The cooldown is not burned either.
-        if dodge_pressed and self.dodge_cooldown_timer <= 0 and self.spend(config.DODGE_COST):
+        # Shocked, it does not happen either, and nothing is taken for it.
+        # Charging a player for a dodge they did not get would read as the
+        # button being broken rather than as the charge holding them.
+        if (
+            dodge_pressed
+            and not self.shocked
+            and self.dodge_cooldown_timer <= 0
+            and self.spend(config.DODGE_COST)
+        ):
             self.dodge_timer = config.DODGE_DURATION
             self.iframe_timer = config.DODGE_IFRAMES
             self.dodge_cooldown_timer = config.DODGE_COOLDOWN
@@ -136,3 +151,4 @@ class Player:
         self.dodge_timer = max(0.0, self.dodge_timer - dt)
         self.iframe_timer = max(0.0, self.iframe_timer - dt)
         self.dodge_cooldown_timer = max(0.0, self.dodge_cooldown_timer - dt)
+        self.shock_timer = max(0.0, self.shock_timer - dt)

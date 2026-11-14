@@ -110,14 +110,8 @@ class Brawl:
         ``forced`` picks the next move instead of the dice. For tests and the
         tuning scripts; the game never passes it.
         """
-        boss_tricks.update(
-            dt,
-            self.tricks,
-            player,
-            patches if patches is not None else [],
-            room=room,
-            radius=radius,
-        )
+        ground = patches if patches is not None else []
+        boss_tricks.update(dt, self.tricks, player, ground, room=room, radius=radius)
         self.arm.update(dt, boss.pos, player.pos)
         if self.arm.caught is not None:
             player.pos.update(self.arm.caught)
@@ -138,7 +132,7 @@ class Brawl:
             self._begin(boss, player, forced)
             return
         if self.phase == WIND:
-            self._strike(boss, player, room, radius)
+            self._strike(boss, player, room, radius, ground)
             return
         elif self.phase == ACT:
             self._land(boss, player)
@@ -170,7 +164,14 @@ class Brawl:
         """What the second phase does to a blow: the same one, harder."""
         return boss.contact_dps / boss.kind.contact_dps
 
-    def _strike(self, boss: Boss, player: Player, room: pygame.Vector2, radius: float) -> None:
+    def _strike(
+        self,
+        boss: Boss,
+        player: Player,
+        room: pygame.Vector2,
+        radius: float,
+        patches: list[Patch],
+    ) -> None:
         might = self._might(boss)
         if self.move == "slam":
             self._slam(boss, player, might)
@@ -189,7 +190,15 @@ class Brawl:
             # commitment, and a boss that could walk out of its own would be
             # handing the player a free hit instead of taking a risk.
             self.held = boss_tricks.cast(
-                self.move or "", self.tricks, boss.pos, self.aim, might, self.rng
+                self.move or "",
+                self.tricks,
+                boss.pos,
+                self.aim,
+                might,
+                self.rng,
+                patches,
+                room,
+                radius,
             )
         self.takeoff = pygame.Vector2(boss.pos)
         self.struck = self.move not in _TRAVELS  # travellers strike en route

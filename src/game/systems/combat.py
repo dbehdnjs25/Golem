@@ -89,6 +89,7 @@ def update_projectiles(
     enemies: list[Golem],
     world: WorldMap,
     boss: Hurtable | None = None,
+    standing: Sequence[Hurtable] | None = None,
     patches: list[Patch] | None = None,
     marks: list[pygame.Vector2] | None = None,
     timers: list[float] | None = None,
@@ -96,10 +97,15 @@ def update_projectiles(
 ) -> None:
     """Fly, hit, and raise whatever trick the shot was carrying.
 
-    The three new arguments are where a trick lands: the ground it leaves, the
-    marks it sets, and whose feet to shove away from. Left out, a shot is
+    The three trick arguments are where a trick lands: the ground it leaves,
+    the marks it sets, and whose feet to shove away from. Left out, a shot is
     damage and nothing else -- which is what every shot was before the supreme
     glyphs existed.
+
+    ``standing`` is whatever a boss has left in the room that can be broken:
+    its columns and its rods. Checked last, so a rod cannot eat a shot meant
+    for anything alive -- but checked, because a trick that says it can be
+    cleared has to actually be clearable.
     """
     surviving: list[Projectile] = []
     any_killed = False
@@ -111,6 +117,8 @@ def update_projectiles(
         # in front of it must not eat the shot that was aimed past it.
         hit = _first_hit(shot, [boss] if boss is not None else [])
         hit = hit if hit is not None else _first_hit(shot, enemies)
+        if hit is None and standing is not None:
+            hit = _first_hit(shot, standing)
         if hit is not None:
             hit.damage(shot.damage)
             _raise_trick(shot, hit, patches, marks, timers, from_pos, world)

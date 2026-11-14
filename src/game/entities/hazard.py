@@ -104,5 +104,141 @@ class Pillar:
     def is_broken(self) -> bool:
         return self.hp <= 0
 
+    @property
+    def is_dead(self) -> bool:
+        """The same thing under the name a shot looks for.
+
+        See ``systems/combat.Hurtable``: being shootable is what makes
+        breaking one a real option rather than a line in the design.
+        """
+        return self.is_broken
+
     def damage(self, amount: float) -> None:
         self.hp -= amount
+
+
+@dataclass
+class Zone:
+    """A circle that stays, and does something to whoever is in it.
+
+    The three earlier shapes all resolve once: a circle lands, a front passes,
+    a ring crosses. This one is a PLACE rather than an event, and it is why the
+    wind can grow and the lightning orb can sit there humming. Being in it
+    costs per second, so a brush past is cheap and standing in it is not.
+
+    It may fly before it settles, drag bodies toward its middle, or push them
+    all one way. Nothing uses all three at once; what matters is that the
+    pulling and the pushing live with the circle instead of each wind trick
+    carrying its own copy.
+    """
+
+    pos: pygame.Vector2
+    radius: float
+    vel: pygame.Vector2 = field(default_factory=pygame.Vector2)
+    settle: float = 0.0  # seconds of flight before it stops where it is
+    dps: float = 0.0
+    grow: float = 0.0  # px/s the edge opens out
+    pull: float = 0.0  # px/s toward the middle; a whirl
+    drift: pygame.Vector2 = field(default_factory=pygame.Vector2)  # px/s, one way
+    ttl: float = 4.0
+    shock: float = 0.0  # seconds of 감전 left on whoever stands in it
+
+
+@dataclass
+class Lob:
+    """Something thrown at a PLACE, which lands there.
+
+    A ball is thrown in a direction and keeps going; this is thrown at a spot
+    and arrives. The difference is what the player reads: a ball is a line to
+    step off, a lob is a circle to not be standing in, announced by the arc
+    itself rather than by a ring on the floor.
+    """
+
+    start: pygame.Vector2
+    to: pygame.Vector2
+    flight: float = config.LOB_SECONDS
+    gone: float = 0.0  # how much of the flight is behind it
+    damage: float = 0.0
+    radius: float = config.LOB_RADIUS
+    leaves: str | None = None
+    pos: pygame.Vector2 = field(default_factory=pygame.Vector2)
+
+    def __post_init__(self) -> None:
+        if not self.pos:
+            self.pos = pygame.Vector2(self.start)
+
+    @property
+    def share(self) -> float:
+        """How far along it is, 0 to 1."""
+        return min(1.0, self.gone / self.flight) if self.flight > 0 else 1.0
+
+    @property
+    def landed(self) -> bool:
+        return self.share >= 1.0
+
+    @property
+    def height(self) -> float:
+        """How high off the ground it is drawn, peaking halfway.
+
+        Drawing only -- nothing flies over anything. But a thrown thing that
+        slides along the floor reads as a ball, and the whole point of a lob
+        is that it is going to come down somewhere.
+        """
+        share = self.share
+        return 4 * config.LOB_ARC * share * (1 - share)
+
+
+@dataclass
+class Rod:
+    """A thing stuck in the ground that is not in the way, and fires.
+
+    A pillar you walk round; a rod you walk past, and then it kills you from
+    somewhere else. It keeps its own clock and is breakable, which is the whole
+    of what the desert asks: the floor fills up with them, and a player who
+    never clears any has built the supreme trick's weapon themselves.
+    """
+
+    pos: pygame.Vector2
+    hp: float = config.ROD_HP
+    radius: float = config.ROD_RADIUS
+    left: float = config.ROD_SECONDS
+    spark: float = config.ROD_SPARK  # seconds until it throws its next line
+    might: float = 1.0  # carried from the cast that planted it
+    # Whether this one throws lines or is only something to be joined to.
+    # Each cast plants exactly one that fires, so a floor full of rods is a
+    # floor the player let fill up.
+    fires: bool = False
+
+    @property
+    def is_broken(self) -> bool:
+        return self.hp <= 0
+
+    @property
+    def is_dead(self) -> bool:
+        """The same thing under the name a shot looks for; see Pillar."""
+        return self.is_broken
+
+    def damage(self, amount: float) -> None:
+        self.hp -= amount
+
+
+@dataclass
+class Beam:
+    """A line between two points that fires after a beat, and hurts once.
+
+    Announced like everything else: while the warning runs it is a thread, and
+    stepping off the thread is the whole answer. Fired, it is a line nobody
+    should be standing on, and then it is gone.
+    """
+
+    a: pygame.Vector2
+    b: pygame.Vector2
+    damage: float = 0.0
+    width: float = config.BEAM_WIDTH
+    left: float = config.BEAM_WARNING
+    ttl: float = config.BEAM_SECONDS
+    spent: bool = False
+
+    @property
+    def live(self) -> bool:
+        return self.left <= 0

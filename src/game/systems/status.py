@@ -41,3 +41,12 @@ def update_burn(dt: float, player: Player, at_source: bool = False) -> None:
     # its own right, and dying to the last tick of a fire you already escaped
     # reads as being cheated.
     player.hp = max(1.0, player.hp - config.BURN_DPS * alight)
+
+
+def charge(player: Player, seconds: float = config.STATIC_SHOCK) -> None:
+    """Put the charge on them, refreshing rather than stacking.
+
+    Same reasoning as the fire: standing in the orb would relight every frame,
+    and a two-second pass would add up to a minute of being unable to dodge.
+    """
+    player.shock_timer = max(player.shock_timer, seconds)

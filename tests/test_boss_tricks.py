@@ -220,10 +220,12 @@ def test_every_trick_the_burnt_lord_holds_can_be_cast():
 
 
 def test_a_trick_nobody_has_written_yet_is_quiet_rather_than_a_crash():
-    # Ten of the fifteen are still names. A boss reaching for one must not take
-    # the game down with it.
+    # All fifteen are built now, so this is tested with a name that is not a
+    # trick at all. The quiet path still matters: the design is edited more
+    # often than the behaviour, and a boss must not take the game down over a
+    # key the table has and the system does not.
     field = boss_tricks.Field()
-    boss_tricks.cast("rotheart", field, pygame.Vector2(HOME), pygame.Vector2(HOME), might=1.0)
+    boss_tricks.cast("nothing_at_all", field, pygame.Vector2(HOME), pygame.Vector2(HOME), 1.0)
     assert not (field.falling or field.walls or field.rings)
 
 
@@ -303,4 +305,5 @@ def test_an_instant_trick_holds_nobody():
 
 def test_an_unbuilt_trick_holds_nobody_either():
     field = boss_tricks.Field()
-    assert boss_tricks.cast("rotheart", field, pygame.Vector2(HOME), pygame.Vector2(HOME)) == 0.0
+    held = boss_tricks.cast("nothing_at_all", field, pygame.Vector2(HOME), pygame.Vector2(HOME))
+    assert held == 0.0

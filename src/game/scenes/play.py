@@ -18,6 +18,7 @@ from game.entities.boss import BOSS_KINDS, Boss
 from game.entities.core import Core
 from game.entities.enemy import Creature, Golem
 from game.entities.fragment import Fragment
+from game.entities.hazard import Pillar, Rod
 from game.entities.loot import LootPile
 from game.entities.patch import BURNING, FROST, SLUDGE, Patch
 from game.entities.player import Player
@@ -768,6 +769,7 @@ class PlayScene(Scene):
             self.enemies,
             self.world,
             boss=self.boss,
+            standing=self._breakables(),
             patches=self.patches,
             marks=self.marks,
             timers=self.mark_timers,
@@ -989,12 +991,12 @@ class PlayScene(Scene):
         self._draw_charge_lane(surface)  # a promise, so under what is real
         self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
-        pygame.draw.circle(
-            surface,
-            config.PLAYER_COLOR,
-            self.camera.world_to_screen(self.player.pos),
-            self.player.radius,
-        )
+        at = self.camera.world_to_screen(self.player.pos)
+        pygame.draw.circle(surface, config.PLAYER_COLOR, at, self.player.radius)
+        if self.player.shocked:
+            # Shown on the body rather than in the corner: what it takes away
+            # is the dodge, and the dodge is pressed while looking here.
+            pygame.draw.circle(surface, config.SHOCK_COLOR, at, self.player.radius + 5, 2)
 
     # --- the belongings screen -------------------------------------------
     def _toggle_grid(self) -> None:
@@ -1691,6 +1693,18 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.LAVA_COLOR, at, pool.radius)
             pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
 
+    def _breakables(self) -> list[Pillar | Rod]:
+        """What the boss has left standing that a shot can be spent on.
+
+        Columns and rods. Clearing them is the answer to two of the fifteen
+        tricks, so they have to be shootable -- and they are listed here
+        rather than held as one list on the field, because what each of them
+        does while it stands has nothing in common with the other.
+        """
+        if self.brawl is None:
+            return []
+        return [*self.brawl.tricks.pillars, *self.brawl.tricks.rods]
+
     def _update_boss(self, dt: float) -> None:
         """Walk it at the player, bruise whoever stands in it, and bury it.
 
@@ -1818,6 +1832,44 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.FROST_COLOR, at, int(ball.radius))
             if ball.splits:
                 pygame.draw.circle(surface, config.WHITE, at, int(ball.radius) + 4, 2)
+        for zone in field.zones:
+            # Filled faintly rather than outlined: it is a place you are in,
+            # not a blow about to land, and an outline would read as a warning
+            # for something that has already started.
+            at = self.camera.world_to_screen(zone.pos)
+            wide = max(1, int(zone.radius))
+            skin = pygame.Surface((wide * 2, wide * 2), pygame.SRCALPHA)
+            colour = config.SHOCK_COLOR if zone.shock else config.WIND_COLOR
+            pygame.draw.circle(skin, (*colour, config.PATCH_ALPHA), (wide, wide), wide)
+            surface.blit(skin, (at.x - wide, at.y - wide))
+            pygame.draw.circle(surface, colour, at, wide, 3)
+        for lob in field.lobs:
+            # The mark on the ground is where it is going; the dot above it is
+            # the thing itself, drawn higher the further it is from landing.
+            down = self.camera.world_to_screen(lob.to)
+            pygame.draw.circle(surface, config.SLUDGE_COLOR, down, int(lob.radius), 3)
+            at = self.camera.world_to_screen(lob.pos) - pygame.Vector2(0, lob.height)
+            pygame.draw.circle(surface, config.SLUDGE_COLOR, at, 10)
+            pygame.draw.circle(surface, config.WHITE, at, 10, 2)
+        for beam in field.beams:
+            at = self.camera.world_to_screen(beam.a)
+            to = self.camera.world_to_screen(beam.b)
+            if beam.live:
+                pygame.draw.line(surface, config.SHOCK_COLOR, at, to, int(beam.width))
+                pygame.draw.line(surface, config.WHITE, at, to, 3)
+            else:
+                # A thread while the warning runs. Thin on purpose: a line
+                # drawn at full width before it fires cannot be told from one
+                # that already has.
+                pygame.draw.line(surface, config.WARNING_COLOR, at, to, 2)
+        for rod in field.rods:
+            at = self.camera.world_to_screen(rod.pos)
+            pygame.draw.circle(surface, config.SHOCK_COLOR, at, int(rod.radius))
+            pygame.draw.circle(surface, config.WHITE, at, int(rod.radius), 2)
+            if rod.fires:
+                # The ones that throw lines are the ones worth breaking, so
+                # they are the ones marked.
+                pygame.draw.circle(surface, config.WHITE, at, int(rod.radius) + 6, 2)
         for pillar in field.pillars:
             # Thinning as it melts, because a column standing in the way is
             # worth going round only while it is still going to be there.

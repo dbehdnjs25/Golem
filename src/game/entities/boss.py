@@ -74,7 +74,7 @@ _ROWS: tuple[Trick, ...] = (
     Trick("stormcore", "바람3", WIND_PLATEAU, 3, "터지는 순서를 읽어라"),
     # 늪지 -- a cone that pools, three lobs, and the floor erupting
     Trick("miasma", "독1", BOG, 1, "붙어라"),
-    Trick("venom", "독2", BOG, 2, "네가 깐 땅을 피해라"),
+    Trick("venom", "독2", BOG, 2, "떨어질 자리를 골라라"),
     Trick("rotheart", "독3", BOG, 3, "깔아둔 것이 전부 계산서"),
     # 사막 -- an orb that sits, rods that chain, a bolt that bounces back
     Trick("static", "번개1", WASTELAND, 1, "구슬에서 떨어져라"),
