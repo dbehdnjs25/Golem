@@ -110,7 +110,14 @@ class Brawl:
         ``forced`` picks the next move instead of the dice. For tests and the
         tuning scripts; the game never passes it.
         """
-        boss_tricks.update(dt, self.tricks, player, patches if patches is not None else [])
+        boss_tricks.update(
+            dt,
+            self.tricks,
+            player,
+            patches if patches is not None else [],
+            room=room,
+            radius=radius,
+        )
         self.arm.update(dt, boss.pos, player.pos)
         if self.arm.caught is not None:
             player.pos.update(self.arm.caught)

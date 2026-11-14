@@ -21,8 +21,8 @@ from dataclasses import dataclass
 import pygame
 
 from game import config
-from game.entities.hazard import Falling, Ring, Wall
-from game.entities.patch import BURNING, Patch
+from game.entities.hazard import Ball, Falling, Pillar, Ring, Wall
+from game.entities.patch import BURNING, FROST, Patch
 from game.entities.player import Player
 
 
@@ -49,17 +49,23 @@ class Field:
         self.falling: list[Falling] = []
         self.walls: list[Wall] = []
         self.rings: list[Ring] = []
+        self.balls: list[Ball] = []
+        self.pillars: list[Pillar] = []
         self.casting: list[Casting] = []
 
     def clear(self) -> None:
         self.falling.clear()
         self.walls.clear()
         self.rings.clear()
+        self.balls.clear()
+        self.pillars.clear()
         self.casting.clear()
 
     @property
     def busy(self) -> bool:
-        return bool(self.falling or self.walls or self.rings or self.casting)
+        return bool(
+            self.falling or self.walls or self.rings or self.balls or self.pillars or self.casting
+        )
 
 
 def _hurt(player: Player, amount: float) -> None:
@@ -86,12 +92,26 @@ def _leave(
 # --- running what is on the floor -----------------------------------------
 
 
-def update(dt: float, field: Field, player: Player, patches: list[Patch]) -> None:
-    """Advance every hazard and settle what it does."""
+def update(
+    dt: float,
+    field: Field,
+    player: Player,
+    patches: list[Patch],
+    room: pygame.Vector2 | None = None,
+    radius: float = config.TEMPLE_RADIUS,
+) -> None:
+    """Advance every hazard and settle what it does.
+
+    The room is wanted because a thrown ball breaks on its wall. Left out,
+    one simply flies until its own clock runs down, which is what happens
+    anywhere there is no room to speak of.
+    """
     _update_casting(dt, field, player)
     _update_falling(dt, field, player, patches)
     _update_walls(dt, field, player)
     _update_rings(dt, field, player, patches)
+    _update_balls(dt, field, player, room, radius)
+    _update_pillars(dt, field, player)
 
 
 def _update_casting(dt: float, field: Field, player: Player) -> None:
@@ -117,6 +137,10 @@ def _update_falling(dt: float, field: Field, player: Player, patches: list[Patch
         if spot.pos.distance_to(player.pos) <= spot.radius + player.radius:
             _hurt(player, spot.damage)
         _leave(spot.leaves, spot.pos, patches, spot.radius)
+        if spot.stands:
+            # A column, not just a blow. It is the only thing in the game that
+            # is in the way, which is the whole of what the trick asks.
+            field.pillars.append(Pillar(pos=pygame.Vector2(spot.pos)))
         field.falling.remove(spot)
 
 
@@ -164,6 +188,66 @@ def _scatter_behind(ring: Ring, before: float, patches: list[Patch]) -> None:
     at = ring.pos + pygame.Vector2(1, 0).rotate(angle) * ring.radius
     ring.dropped.append(at)
     _leave(ring.leaves, at, patches, config.RING_EMBER_RADIUS)
+
+
+def _update_balls(
+    dt: float,
+    field: Field,
+    player: Player,
+    room: pygame.Vector2 | None,
+    radius: float,
+) -> None:
+    """Fly, hit once, and break apart on the wall."""
+    for ball in list(field.balls):
+        ball.pos += ball.vel * dt
+        ball.ttl -= dt
+        if not ball.spent and ball.pos.distance_to(player.pos) <= ball.radius + player.radius:
+            _hurt(player, ball.damage)
+            ball.spent = True
+        at_wall = room is not None and room.distance_to(ball.pos) >= radius - ball.radius
+        if at_wall and ball.splits:
+            _shatter(field, ball)
+            field.balls.remove(ball)
+            continue
+        if ball.ttl <= 0 or (at_wall and not ball.splits):
+            field.balls.remove(ball)
+
+
+def _shatter(field: Field, ball: Ball) -> None:
+    """Break one ball into shards, fanned evenly.
+
+    Evenly rather than at random: the player is meant to read where the pieces
+    are going from where it struck, and a scatter cannot be read.
+    """
+    speed = ball.vel.length() or config.FROST_SPEED
+    for n in range(ball.splits):
+        way = pygame.Vector2(1, 0).rotate(360 * n / ball.splits)
+        field.balls.append(
+            Ball(
+                pos=pygame.Vector2(ball.pos),
+                vel=way * speed * 0.8,
+                damage=ball.damage,
+                splits=0,  # a shard does not break again
+            )
+        )
+
+
+def _update_pillars(dt: float, field: Field, player: Player) -> None:
+    """Melt them down, clear the broken ones, and keep bodies out of them."""
+    for pillar in list(field.pillars):
+        pillar.left -= dt
+        if pillar.left <= 0 or pillar.is_broken:
+            field.pillars.remove(pillar)
+            continue
+        gap = pillar.pos.distance_to(player.pos)
+        reach = pillar.radius + player.radius
+        if gap < reach:
+            # Pushed out rather than stopped at the edge: a player who was
+            # already inside when it landed has to end up somewhere.
+            offset = player.pos - pillar.pos
+            if offset.length_squared() == 0:
+                offset = pygame.Vector2(1, 0)
+            player.pos.update(pillar.pos + offset.normalize() * reach)
 
 
 # --- casting ---------------------------------------------------------------
@@ -275,6 +359,80 @@ def _ashheart(
     return 0.0  # one strike; the ring opens out by itself
 
 
+def _frost(
+    field: Field,
+    boss_pos: pygame.Vector2,
+    target: pygame.Vector2,
+    might: float,
+    rng: random.Random,
+) -> float:
+    """One ball, thrown at where you were. It breaks on whatever it meets."""
+    toward = target - boss_pos
+    facing = toward.normalize() if toward.length_squared() else pygame.Vector2(1, 0)
+    field.balls.append(
+        Ball(
+            pos=pygame.Vector2(boss_pos),
+            vel=facing * config.FROST_SPEED,
+            damage=config.FROST_DAMAGE * might,
+            splits=config.FROST_SPLITS,
+        )
+    )
+    return 0.0
+
+
+def _coldsnap(
+    field: Field,
+    boss_pos: pygame.Vector2,
+    target: pygame.Vector2,
+    might: float,
+    rng: random.Random,
+) -> float:
+    """A fan of frost, and the floor left slick where it passed.
+
+    Resolved at once rather than swept across frames: it is an arm's length,
+    and a wedge that takes a second to travel is a wall, not a swing. What
+    lasts is the ground.
+    """
+    toward = target - boss_pos
+    facing = toward.normalize() if toward.length_squared() else pygame.Vector2(1, 0)
+    half = config.COLDSNAP_ARC / 2
+    for n in range(config.COLDSNAP_SHEETS):
+        share = n / max(1, config.COLDSNAP_SHEETS - 1)
+        way = facing.rotate(-half + config.COLDSNAP_ARC * share)
+        field.falling.append(
+            Falling(
+                pos=boss_pos + way * config.COLDSNAP_RANGE * 0.55,
+                damage=config.COLDSNAP_DAMAGE * might,
+                radius=config.COLDSNAP_RANGE * 0.45,
+                left=0.0,  # the swing is already happening; nothing to warn of
+                leaves=FROST,
+            )
+        )
+    return 0.0
+
+
+def _absolute(
+    field: Field,
+    boss_pos: pygame.Vector2,
+    target: pygame.Vector2,
+    might: float,
+    rng: random.Random,
+) -> float:
+    """Columns announced around you, which then stand where they fell."""
+    for n in range(config.ABSOLUTE_PILLARS):
+        angle = rng.uniform(0, 360) + 360 * n / config.ABSOLUTE_PILLARS
+        reach = rng.uniform(config.ABSOLUTE_SPREAD * 0.3, config.ABSOLUTE_SPREAD)
+        field.falling.append(
+            Falling(
+                pos=target + pygame.Vector2(1, 0).rotate(angle) * reach,
+                damage=config.ABSOLUTE_DAMAGE * might,
+                radius=config.PILLAR_RADIUS,
+                stands=True,
+            )
+        )
+    return 0.0
+
+
 # One generator for every beat of every channel. The casts take an injected
 # one, but a beat happens frames later with nobody holding the dice.
 _SPIN = random.Random()
@@ -290,4 +448,7 @@ _CASTS = {
     "ember": _ember,
     "flame": _flame,
     "ashheart": _ashheart,
+    "frost": _frost,
+    "coldsnap": _coldsnap,
+    "absolute": _absolute,
 }

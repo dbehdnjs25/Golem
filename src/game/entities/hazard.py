@@ -31,6 +31,7 @@ class Falling:
     radius: float = config.FALL_RADIUS
     left: float = config.FALL_WARNING
     leaves: str | None = None  # a patch kind to put down where it lands
+    stands: bool = False  # whether a column is left standing where it landed
 
 
 @dataclass
@@ -66,3 +67,42 @@ class Ring:
     leaves: str | None = None
     dropped: list[pygame.Vector2] = field(default_factory=list)
     caught: bool = False  # it crosses a given body once
+
+
+@dataclass
+class Ball:
+    """Something thrown that does its real work on arrival.
+
+    Nothing to dodge while it crosses the room; the danger is where it ends.
+    Which is what makes standing near a wall the mistake, and the reason the
+    snowfield's basic is a thrown thing rather than another falling circle.
+    """
+
+    pos: pygame.Vector2
+    vel: pygame.Vector2
+    damage: float = 0.0
+    radius: float = config.BALL_RADIUS
+    ttl: float = config.BALL_SECONDS
+    splits: int = 0  # how many shards it breaks into at the wall; 0 for a shard
+    spent: bool = False  # it hits once, not sixty times a second
+
+
+@dataclass
+class Pillar:
+    """A column standing in the way. The one thing in the game that is.
+
+    It can be broken, and it melts on its own -- left standing for the rest of
+    a fight, one bad cast would wall the room off permanently.
+    """
+
+    pos: pygame.Vector2
+    hp: float = config.PILLAR_HP
+    radius: float = config.PILLAR_RADIUS
+    left: float = config.PILLAR_SECONDS
+
+    @property
+    def is_broken(self) -> bool:
+        return self.hp <= 0
+
+    def damage(self, amount: float) -> None:
+        self.hp -= amount

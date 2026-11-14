@@ -1811,6 +1811,21 @@ class PlayScene(Scene):
             if ring.radius >= 1:
                 at = self.camera.world_to_screen(ring.pos)
                 pygame.draw.circle(surface, config.FLAME_COLOR, at, int(ring.radius), 6)
+        for ball in field.balls:
+            # A ring around a thrown one, so that the ones which still have a
+            # wall to break on are told apart from the shards which do not.
+            at = self.camera.world_to_screen(ball.pos)
+            pygame.draw.circle(surface, config.FROST_COLOR, at, int(ball.radius))
+            if ball.splits:
+                pygame.draw.circle(surface, config.WHITE, at, int(ball.radius) + 4, 2)
+        for pillar in field.pillars:
+            # Thinning as it melts, because a column standing in the way is
+            # worth going round only while it is still going to be there.
+            at = self.camera.world_to_screen(pillar.pos)
+            left = max(0.0, pillar.left / config.PILLAR_SECONDS)
+            pygame.draw.circle(surface, config.FROST_COLOR, at, int(pillar.radius))
+            pygame.draw.circle(surface, config.WHITE, at, int(pillar.radius), 3)
+            pygame.draw.circle(surface, config.WHITE, at, int(pillar.radius * left), 2)
 
     def _draw_boss(self, surface: pygame.Surface) -> None:
         """The thing itself, in its biome's colour and far bigger than a golem.

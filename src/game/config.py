@@ -603,6 +603,32 @@ WALL_SECONDS: Final[float] = 6.0
 RING_SPEED: Final[float] = 430.0
 RING_REACH: Final[float] = 520.0
 
+# Something thrown, which does its real work on arrival. Nothing to dodge while
+# it crosses the room, so the danger is where it ends -- which is what makes
+# standing near a wall the mistake.
+BALL_RADIUS: Final[float] = 22.0
+BALL_SECONDS: Final[float] = 5.0
+
+# A column standing in the way: the one thing in the game that is. Breakable,
+# and it melts on its own, because one bad cast should not wall the room off
+# for the rest of the fight.
+PILLAR_RADIUS: Final[float] = 54.0
+PILLAR_HP: Final[float] = 60.0
+PILLAR_SECONDS: Final[float] = 9.0
+
+# --- The snowfield's three -------------------------------------------------
+# Ice is thrown, swept and dropped.
+FROST_SPEED: Final[float] = 420.0
+FROST_DAMAGE: Final[float] = 14.0
+FROST_SPLITS: Final[int] = 6  # shards off the wall
+COLDSNAP_RANGE: Final[float] = 300.0
+COLDSNAP_ARC: Final[float] = 100.0  # degrees of the fan
+COLDSNAP_DAMAGE: Final[float] = 18.0
+COLDSNAP_SHEETS: Final[int] = 4  # frost left across the fan
+ABSOLUTE_PILLARS: Final[int] = 4
+ABSOLUTE_SPREAD: Final[float] = 260.0
+ABSOLUTE_DAMAGE: Final[float] = 26.0
+
 # --- The burnt forest's three ----------------------------------------------
 # Fire falls, then walks at you, then bursts out of the floor.
 EMBER_DROPS: Final[int] = 5
