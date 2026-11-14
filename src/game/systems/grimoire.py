@@ -3,9 +3,9 @@
 Learning is free and permanent: open a ruin, read what is inside, and it is
 yours for the rest of the run. Nothing is spent and nothing can be lost.
 
-The cost lives in the drawing instead -- see ``items/strokes``. That split is
-the spec's, and it is what makes a glyph a collectible rather than a
-consumable: the drawing is knowledge, the chisel is the price of using it.
+The cost lives in the drawing instead -- see ``items/strokes``. A glyph is a
+collectible, not a consumable: knowing it is permanent, and what it costs is
+getting the shape right under pressure, every single time.
 """
 
 from __future__ import annotations

@@ -28,7 +28,6 @@ from game.items.item_kinds import (
     BURNT_FOREST_DETECTOR,
     CHARCOAL,
     CHARRED_WOOD,
-    CHISEL,
     COOKED_MEAT,
     COPPER_AXE,
     COPPER_INGOT,
@@ -115,7 +114,6 @@ RECIPES: tuple[Recipe, ...] = (
     Recipe(HEARTH, 1, ((STONE, 12), (WOOD, 6)), BENCH_S),
     # Cheap to make and quick to use up. The scarcity that matters is the
     # three cuts it has in it, not the iron it took.
-    Recipe(CHISEL, 1, ((IRON_INGOT, 1), (WOOD, 2)), BENCH_S),
     Recipe(WORN_PACK, 1, ((WOOD, 12),), BENCH_S),
     # Hide only comes off an animal, so the bigger pack is paid for in nights
     # spent out rather than in ore.

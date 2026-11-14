@@ -162,14 +162,6 @@ def test_the_leather_pack_is_paid_for_in_hide():
     assert HIDE in {kind for kind, _ in _by_output(ITEM_KINDS["leather_pack"]).inputs}
 
 
-def test_the_chisel_is_reachable_and_cheap():
-    # Its scarcity is the three cuts in it, not the iron it cost. Expensive to
-    # make as well as quick to use up would just mean nobody carves anything.
-    recipe = _by_output(ITEM_KINDS["chisel"])
-    assert recipe.station == recipes.BENCH_S
-    assert sum(n for _, n in recipe.inputs) <= 4
-
-
 def test_charred_wood_is_a_shortcut_to_charcoal():
     # The reason to walk into the burnt forest. Ordinary charcoal is three logs
     # burned for twelve seconds; this wood is already half burnt, so the fire

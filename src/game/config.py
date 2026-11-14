@@ -503,11 +503,6 @@ LAVA_RIM_COLOR: Final[tuple[int, int, int]] = (255, 186, 92)
 # How strongly the screen washes while standing in it. A health bar falling
 # with no cause on screen is the kind of thing a player blames on the game.
 LAVA_WASH: Final[int] = 70
-# Cuts per chisel. Learning is free and forever, so this is the only price
-# carving has -- and it is what makes "is this the right glyph for this
-# weapon" a question every time instead of a formality.
-CHISEL_USES: Final[int] = 3
-
 # --- Structures -----------------------------------------------------------
 # The ruins that hold the drawings. Placement walks the glyph list rather than
 # a count, so every basic glyph is guaranteed a home -- a count-first world

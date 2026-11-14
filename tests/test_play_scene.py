@@ -958,16 +958,6 @@ def test_the_world_puts_out_a_ruin_for_every_basic_glyph():
         assert glyph.key in held
 
 
-# --- carving --------------------------------------------------------------
-
-
-def _ready_to_carve(scene) -> None:
-    """Hold the weapon, know a glyph, have a chisel."""
-    scene.hotbar.select(4)
-    scene.grimoire.learn(glyph_table.BURNT_GLYPHS[0])
-    scene.hotbar.add(ITEM_KINDS["chisel"], 1)
-
-
 def test_only_one_screen_at_a_time():
     scene = PlayScene()
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_g))
