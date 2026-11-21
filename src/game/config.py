@@ -117,6 +117,10 @@ CORE_SHARDS_TO_IGNITE: Final[int] = 5
 # unlocks the final upgrade rather than another cap.
 CORE_MAX_LEVEL: Final[int] = 50
 CORE_LEVEL_CAPS: Final[tuple[int, ...]] = (10, 20, 30, 40, 50)
+# One sigil per boss, and the last one opens no new ceiling -- the ladder has
+# already run out by then. What it opens is the ending: the night after it
+# comes home is the last one.
+SIGILS_TO_END: Final[int] = 5
 
 # The ward grows by a constant RATIO per level, not a constant amount: absolute
 # growth makes an early level invisible and a late one enormous. It starts at a
@@ -454,6 +458,10 @@ CORE_REPAIR_PER_ITEM: Final[float] = 25.0  # hp mended per stone spent
 # trickle into the same small cap would hardly read as a raid at all.
 RAID_SPAWN_INTERVAL: Final[float] = 2.0
 RAID_SPAWN_MAX: Final[int] = 20
+# The last night. Everything the player has beaten, and more of it than any
+# night before -- it is the one raid that is not survived by outlasting a
+# trickle.
+LAST_STAND_MAX: Final[int] = 34
 # Clawing a person and clawing a stone monolith are not the same work, so the
 # core takes its hits far more slowly than the player does. Without this every
 # raider piles onto one point and even a level-50 core falls inside two
@@ -464,6 +472,13 @@ WARD_BROKEN_COLOR: Final[tuple[int, int, int]] = (214, 92, 84)
 # The screen-edge pulse that says a raid is on. The ward is thousands of units
 # across and the view is hundreds, so the broken rim is off screen; this is the
 # one sign that does not depend on where the camera is pointed.
+# The screen a run ends on. Washed rather than blacked out: the world the
+# player spent the run building should still be visible under it.
+ENDING_WASH: Final[tuple[int, int, int]] = (8, 6, 14)
+ENDING_ALPHA: Final[int] = 180
+ENDING_WON_COLOR: Final[tuple[int, int, int]] = (236, 222, 140)
+ENDING_LOST_COLOR: Final[tuple[int, int, int]] = (206, 92, 86)
+
 RAID_EDGE_WIDTH: Final[int] = 28
 RAID_PULSE_SPEED: Final[float] = 2.2  # radians/s
 RAID_PULSE_MIN: Final[int] = 40

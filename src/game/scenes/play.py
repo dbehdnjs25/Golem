@@ -72,6 +72,9 @@ from game.systems import (
     survival,
     weather,
 )
+from game.systems import (
+    ending as ending_rules,
+)
 from game.systems.beast_spawner import BeastSpawner
 from game.systems.camera import Camera, edge_marker
 from game.systems.daynight import DayNight
@@ -496,7 +499,7 @@ class PlayScene(Scene):
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
         self.clock = DayNight()
-        self.defeated = False
+        self.ending = ending_rules.Ending()
         self.grimoire = Grimoire()
         self.note = ""  # a line that fades; see _say
         self.note_left = 0.0
@@ -850,11 +853,20 @@ class PlayScene(Scene):
         self._dodge_pressed = False
         self._sync_pressed = False
 
+        # Settled before anything moves, the clock included. A run that keeps
+        # running underneath its own ending is not an ending, it is a
+        # notification -- and a day counter still climbing behind the words
+        # "버텼다" is the clearest way to say the game did not notice.
+        self.ending.update(
+            sigils_taken=self.core.sigils_taken,
+            is_night=self.clock.is_night,
+            core_destroyed=self.core.is_destroyed,
+        )
+        if self.ending.over:
+            return
+
         self.clock.update(dt)
         self.note_left = max(0.0, self.note_left - dt)
-        # A signal and nothing more. What a run does about losing its core is
-        # the ending's business, and the ending is still being designed.
-        self.defeated = self.defeated or self.core.is_destroyed
         self._tick_loot(dt)
         for station in self.stations:
             station.update(dt)
@@ -902,7 +914,14 @@ class PlayScene(Scene):
         )
         self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
         self.enemy_spawner.update(
-            dt, self.enemies, self.player.pos, self.core, self.rng, self.world, raid=self.is_raid
+            dt,
+            self.enemies,
+            self.player.pos,
+            self.core,
+            self.rng,
+            self.world,
+            raid=self.is_raid,
+            last_stand=self.is_last_stand,
         )
         self.beast_spawner.update(
             dt,
@@ -928,12 +947,28 @@ class PlayScene(Scene):
             self._respawn_timer = config.RESPAWN_DELAY
 
     @property
+    def defeated(self) -> bool:
+        """Kept as a name because it reads better than ``ending.outcome``."""
+        return self.ending.outcome == ending_rules.LOST
+
+    @property
+    def won(self) -> bool:
+        return self.ending.outcome == ending_rules.WON
+
+    @property
+    def is_last_stand(self) -> bool:
+        """The one night after the fifth sigil comes home."""
+        return self.ending.standing
+
+    @property
     def is_raid(self) -> bool:
         """Whether the ward is open tonight.
 
         Only ever at night. A raid is a night the wall comes down, and one
         running through the afternoon would make the word meaningless.
         """
+        if self.ending.standing:
+            return True  # the last night is a raid whether the calendar says so or not
         return self.clock.is_night and raids.is_raid_night(self.clock.day, self.core.bosses_killed)
 
     @property
@@ -1041,6 +1076,39 @@ class PlayScene(Scene):
         self._draw_grid(surface)
         self._draw_craft(surface)
         self._draw_settings(surface)
+        # Over everything, including the open screens: once a run is over
+        # there is nothing left to read behind it.
+        self._draw_ending(surface)
+
+    def _draw_ending(self, surface: pygame.Surface) -> None:
+        """What a finished run looks like: the world dimmed, and one line.
+
+        Deliberately plain. The screen's job is to say which of the two things
+        happened and let the player stop looking at it -- a results table would
+        be asking them to study a run they can no longer change.
+        """
+        if not self.ending.over:
+            return
+        scale = config.UI_SCALE
+        width, height = surface.get_size()
+
+        wash = pygame.Surface((width, height), pygame.SRCALPHA)
+        wash.fill((*config.ENDING_WASH, config.ENDING_ALPHA))
+        surface.blit(wash, (0, 0))
+
+        won = self.won
+        title = "버텼다" if won else "코어가 꺼졌다"
+        under = (
+            f"{self.clock.day}일째 아침 · 인장 {self.core.sigils_taken}개"
+            if won
+            else f"{self.clock.day}일째 · 보스 {self.core.bosses_killed}마리"
+        )
+        colour = config.ENDING_WON_COLOR if won else config.ENDING_LOST_COLOR
+
+        head = _font(26 * scale).render(title, True, colour)
+        surface.blit(head, head.get_rect(center=(width // 2, height // 2 - 14 * scale)))
+        tail = _font(10 * scale).render(under, True, config.WHITE)
+        surface.blit(tail, tail.get_rect(center=(width // 2, height // 2 + 16 * scale)))
 
     def _field_surface(self, surface: pygame.Surface) -> pygame.Surface:
         """The surface the world is drawn onto, kept between frames.

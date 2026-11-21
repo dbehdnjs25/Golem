@@ -75,12 +75,16 @@ def test_offering_the_sigil_raises_the_cap():
 
 
 def test_the_cap_stops_once_every_boss_has_been_answered_for():
+    # The ladder runs out one sigil before the sigils do. The fifth is still
+    # taken -- it is what calls the last night, see systems/ending -- but it
+    # opens no new ceiling, because there is no sixth rung to climb to.
     core = _lit()
     for _ in range(len(config.CORE_LEVEL_CAPS) - 1):
         assert core.offer_sigil()
     assert core.level_cap == config.CORE_LEVEL_CAPS[-1]
-    assert not core.offer_sigil()  # nothing left to raise
+    assert core.offer_sigil()  # the last one still comes home
     assert core.level_cap == config.CORE_LEVEL_CAPS[-1]
+    assert not core.offer_sigil()  # and a sixth would be a boss that does not exist
 
 
 def test_an_unlit_core_takes_nothing():
@@ -251,14 +255,14 @@ def test_carrying_a_sigil_to_the_lit_core_opens_the_next_cap():
     assert scene._carried(CORE_SIGIL) == 0  # it is spent, not kept
 
 
-def test_a_sigil_is_not_spent_when_there_is_no_cap_left():
+def test_a_sigil_is_not_spent_when_there_is_nothing_left_to_give_it_to():
     import pygame as pg
 
     from game.scenes.play import PlayScene
 
     scene = PlayScene()
     scene.core.ignite()
-    scene.core.sigils_taken = len(config.CORE_LEVEL_CAPS) - 1
+    scene.core.sigils_taken = config.SIGILS_TO_END  # every boss already answered for
     scene.hotbar.add(CORE_SIGIL, 1)
     _at_core(scene)
     scene.handle_event(pg.event.Event(pg.KEYDOWN, key=pg.K_e))

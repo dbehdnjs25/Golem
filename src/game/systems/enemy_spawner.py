@@ -48,12 +48,17 @@ class EnemySpawner(TimedSpawner):
         rng: random.Random,
         world: WorldMap,
         raid: bool = False,
+        last_stand: bool = False,
     ) -> Golem | None:
         if not self.is_due(dt, config.RAID_SPAWN_INTERVAL if raid else None):
             return None
         if not core.ignited:
             return None  # they come for the core; before it burns there is none
-        if len(enemies) >= (config.RAID_SPAWN_MAX if raid else self.max_enemies):
+        # The last night is a raid with the brakes off. One number rather than
+        # a different system: what makes it the last night is that it does not
+        # thin out, and a bigger crowd is exactly that.
+        cap = config.LAST_STAND_MAX if last_stand else config.RAID_SPAWN_MAX
+        if len(enemies) >= (cap if raid else self.max_enemies):
             return None
         spot = (
             self._at_the_ward(core, player_pos, rng, world)

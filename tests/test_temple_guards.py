@@ -62,7 +62,7 @@ def test_every_ring_biome_has_a_golem_to_stand_there():
 
 def test_a_guard_is_tougher_than_the_golem_it_is_made_from():
     scene = PlayScene()
-    temple = _walk_into(scene, _first_temple(scene))
+    _walk_into(scene, _first_temple(scene))
     guard = _guards(scene)[0]
     assert guard.hp > guard.kind.hp
 
@@ -163,7 +163,7 @@ def test_an_empty_room_nobody_is_standing_in_stays_shut():
 
 def test_the_player_is_told_the_altar_opened():
     scene = PlayScene()
-    temple = _walk_into(scene, _first_temple(scene))
+    _walk_into(scene, _first_temple(scene))
     scene.enemies = []
     scene._visit_temples()
     assert scene.note

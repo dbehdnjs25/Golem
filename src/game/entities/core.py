@@ -55,10 +55,16 @@ class Core:
         return config.CORE_LEVEL_CAPS[index]
 
     def offer_sigil(self) -> bool:
-        """Give the core a boss's sigil. False when there is no cap left to open."""
+        """Give the core a boss's sigil. False once all five are home.
+
+        One per boss. The first four each open a ceiling; the fifth opens
+        none, because the ladder has run out by then -- what it opens is the
+        ending, and the scene is what reads that. Refusing it for having no
+        cap left would have left the last boss's reward with nowhere to go.
+        """
         if not self.ignited:
             return False  # no ladder before it burns
-        if self.sigils_taken >= len(config.CORE_LEVEL_CAPS) - 1:
+        if self.sigils_taken >= config.SIGILS_TO_END:
             return False
         self.sigils_taken += 1
         return True
