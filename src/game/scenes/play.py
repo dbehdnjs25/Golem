@@ -115,6 +115,16 @@ _MENU_STEP = {
     ctl.DRAW_RIGHT: (1, 0),
 }
 _CONFIRM_KEYS = {pygame.K_RETURN, pygame.K_KP_ENTER}
+# What Esc opens. The world waits behind it, and leaving the game is a row
+# here rather than a bare key, so one stray press cannot end a run.
+RESUME = "resume"
+KEYS = "keys"
+QUIT = "quit"
+_PAUSE_ROWS: tuple[tuple[str, str], ...] = (
+    (RESUME, "계속하기"),
+    (KEYS, "키 설정"),
+    (QUIT, "게임 종료"),
+)
 
 # Korean first, since every item name is Korean; the fallbacks are only so a
 # machine without these still draws something rather than raising.
@@ -574,7 +584,9 @@ class PlayScene(Scene):
         # selected; the recipe list starts at the top.
         self.grid_cursor: tuple[str, int] = (grid.HOTBAR, 0)
         self.craft_cursor = 0
-        self.settings_open = False
+        self.pause_open = False  # the Esc menu
+        self.pause_cursor = 0
+        self.settings_open = False  # the key list, opened from it or by F1
         self.settings_cursor = 0
         self.settings_waiting = False  # the next key pressed is the new binding
 
@@ -662,6 +674,9 @@ class PlayScene(Scene):
         if self.settings_open:
             self._settings_key(key)
             return
+        if self.pause_open:
+            self._pause_key(key)
+            return
         if key == ctl.SETTINGS_KEY:
             self._open_settings()
             return
@@ -669,8 +684,7 @@ class PlayScene(Scene):
             self._menu_key(key)
             return
         if key == ctl.BACK_KEY:
-            if self.manager is not None:
-                self.manager.pop()
+            self._open_pause()
             return
         controls = self.controls
         if controls.is_key(key, ctl.ACTION):
@@ -732,6 +746,31 @@ class PlayScene(Scene):
             self._toggle_grid()
         self.craft_open = False
 
+    # --- the Esc menu ----------------------------------------------------
+    def _open_pause(self) -> None:
+        self._close_menus()
+        self.pause_open = True
+        self.pause_cursor = 0
+        self._held_keys.clear()  # see _open_settings
+
+    def _pause_key(self, key: int) -> None:
+        controls = self.controls
+        rows = len(_PAUSE_ROWS)
+        if key == ctl.BACK_KEY:
+            self.pause_open = False
+        elif key == pygame.K_UP or controls.is_key(key, ctl.MOVE_UP):
+            self.pause_cursor = (self.pause_cursor - 1) % rows
+        elif key == pygame.K_DOWN or controls.is_key(key, ctl.MOVE_DOWN):
+            self.pause_cursor = (self.pause_cursor + 1) % rows
+        elif key in _CONFIRM_KEYS or controls.is_key(key, ctl.ACTION):
+            choice = _PAUSE_ROWS[self.pause_cursor][0]
+            if choice == RESUME:
+                self.pause_open = False
+            elif choice == KEYS:
+                self._open_settings()
+            elif choice == QUIT and self.manager is not None:
+                self.manager.pop()
+
     # --- the key settings screen -----------------------------------------
     def _open_settings(self) -> None:
         self._close_menus()
@@ -755,7 +794,7 @@ class PlayScene(Scene):
             return
         controls = self.controls
         if key in (ctl.BACK_KEY, ctl.SETTINGS_KEY):
-            self.settings_open = False
+            self.settings_open = False  # back to the Esc menu, if it was open
         elif key == pygame.K_UP or controls.is_key(key, ctl.MOVE_UP):
             self.settings_cursor = (self.settings_cursor - 1) % rows
         elif key == pygame.K_DOWN or controls.is_key(key, ctl.MOVE_DOWN):
@@ -872,7 +911,7 @@ class PlayScene(Scene):
             station.update(dt)
 
         self._swing_left = max(0.0, self._swing_left - dt)
-        if self.grid_open or self.craft_open or self.settings_open:
+        if self.grid_open or self.craft_open or self.settings_open or self.pause_open:
             return  # the world waits while a screen is open
 
         down = self._respawn_timer > 0
@@ -1075,6 +1114,7 @@ class PlayScene(Scene):
         self._draw_detector(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
+        self._draw_pause(surface)
         self._draw_settings(surface)
         # Over everything, including the open screens: once a run is over
         # there is nothing left to read behind it.
@@ -1211,6 +1251,32 @@ class PlayScene(Scene):
         pygame.draw.polygon(layer, (255, 255, 255, int(70 * fade)), points)
         pygame.draw.lines(layer, (255, 255, 255, int(160 * fade)), False, points[1:], 2)
         surface.blit(layer, (0, 0))
+
+    def _draw_pause(self, surface: pygame.Surface) -> None:
+        """The Esc menu: a short list over the dimmed, waiting world."""
+        if not self.pause_open or self.settings_open:
+            return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 170))
+        surface.blit(overlay, (0, 0))
+        row_h = 34
+        panel = pygame.Rect(0, 0, 280, len(_PAUSE_ROWS) * row_h + 84)
+        panel.center = (surface.get_width() // 2, surface.get_height() // 2)
+        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
+        title = _font(18).render("설정", True, config.WHITE)
+        surface.blit(title, title.get_rect(midtop=(panel.centerx, panel.top + 14)))
+        top = panel.top + 50
+        for index, (_, name) in enumerate(_PAUSE_ROWS):
+            rect = pygame.Rect(panel.left + 16, top + index * row_h, panel.width - 32, row_h - 4)
+            chosen = index == self.pause_cursor
+            fill = (64, 64, 84) if chosen else (48, 48, 62)
+            pygame.draw.rect(surface, fill, rect, border_radius=4)
+            if chosen:
+                pygame.draw.rect(surface, config.WHITE, rect, 2, border_radius=4)
+            label = _font(15).render(name, True, config.WHITE)
+            surface.blit(label, label.get_rect(center=rect.center))
+        hint = _font(12).render("↑↓ 고르기 · Enter 선택 · Esc 닫기", True, (170, 170, 185))
+        surface.blit(hint, hint.get_rect(midbottom=(panel.centerx, panel.bottom - 8)))
 
     def _draw_settings(self, surface: pygame.Surface) -> None:
         """The key list: what each does, and what it is bound to now."""

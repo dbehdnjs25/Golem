@@ -1934,3 +1934,83 @@ def test_a_swing_and_the_open_menus_draw():
     scene.draw(surface)
     _key(scene, pygame.K_c)
     scene.draw(surface)
+
+
+# --- the Esc menu -------------------------------------------------------------
+
+
+def _choose(scene, row):
+    from game.scenes import play
+
+    index = [key for key, _ in play._PAUSE_ROWS].index(row)
+    for _ in range(index):
+        _key(scene, pygame.K_DOWN)
+    _key(scene, pygame.K_RETURN)
+
+
+def test_escape_opens_the_settings_menu_and_the_world_waits():
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    assert scene.pause_open
+    _key(scene, pygame.K_d)
+    scene.update(config.FIXED_DT)
+    assert scene._move_dir() == pygame.Vector2(0, 0)
+
+
+def test_escape_again_closes_it():
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    _key(scene, pygame.K_ESCAPE)
+    assert not scene.pause_open
+
+
+def test_resume_closes_the_menu():
+    from game.scenes import play
+
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    _choose(scene, play.RESUME)
+    assert not scene.pause_open
+
+
+def test_the_menu_opens_the_key_list_and_escape_comes_back_to_it():
+    from game.scenes import play
+
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    _choose(scene, play.KEYS)
+    assert scene.settings_open
+    _key(scene, pygame.K_ESCAPE)
+    assert not scene.settings_open
+    assert scene.pause_open
+
+
+def test_rebinding_from_the_menu_works():
+    from game.core import controls as ctl
+    from game.scenes import play
+
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    _choose(scene, play.KEYS)
+    _key(scene, pygame.K_RETURN)  # first row: walking up
+    _key(scene, pygame.K_t)
+    assert scene.controls.keys_for(ctl.MOVE_UP) == (pygame.K_t,)
+
+
+def test_quit_is_a_menu_row_not_a_bare_key():
+    from game.core.scene import SceneManager
+    from game.scenes import play
+
+    manager = SceneManager()
+    scene = PlayScene()
+    manager.push(scene)
+    _key(scene, pygame.K_ESCAPE)
+    assert not manager.is_empty  # Esc alone no longer leaves
+    _choose(scene, play.QUIT)
+    assert manager.is_empty
+
+
+def test_the_settings_menu_draws():
+    scene = PlayScene()
+    _key(scene, pygame.K_ESCAPE)
+    scene.draw(pygame.Surface(config.SCREEN_SIZE))
