@@ -105,6 +105,14 @@ BIOME_GOLEMS: tuple[EnemyKind, ...] = tuple(
 GOLEM_KINDS: tuple[EnemyKind, ...] = (PLAIN_GOLEM, *BIOME_GOLEMS)
 
 
+_BY_BIOME = {kind.biome: kind for kind in BIOME_GOLEMS if kind.biome is not None}
+
+
+def golem_of(biome: Biome | None) -> EnemyKind:
+    """The golem belonging to a biome, or the plain one for anywhere else."""
+    return _BY_BIOME.get(biome, PLAIN_GOLEM) if biome is not None else PLAIN_GOLEM
+
+
 def raid_kinds(bosses_killed: int) -> tuple[EnemyKind, ...]:
     """What a raid may be made of. The plain golem, plus one per boss killed."""
     return (PLAIN_GOLEM, *BIOME_GOLEMS[: min(bosses_killed, len(BIOME_GOLEMS))])
@@ -116,6 +124,11 @@ class Golem:
     kind: EnemyKind = PLAIN_GOLEM
     scale: float = 1.0
     hp: float = field(default=0.0)
+    # Whether this one is standing in a temple's ring. A real field rather
+    # than something stuck on at the call site: the scene has to ask every
+    # step whether the ring is still up, and that question deserves an
+    # answer the type checker can see.
+    guarding: bool = False
 
     def __post_init__(self) -> None:
         if not self.hp:

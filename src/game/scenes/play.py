@@ -18,7 +18,7 @@ from game.core.scene import Scene
 from game.entities.beast import Beast
 from game.entities.boss import BOSS_KINDS, Boss
 from game.entities.core import Core
-from game.entities.enemy import Creature, Golem
+from game.entities.enemy import Creature, Golem, golem_of
 from game.entities.fragment import Fragment
 from game.entities.hazard import Pillar, Rod
 from game.entities.loot import LootPile
@@ -1742,6 +1742,8 @@ class PlayScene(Scene):
                 temple.enter(self.player.pos)
                 if temple.layout is not was and not temple.guards_down:
                     self._raise_guards(temple)
+                elif not temple.guards_down:
+                    self._lower_guards_if_cleared(temple)
             else:
                 temple.leave()
         # A sealed room holds against ITS temple, not against whichever one the
@@ -1763,15 +1765,43 @@ class PlayScene(Scene):
     def _raise_guards(self, temple: Temple) -> None:
         """Set this drawing's guard on their feet.
 
-        Plain golems for now; Task 4 gives each biome its own kind and these
-        become a first look at whatever will later join the raids.
+        That biome's own golem, not a plain one. A temple is the first place
+        the player meets the thing that will later walk in the raids, and
+        meeting it one ring at a time -- in the biome it belongs to, with the
+        ring's own toughness on it -- is the introduction.
+
+        Any ring still standing somewhere else is cleared first. Only one room
+        is ever being stood in, and guards left over from a temple the player
+        walked out of would follow the fight around the map.
         """
-        self.enemies = [e for e in self.enemies if not getattr(e, "guarding", False)]
+        self.enemies = [e for e in self.enemies if not e.guarding]
         assert temple.layout is not None
         for spot in temple.layout.guards:
-            golem = Golem(pos=pygame.Vector2(spot), scale=config.GUARD_SCALE)
-            golem.guarding = True  # type: ignore[attr-defined]
-            self.enemies.append(golem)
+            self.enemies.append(
+                Golem(
+                    pos=pygame.Vector2(spot),
+                    kind=golem_of(temple.biome),
+                    scale=config.GUARD_SCALE,
+                    guarding=True,
+                )
+            )
+
+    def _lower_guards_if_cleared(self, temple: Temple) -> None:
+        """Open the altar once nothing is left standing around it.
+
+        This is the door to the whole of the boss content: nothing else in the
+        game sets ``guards_down``, so before this the altar refused forever and
+        the five bosses could only be reached by a dev script.
+
+        The drawing forgets them as well as the temple, or walking out and back
+        in would show a ring that is not there.
+        """
+        if any(enemy.guarding for enemy in self.enemies):
+            return
+        temple.guards_down = True
+        if temple.layout is not None:
+            temple.layout = replace(temple.layout, guards=())
+        self._say("수호 골렘이 쓰러졌다 · 제단이 열렸다")
 
     def _open_chest(self) -> None:
         """Take what the temple's chest holds: that biome's greater glyph."""

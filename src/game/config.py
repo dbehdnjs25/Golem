@@ -310,7 +310,12 @@ ARENA_ATTEMPTS: Final[int] = 200
 ALTAR_REACH: Final[float] = 110.0  # how close to stand to use one
 # Guards are tougher than a roadside golem: they are the test of whether
 # the boss behind them is worth calling yet.
-GUARD_SCALE: Final[float] = 2.4
+# A guard is its biome's golem, which already carries the ring's toughness
+# (1.6x in the burnt forest, 3.5x in the desert). This multiplies THAT, so it
+# is far smaller than it was when guards were plain golems blown up: the two
+# together keep the first temple about as hard as it used to be and let the
+# last one climb, instead of making every temple the hardest fight in the run.
+GUARD_SCALE: Final[float] = 1.5
 TEMPLE_FLOOR: Final[tuple[int, int, int]] = (52, 48, 60)
 TEMPLE_WALL: Final[tuple[int, int, int]] = (164, 158, 176)
 # The wall goes red while the door is shut, so being sealed in reads
