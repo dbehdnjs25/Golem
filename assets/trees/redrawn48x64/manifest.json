@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "canvas": [
+    48,
+    64
+  ],
+  "reference": "../../grassland/objects/tree_base.aseprite",
+  "frames": 1,
+  "alpha": "0 or 255 only",
+  "outline": "#303024",
+  "layers": "One solid RGB color per layer; Outline plus Base / Highlight / Shadow for each material",
+  "runtime_paths_replaced": false,
+  "original_96x128_files_preserved": true,
+  "assets": [
+    {
+      "key": "bog",
+      "png": "bog.png",
+      "aseprite": "bog.aseprite",
+      "source": "source/bog.png",
+      "anchor": [
+        24,
+        62
+      ]
+    },
+    {
+      "key": "burnt_forest",
+      "png": "burnt_forest.png",
+      "aseprite": "burnt_forest.aseprite",
+      "source": "source/burnt_forest.png",
+      "anchor": [
+        24,
+        62
+      ]
+    },
+    {
+      "key": "snowfield",
+      "png": "snowfield.png",
+      "aseprite": "snowfield.aseprite",
+      "source": "source/snowfield.png",
+      "anchor": [
+        24,
+        62
+      ]
+    },
+    {
+      "key": "wind_plateau",
+      "png": "wind_plateau.png",
+      "aseprite": "wind_plateau.aseprite",
+      "source": "source/wind_plateau.png",
+      "anchor": [
+        24,
+        62
+      ]
+    },
+    {
+      "key": "wasteland",
+      "png": "wasteland.png",
+      "aseprite": "wasteland.aseprite",
+      "source": "source/wasteland.png",
+      "anchor": [
+        24,
+        62
+      ]
+    }
+  ],
+  "preview_order": [
+    [
+      "base tree",
+      "bog",
+      "burnt_forest"
+    ],
+    [
+      "snowfield",
+      "wind_plateau",
+      "wasteland"
+    ]
+  ]
+}

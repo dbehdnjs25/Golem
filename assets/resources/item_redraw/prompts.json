@@ -1,0 +1,199 @@
+{
+  "tool": "built-in image_gen",
+  "reference": "assets/grassland/objects/tree_base.png",
+  "common": "ONE isolated inventory icon for a handcrafted top-down pixel art survival RPG. The provided basic tree is STYLE REFERENCE only. Match its muted natural colors, 1-pixel dark brown-green outline, crisp pixel clusters and upper-left light. Detailed readable craftsmanship but designed to fit a 48x48 pixel native sprite, enlarged nearest-neighbor. Exactly three flat solid shades per material (base, highlight, shadow), plus dark outline; no gradient, blur, smooth antialias, noise or dithering. Top-down three-quarter view. One centered object or tightly grouped requested cluster, entirety visible with ample transparent margin. True transparent background, no ground, no cast shadow, no frame, no text, no labels, no watermark. Subject: ",
+  "items": [
+    [
+      "core_shard",
+      "a fractured luminous teal crystal shard with several large planar facets"
+    ],
+    [
+      "twig",
+      "a crooked oak twig fork with bark ridges and two snapped ends"
+    ],
+    [
+      "pebble",
+      "three smooth irregular grey river pebbles in a compact pile"
+    ],
+    [
+      "grass",
+      "a tied tuft of broad sage-green grass leaves, no ground"
+    ],
+    [
+      "charcoal",
+      "a compact pile of three cracked charcoal chunks with warm dark grey facets"
+    ],
+    [
+      "copper_ingot",
+      "one heavy copper ingot, beveled trapezoid bar with a subtle stamped square and worn edge; warm orange copper"
+    ],
+    [
+      "iron_ingot",
+      "one heavy iron ingot, beveled trapezoid bar with a subtle stamped square and worn edge; neutral silver-grey"
+    ],
+    [
+      "gold_ingot",
+      "one heavy gold ingot, beveled trapezoid bar with a subtle stamped square and worn edge; rich yellow gold"
+    ],
+    [
+      "brass_ingot",
+      "one heavy brass ingot, beveled trapezoid bar with a subtle stamped square and worn edge; muted olive-gold brass"
+    ],
+    [
+      "steel_ingot",
+      "one heavy steel ingot, beveled trapezoid bar with a subtle stamped square and worn edge; cool blue-grey steel"
+    ],
+    [
+      "obsidian",
+      "a sharp violet-black volcanic glass shard cluster"
+    ],
+    [
+      "obsidian_stone",
+      "a weathered dark grey boulder studded with angular violet-black obsidian crystals"
+    ],
+    [
+      "frost_crystal",
+      "a cluster of three pale cyan ice crystals with sharp asymmetric facets"
+    ],
+    [
+      "weathered_stone",
+      "a wind-eroded sandstone rock with layered striations and chipped angular face"
+    ],
+    [
+      "bog_moss",
+      "a compact lush cushion of olive moss with layered leafy tufts and a few curling tendrils, no ground"
+    ],
+    [
+      "thunder_stone",
+      "a warm ochre stone with a single pale yellow lightning-shaped mineral vein"
+    ],
+    [
+      "crude_axe",
+      "a primitive axe with irregular flint head lashed to crooked wooden handle with coarse twine"
+    ],
+    [
+      "wood_pick",
+      "a wood pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, entirely carved wood head bound with twine, practical handmade tool"
+    ],
+    [
+      "stone_pick",
+      "a stone pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct stone head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "copper_pick",
+      "a copper pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct copper head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "iron_pick",
+      "a iron pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct iron head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "gold_pick",
+      "a gold pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct gold head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "brass_pick",
+      "a brass pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct brass head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "steel_pick",
+      "a steel pickaxe, two clearly opposed pointed ends, diagonally arranged sturdy brown wood handle, distinct steel head securely attached with leather wraps, practical handmade tool"
+    ],
+    [
+      "wood_axe",
+      "a wood chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, entirely carved wood head with darker grain, practical handmade tool"
+    ],
+    [
+      "stone_axe",
+      "a stone chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct stone head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "copper_axe",
+      "a copper chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct copper head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "iron_axe",
+      "a iron chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct iron head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "gold_axe",
+      "a gold chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct gold head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "brass_axe",
+      "a brass chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct brass head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "steel_axe",
+      "a steel chopping axe, single broad curved cutting edge and short poll, diagonally arranged sturdy brown wood handle, distinct steel head with beveled edge and leather wraps, practical handmade tool"
+    ],
+    [
+      "bench",
+      "a sturdy rustic wooden crafting bench, four visible legs in three-quarter view, plank top with small hammer and hand plane"
+    ],
+    [
+      "smelter",
+      "a squat round stone smelting furnace with arched amber fire opening, small chimney and dark metal rim"
+    ],
+    [
+      "hearth",
+      "a compact cooking hearth of chunky grey stones surrounding small amber flames under a black cooking pot, no ground"
+    ],
+    [
+      "fine_bench",
+      "an ornate upgraded oak crafting bench with stout legs, iron vice and brass corner braces, tiny tools on plank top"
+    ],
+    [
+      "blast_furnace",
+      "a tall compact reinforced dark iron blast furnace with masonry base, tapered chimney, glowing orange arched opening and copper side pipe"
+    ],
+    [
+      "burnt_forest_detector",
+      "an ancient handheld temple locator compass with short wooden handle, ornate bronze circular rim and central charred brown and ember orange fire crystal, no lettering"
+    ],
+    [
+      "snowfield_detector",
+      "an ancient handheld temple locator compass with short wooden handle, ornate bronze circular rim and central frosted pale blue icy crystal, no lettering"
+    ],
+    [
+      "wind_detector",
+      "an ancient handheld temple locator compass with short wooden handle, ornate bronze circular rim and central sage stone and pale mint wind spiral, no lettering"
+    ],
+    [
+      "bog_detector",
+      "an ancient handheld temple locator compass with short wooden handle, ornate bronze circular rim and central dark wood and olive green moss crystal, no lettering"
+    ],
+    [
+      "wasteland_detector",
+      "an ancient handheld temple locator compass with short wooden handle, ornate bronze circular rim and central sandstone gold and pale cyan lightning crystal, no lettering"
+    ],
+    [
+      "staff",
+      "a gnarled wooden magic staff diagonally leaning, leafy carved head cradling muted violet crystal, leather binding"
+    ],
+    [
+      "worn_pack",
+      "a battered dark brown cloth and leather backpack with sagging flap, stitch patches, two shoulder straps and dull bronze buckle"
+    ],
+    [
+      "leather_pack",
+      "a well-crafted warm brown leather rucksack with rounded flap, two sturdy side pouches, thick seams, brass buckles"
+    ],
+    [
+      "hide",
+      "an irregular folded tan animal hide with dark fur fringe and curled edge, no animal"
+    ],
+    [
+      "raw_meat",
+      "a fresh muted red steak with cream fat edge and small round bone cross-section"
+    ],
+    [
+      "cooked_meat",
+      "a roasted brown meat portion on small bone, caramelized scored surface and golden edges"
+    ],
+    [
+      "potion",
+      "a rounded thick glass potion bottle filled with muted rose red liquid, cork stopper and twine neck, restrained solid glass highlight"
+    ]
+  ]
+}
