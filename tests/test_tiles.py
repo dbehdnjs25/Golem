@@ -39,7 +39,10 @@ def test_the_plain_ground_is_the_first_tile():
 def test_decoration_leaves_out_the_plain_tile_and_the_hidden_ones():
     for sheet in tiles.SHEETS.values():
         assert sheet.base not in sheet.decor
-        assert sheet.decor, sheet.key  # every biome scatters something
+        if sheet.key == "wasteland":
+            assert not sheet.decor  # the desert intentionally has only plain ground
+        else:
+            assert sheet.decor, sheet.key
 
 
 def test_a_tile_id_maps_onto_the_atlas():
@@ -66,7 +69,9 @@ def test_a_picked_tile_is_one_the_sheet_has():
     allowed = {sheet.base, *sheet.decor}
     for x in range(40):
         for y in range(40):
-            assert tiles.pick(sheet, x, y) in allowed
+            picked = tiles.pick(sheet, x, y)
+            assert picked in allowed
+            assert picked == sheet.base
 
 
 def test_most_ground_is_plain_but_not_all_of_it():

@@ -116,6 +116,8 @@ def _scramble(x: int, y: int) -> int:
 
 def pick(sheet: TileSheet, cell_x: int, cell_y: int) -> int:
     """The tile for one cell of one biome's ground."""
+    if not sheet.decor:
+        return sheet.base
     h = _scramble(cell_x, cell_y)
     if h % DECOR_IN:
         return sheet.base
