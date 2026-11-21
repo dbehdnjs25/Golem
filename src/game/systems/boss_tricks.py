@@ -22,7 +22,7 @@ import pygame
 
 from game import config
 from game.entities.hazard import Ball, Beam, Falling, Lob, Pillar, Ring, Rod, Wall, Zone
-from game.entities.patch import BURNING, FROST, SLUDGE, Patch
+from game.entities.patch import BOSS, BURNING, FROST, SLUDGE, Patch
 from game.entities.player import Player
 from game.systems import status
 
@@ -110,7 +110,7 @@ def _leave(
     then stepping correctly out of the warning still burned you.
     """
     if kind is not None:
-        patches.append(Patch(pos=pygame.Vector2(at), kind=kind, radius=radius))
+        patches.append(Patch(pos=pygame.Vector2(at), kind=kind, radius=radius, laid_by=BOSS))
 
 
 # --- running what is on the floor -----------------------------------------

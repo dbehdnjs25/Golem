@@ -20,13 +20,15 @@ colour, and none of them kills outright.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol
 
 import pygame
 
 from game import config
-from game.entities.patch import BURNING, FROST, SLUDGE, Patch
+from game.entities.boss import Boss
+from game.entities.patch import BOSS, BURNING, FROST, SLUDGE, Patch
 from game.entities.player import Player
 from game.systems import status
 from game.world.biomes import BOG, BURNT_FOREST, SNOWFIELD, WASTELAND, WIND_PLATEAU, Biome
@@ -244,3 +246,46 @@ _BY_BIOME: dict[Biome, Gimmick] = {g.biome: g for g in GIMMICKS}
 def of(biome: Biome | None) -> Gimmick | None:
     """The gimmick belonging to ``biome``, or None where there is not one."""
     return _BY_BIOME.get(biome) if biome is not None else None
+
+
+class Standing(Protocol):
+    """Anything on the floor that is not the player.
+
+    A golem, a temple's guard, a boss. They differ in everything else and in
+    this they are the same: they have a place, a health bar, and mud can get
+    hold of them.
+    """
+
+    pos: pygame.Vector2
+    hp: float
+    mired: float
+
+    def damage(self, amount: float) -> None: ...
+
+
+def wade(dt: float, bodies: Sequence[Standing], patches: list[Patch]) -> None:
+    """Apply the ground to everything standing on it except the player.
+
+    The same three rules ``touch`` applies, read for a body with no breath to
+    lose and no footing to lose either: fire takes health, mud takes pace, and
+    ice does nothing at all.
+
+    A boss is not touched by its OWN ground. Not because the rule differs, but
+    because a fire boss simmering in its own fire would mean the fight could
+    be won by standing back and waiting -- the opposite of what the trick is
+    for. Its golems still burn in it: the exemption is the boss, not the
+    element.
+    """
+    for body in bodies:
+        if body.hp <= 0:
+            continue
+        its_own = isinstance(body, Boss)
+        for patch in patches:
+            if not patch.holds(body.pos):
+                continue
+            if its_own and patch.laid_by == BOSS:
+                continue
+            if patch.kind == BURNING:
+                body.damage(config.GROUND_DPS * dt)
+            elif patch.kind == SLUDGE:
+                body.mired = config.MIRE_CLING

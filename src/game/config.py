@@ -246,6 +246,15 @@ MIRE_WASH: Final[int] = 95
 # is the point, not the damage, and a tail heavier than its cause would make
 # the pool the lesser hazard.
 BURN_DPS: Final[float] = 2.0
+# What burning ground costs a body standing in it, per second. Far above the
+# fire a player carries out of it: a golem has no reason to walk out, so the
+# ground has to be worth laying rather than worth ignoring.
+GROUND_DPS: Final[float] = 22.0
+# How long mud keeps its grip after the last step in it, and how much of its
+# pace it takes. A slow that ends on the exact frame of leaving reads as
+# nothing happening at all.
+MIRE_CLING: Final[float] = 0.6
+MIRE_SLOW: Final[float] = 0.55
 BURN_SECONDS: Final[float] = 5.0
 # Fainter than the lava's wash: still alight, no longer standing in it.
 BURN_WASH: Final[int] = 34

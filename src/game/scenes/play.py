@@ -836,7 +836,11 @@ class PlayScene(Scene):
 
     @property
     def on_ice(self) -> bool:
-        return ice.holds(self.player.pos, self.ice)
+        # The map's own ice, and whatever a fight has frozen since. Reading
+        # only the first meant a coldsnap's frost was something to look at.
+        return ice.holds(self.player.pos, self.ice) or gimmicks.slippery(
+            self.player.pos, self.patches
+        )
 
     @property
     def in_waste(self) -> bool:
@@ -946,6 +950,22 @@ class PlayScene(Scene):
             from_pos=self.player.pos,
         )
         gimmicks.update_patches(dt, self.patches)
+        # The floor is the floor. Until now every patch a trick or a glyph
+        # left was decoration: ``touch`` was written for this and never
+        # called from anywhere, and nothing ever asked what a golem was
+        # standing in.
+        gimmicks.touch(
+            dt,
+            self.player,
+            self.patches,
+            # Where they are actually heading, which on ice is not where they
+            # are pushing -- and wading is what the bog charges for.
+            moving=self.player.slide.length_squared() > 0,
+        )
+        standing: list[gimmicks.Standing] = [*self.enemies]
+        if self.boss is not None:
+            standing.append(self.boss)
+        gimmicks.wade(dt, standing, self.patches)
         gimmicks.update_marks(dt, self.marks, self.mark_timers)
         self._update_boss(dt)
         combat.update_enemies(

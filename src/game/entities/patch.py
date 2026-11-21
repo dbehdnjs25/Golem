@@ -21,6 +21,12 @@ BURNING = "burning"
 FROST = "frost"
 SLUDGE = "sludge"
 
+# Who put it there. The only thing it decides is that a boss does not
+# stand in its own fire: everything else on the floor is the floor, for
+# the player and the golems alike.
+PLAYER = "player"
+BOSS = "boss"
+
 
 @dataclass
 class Patch:
@@ -28,6 +34,7 @@ class Patch:
     kind: str
     radius: float = config.PATCH_RADIUS
     ttl: float = config.PATCH_SECONDS
+    laid_by: str = PLAYER  # most of it comes from a glyph; a trick says so
 
     @property
     def spent(self) -> bool:

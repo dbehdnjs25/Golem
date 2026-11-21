@@ -175,6 +175,7 @@ class Boss:
     kind: BossKind
     hp: float = field(default=0.0)
     turned: bool = False  # once the second phase opens it stays open
+    mired: float = 0.0  # seconds of the player's mud still clinging
 
     def __post_init__(self) -> None:
         if not self.hp:
@@ -222,7 +223,9 @@ class Boss:
     @property
     def speed(self) -> float:
         quick = self.kind.speed
-        return quick * config.BOSS_PHASE2_HASTE if self.phase == 2 else quick
+        if self.phase == 2:
+            quick *= config.BOSS_PHASE2_HASTE
+        return quick * config.MIRE_SLOW if self.mired > 0 else quick
 
     @property
     def radius(self) -> float:
@@ -252,6 +255,7 @@ class Boss:
         Loose on the map it would wander out into the ring, and the temple
         would stop being the place the fight happens.
         """
+        self.mired = max(0.0, self.mired - dt)
         toward = target - self.pos
         if toward.length_squared() > 0:
             self.pos += toward.normalize() * self.speed * dt

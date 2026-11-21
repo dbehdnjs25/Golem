@@ -129,6 +129,10 @@ class Golem:
     # step whether the ring is still up, and that question deserves an
     # answer the type checker can see.
     guarding: bool = False
+    # Seconds of mud still clinging. Set by whatever it is standing in and
+    # ticked down as it walks, so stepping out of sludge is a recovery rather
+    # than a switch.
+    mired: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.hp:
@@ -138,7 +142,8 @@ class Golem:
     def speed(self) -> float:
         # Scaled less than health: a golem twice as tough that also moves twice
         # as fast is not harder, it is unfightable.
-        return self.kind.speed * (1 + (self.scale - 1) * config.GOLEM_SPEED_SCALING)
+        quick = self.kind.speed * (1 + (self.scale - 1) * config.GOLEM_SPEED_SCALING)
+        return quick * config.MIRE_SLOW if self.mired > 0 else quick
 
     @property
     def radius(self) -> float:
@@ -160,6 +165,7 @@ class Golem:
         self.hp -= amount
 
     def update(self, dt: float, target: pygame.Vector2, world: WorldMap) -> None:
+        self.mired = max(0.0, self.mired - dt)
         to_target = target - self.pos
         if to_target.length_squared() > 0:
             self.pos += to_target.normalize() * self.speed * dt
