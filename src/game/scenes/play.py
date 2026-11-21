@@ -1812,8 +1812,15 @@ class PlayScene(Scene):
                     self._raise_guards(temple)
                 elif not temple.guards_down:
                     self._lower_guards_if_cleared(temple)
-            else:
+            elif temple.inside:
                 temple.leave()
+                # The ring goes with the room. A guard is a golem, and a golem
+                # marches on the core -- left standing when the player walks
+                # out, a ring raised by nothing more than peering through the
+                # door escorted itself across the map to a core nobody was
+                # defending. Walking back in redraws the room anyway, so
+                # nothing is lost by them not being there in between.
+                self.enemies = [e for e in self.enemies if not e.guarding]
         # A sealed room holds against ITS temple, not against whichever one the
         # player is currently counted as standing in. One long step -- a shove,
         # a dodge, anything that moves further than the wall is thick -- would

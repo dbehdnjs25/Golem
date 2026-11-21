@@ -187,3 +187,55 @@ def test_the_guard_scale_still_multiplies_something_already_tough():
     assert config.GUARD_SCALE < 2.4
     first = BIOME_GOLEMS[0].hp * config.GUARD_SCALE
     assert first >= PLAIN_GOLEM.hp * 2.0  # still worth bringing a weapon to
+
+
+# --- they belong to the room, not to the world ----------------------------
+
+
+def test_walking_out_takes_the_ring_with_you():
+    # They are golems, and a golem marches on the core. Left standing when the
+    # player walks out, a ring raised by peering through the door escorted
+    # itself home -- three biome golems, from a temple five biomes away, at a
+    # core the player was not defending.
+    scene = PlayScene()
+    temple = _walk_into(scene, _first_temple(scene))
+    assert _guards(scene)
+    scene.player.pos.update(scene.core.pos)
+    scene._visit_temples()
+    assert not _guards(scene)
+    assert not temple.inside
+
+
+def test_the_ring_comes_back_when_you_do():
+    scene = PlayScene()
+    temple = _first_temple(scene)
+    _walk_into(scene, temple)
+    scene.player.pos.update(scene.core.pos)
+    scene._visit_temples()
+    _walk_into(scene, temple)
+    assert _guards(scene)
+    assert not temple.guards_down
+
+
+def test_leaving_does_not_disturb_anything_else_on_the_field():
+    from game.entities.enemy import Golem
+
+    scene = PlayScene()
+    temple = _first_temple(scene)
+    _walk_into(scene, temple)
+    wanderer = Golem(pos=pygame.Vector2(scene.core.pos))
+    scene.enemies.append(wanderer)
+    scene.player.pos.update(scene.core.pos)
+    scene._visit_temples()
+    assert wanderer in scene.enemies
+
+
+def test_a_cleared_temple_has_nothing_to_take_away():
+    scene = PlayScene()
+    temple = _walk_into(scene, _first_temple(scene))
+    scene.enemies = []
+    scene._visit_temples()
+    assert temple.guards_down
+    scene.player.pos.update(scene.core.pos)
+    scene._visit_temples()
+    assert temple.guards_down
