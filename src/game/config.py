@@ -553,7 +553,15 @@ GOLEM_APPROACH: Final[float] = 0.45
 
 # --- Combat: weapon / projectile ----------------------------------------------
 WEAPON_DAMAGE: Final[float] = 12.0
-WEAPON_FIRE_RATE: Final[float] = 4.0  # shots per second while held
+WEAPON_FIRE_RATE: Final[float] = 4.0  # swings per second while held
+# No cursor: the weapon sweeps a fan in front of the player and hits
+# everything in it. Reach is from the player's centre to the target's edge.
+WEAPON_REACH: Final[float] = 120.0
+# Half the fan's width, in degrees, for swings and digs alike. 60 is a
+# third of a circle: wide enough that the eight walking directions cover the
+# ground between them, narrow enough that turning around still matters.
+AIM_HALF_ANGLE: Final[float] = 60.0
+SWING_FLASH: Final[float] = 0.12  # seconds the swept fan stays drawn
 PROJECTILE_SPEED: Final[float] = 520.0  # px/s
 PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
 PROJECTILE_RADIUS: Final[float] = 4.0

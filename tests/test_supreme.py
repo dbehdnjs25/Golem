@@ -168,7 +168,7 @@ def _armed(glyph) -> PlayScene:
         if slot is not None and getattr(slot, "kind", None) is STAFF_ITEM:
             scene.hotbar.select(index)
     scene.grimoire.learn(glyph)
-    scene._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT // 2)
+    scene.facing = pygame.Vector2(1, 0)
     return scene
 
 
@@ -231,20 +231,3 @@ def test_throwing_heats_the_staff():
     scene = _armed(glyph)
     _draw(scene, glyph)
     assert scene.staff.strain > 0
-
-
-def test_a_weapon_shot_carries_no_trick_at_all():
-    # Glyphs used to be carved onto weapons. They are not any more, and a
-    # weapon shot that still threw one would be the old system surviving in
-    # the one place nobody looks.
-    from game.items.tools import WeaponTool
-
-    _, shots = combat.fire_weapon(
-        config.FIXED_DT,
-        weapon=WeaponTool(),
-        held=True,
-        aim_world=pygame.Vector2(CENTRE) + pygame.Vector2(100, 0),
-        player_pos=pygame.Vector2(CENTRE),
-        fire_timer=0.0,
-    )
-    assert shots and shots[0].gimmick is None

@@ -18,6 +18,7 @@ from game.items.tools import MiningTool
 from game.systems import mining
 
 PLAYER = pygame.Vector2(1000, 1000)
+RIGHT = pygame.Vector2(1, 0)
 
 
 def _backpack() -> Container:
@@ -30,7 +31,7 @@ def test_idle_when_not_held() -> None:
         1 / 60,
         active_tool=MiningTool(),
         held=False,
-        aim_world=pygame.Vector2(1010, 1000),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=frags,
         backpack=_backpack(),
@@ -46,7 +47,7 @@ def test_channelling_reduces_hp() -> None:
         1.0,
         active_tool=MiningTool(),
         held=True,
-        aim_world=pygame.Vector2(1010, 1000),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=frags,
         backpack=_backpack(),
@@ -64,7 +65,7 @@ def test_depletion_collects_into_backpack() -> None:
         1.0,
         active_tool=MiningTool(),
         held=True,
-        aim_world=pygame.Vector2(1010, 1000),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=frags,
         backpack=bp,
@@ -82,7 +83,7 @@ def test_out_of_range_does_no_damage() -> None:
         1.0,
         active_tool=MiningTool(),
         held=True,
-        aim_world=pygame.Vector2(2000, 1000),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=frags,
         backpack=_backpack(),
@@ -101,7 +102,7 @@ def test_full_backpack_blocks_and_preserves_fragment() -> None:
         1.0,
         active_tool=MiningTool(),
         held=True,
-        aim_world=pygame.Vector2(1010, 1000),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=frags,
         backpack=bp,
@@ -118,7 +119,7 @@ def _swing(tool, kind, dt=1.0):
         dt,
         active_tool=tool,
         held=True,
-        aim_world=pygame.Vector2(node.pos),
+        facing=RIGHT,
         player_pos=PLAYER,
         fragments=[node],
         backpack=_backpack(),
@@ -230,7 +231,7 @@ def test_digging_costs_wind():
         1.0,
         active_tool=tools.pickaxe(grades.STONE_G),
         held=True,
-        aim_world=node.pos,
+        facing=RIGHT,
         player_pos=player.pos,
         fragments=[node],
         backpack=None,
@@ -251,7 +252,7 @@ def test_running_dry_slows_digging_but_never_stops_it():
             1.0,
             active_tool=tools.pickaxe(grades.STONE_G),
             held=True,
-            aim_world=node.pos,
+            facing=RIGHT,
             player_pos=player.pos,
             fragments=[node],
             backpack=None,
@@ -271,10 +272,83 @@ def test_digging_still_works_with_nobody_holding_the_pick():
         0.01,
         active_tool=tools.pickaxe(grades.STONE_G),
         held=True,
-        aim_world=node.pos,
+        facing=RIGHT,
         player_pos=pygame.Vector2(PLAYER),
         fragments=[node],
         backpack=None,
         hotbar=Hotbar.create(),
     )
     assert status == mining.MINING
+
+
+# --- no cursor: the fan in front of the player ------------------------------
+
+
+def _dig(nodes, facing=RIGHT, tool=None, dt=0.1):
+    return mining.update_mining(
+        dt,
+        active_tool=tool or tools.pickaxe(grades.STONE_G),
+        held=True,
+        facing=facing,
+        player_pos=pygame.Vector2(PLAYER),
+        fragments=nodes,
+        backpack=_backpack(),
+        hotbar=Hotbar.create(),
+    )
+
+
+def test_a_node_behind_the_player_is_left_alone():
+    behind = Fragment(pos=PLAYER + pygame.Vector2(-40, 0), kind=STONE)
+    status, _ = _dig([behind])
+    assert status == mining.OUT_OF_RANGE
+    assert behind.hp == config.FRAGMENT_HP
+
+
+def test_everything_in_the_fan_is_dug_at_once():
+    ahead = Fragment(pos=PLAYER + pygame.Vector2(40, 0), kind=STONE)
+    off_to_the_side = Fragment(pos=PLAYER + pygame.Vector2(40, 30), kind=STONE)
+    status, _ = _dig([ahead, off_to_the_side])
+    assert status == mining.MINING
+    assert ahead.hp < config.FRAGMENT_HP
+    assert off_to_the_side.hp < config.FRAGMENT_HP
+
+
+def test_a_wrong_node_in_the_fan_does_not_stop_the_right_one():
+    tree = Fragment(pos=PLAYER + pygame.Vector2(20, 0), kind=WOOD)
+    rock = Fragment(pos=PLAYER + pygame.Vector2(50, 0), kind=STONE)
+    status, _ = _dig([tree, rock])
+    assert status == mining.MINING
+    assert tree.hp == config.FRAGMENT_HP
+    assert rock.hp < config.FRAGMENT_HP
+
+
+def test_what_came_out_is_reported():
+    rock = Fragment(pos=PLAYER + pygame.Vector2(40, 0), kind=STONE, hp=1.0)
+    status, got = _dig([rock], dt=1.0)
+    assert status == mining.COLLECTED
+    assert got == [STONE]
+
+
+def test_wind_is_paid_once_however_many_are_dug():
+    from game.entities.player import Player
+
+    def spent(n: int) -> float:
+        player = Player(pos=pygame.Vector2(PLAYER))
+        nodes = [
+            Fragment(pos=PLAYER + pygame.Vector2(30 + 10 * i, 0), kind=STONE, hp=999.0)
+            for i in range(n)
+        ]
+        mining.update_mining(
+            0.5,
+            active_tool=tools.pickaxe(grades.STONE_G),
+            held=True,
+            facing=RIGHT,
+            player_pos=player.pos,
+            fragments=nodes,
+            backpack=_backpack(),
+            hotbar=Hotbar.create(),
+            player=player,
+        )
+        return player.max_stamina - player.stamina
+
+    assert spent(1) == spent(3)

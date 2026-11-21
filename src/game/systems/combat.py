@@ -22,38 +22,8 @@ from game.entities.projectile import Projectile
 from game.inventory.storage import Container
 from game.items.item_kinds import ItemKind
 from game.items.tools import WeaponTool
-from game.systems import gimmicks
+from game.systems import aim, gimmicks
 from game.world.map import WorldMap
-
-
-def fire_weapon(
-    dt: float,
-    *,
-    weapon: object | None,
-    held: bool,
-    aim_world: pygame.Vector2,
-    player_pos: pygame.Vector2,
-    fire_timer: float,
-) -> tuple[float, list[Projectile]]:
-    fire_timer -= dt
-    if not held or not isinstance(weapon, WeaponTool):
-        return fire_timer, []
-    if fire_timer > 0:
-        return fire_timer, []
-    aim = aim_world - player_pos
-    if aim.length_squared() == 0:
-        return fire_timer, []
-    velocity = aim.normalize() * weapon.projectile_speed
-    shot = Projectile(
-        pos=pygame.Vector2(player_pos),
-        vel=velocity,
-        damage=weapon.total_damage,
-        radius=weapon.projectile_radius,
-        ttl=weapon.projectile_ttl,
-        # No gimmick. A weapon shot is a weapon shot; the tricks ride on
-        # shapes the player draws, which the scene throws itself.
-    )
-    return 1.0 / weapon.fire_rate, [shot]
 
 
 class Hurtable(Protocol):
@@ -74,6 +44,35 @@ class Hurtable(Protocol):
     def is_dead(self) -> bool: ...
 
     def damage(self, amount: float) -> None: ...
+
+
+def swing_weapon(
+    dt: float,
+    *,
+    weapon: object | None,
+    held: bool,
+    facing: pygame.Vector2,
+    player_pos: pygame.Vector2,
+    fire_timer: float,
+    targets: Sequence[Hurtable],
+) -> tuple[float, list[Hurtable]]:
+    """One step of the weapon: a sweep through the fan in front, on its beat.
+
+    Every live target in the fan takes the full blow. Returns the new timer
+    and who was hit -- the scene clears the dead and draws the sweep. A swing
+    that hits nothing still spends the beat: the arm went round either way,
+    and a swing that came back early for missing would reward flailing.
+    """
+    fire_timer -= dt
+    if not held or not isinstance(weapon, WeaponTool):
+        return fire_timer, []
+    if fire_timer > 0:
+        return fire_timer, []
+    live = [t for t in targets if not t.is_dead]
+    hit = aim.in_front(player_pos, facing, live, weapon.reach)
+    for target in hit:
+        target.damage(weapon.total_damage)
+    return 1.0 / weapon.fire_rate, hit
 
 
 def _first_hit(shot: Projectile, targets: Sequence[Hurtable]) -> Hurtable | None:

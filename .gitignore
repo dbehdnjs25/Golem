@@ -31,3 +31,6 @@ Thumbs.db
 # grassland-atlas.png and the template; it is 2 MB of base64 duplicating a PNG
 # that is already tracked, and git would keep every version of it forever.
 assets/grassland/preview.html
+
+# the player's own key bindings (written by the F1 screen)
+controls.json

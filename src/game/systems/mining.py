@@ -1,15 +1,17 @@
 """One mining step.
 
-The cursor picks WHICH node (nearest to the aim point) among those within the
-tool's range of the PLAYER; the tool then channels damage into it. On depletion
-the node is removed and what it held is handed to ``carrying``.
+There is no cursor: every node in the fan in front of the player, within the
+tool's reach, is dug at once. Each is checked on its own -- the wrong tool for
+one does not stop the others -- and the tool's full rate goes into every one
+of them. Wind is paid once per step, not once per node: it is the arm that
+tires, and the arm swings once.
 
-Returns ``(status, kind)`` -- the kind only on a collect, and only because a
+Returns ``(status, kinds)`` -- the kinds that came out this step, because a
 backpack is worn the moment it is dug up rather than stored, so the scene has
 to be told what came out.
 
-Nowhere to put it blocks the swing BEFORE any damage lands, so the node is
-preserved rather than destroyed into a full pack.
+Nowhere to put it blocks the swing at that node BEFORE any damage lands, so
+the node is preserved rather than destroyed into a full pack.
 """
 
 from __future__ import annotations
@@ -24,7 +26,7 @@ from game.inventory.storage import Container
 from game.items import grades
 from game.items.item_kinds import ItemKind, yield_of
 from game.items.tools import BARE_HAND, MiningTool
-from game.systems import carrying
+from game.systems import aim, carrying
 
 IDLE = "idle"
 MINING = "mining"
@@ -35,18 +37,15 @@ TOO_HARD = "too_hard"  # the right family, too low a grade
 COLLECTED = "collected"
 
 
-def pick_target(
-    aim_world: pygame.Vector2,
+def targets(
+    facing: pygame.Vector2,
     player_pos: pygame.Vector2,
     fragments: list[Fragment],
     reach: float,
-) -> Fragment | None:
-    candidates = [
-        f for f in fragments if not f.is_depleted and player_pos.distance_to(f.pos) <= reach
-    ]
-    if not candidates:
-        return None
-    return min(candidates, key=lambda f: aim_world.distance_to(f.pos))
+) -> list[Fragment]:
+    """The live nodes in the fan in front of the player, nearest first."""
+    live = [f for f in fragments if not f.is_depleted]
+    return aim.in_front(player_pos, facing, live, reach)
 
 
 def update_mining(
@@ -54,48 +53,67 @@ def update_mining(
     *,
     active_tool: object | None,
     held: bool,
-    aim_world: pygame.Vector2,
+    facing: pygame.Vector2,
     player_pos: pygame.Vector2,
     fragments: list[Fragment],
     backpack: Container | None,
     hotbar: Hotbar,
     player: Player | None = None,
-) -> tuple[str, ItemKind | None]:
+) -> tuple[str, list[ItemKind]]:
     if not held:
-        return IDLE, None
+        return IDLE, []
     if active_tool is None:
         active_tool = BARE_HAND  # nothing in hand is still a pair of hands
     if not isinstance(active_tool, MiningTool):
-        return IDLE, None
-    target = pick_target(aim_world, player_pos, fragments, active_tool.range)
-    if target is None:
-        return OUT_OF_RANGE, None
-    # Qualification is checked BEFORE any damage lands. A node that cannot be
-    # finished must not be left half-chewed, or an unreachable ore sits there
-    # ruined for whoever comes back with the right tool.
-    need = grades.need_for(target.kind)
-    if not _suits(active_tool.family, need.family):
-        return WRONG_TOOL, None
-    if active_tool.grade.rank < need.grade.rank:
-        return TOO_HARD, None
+        return IDLE, []
+    in_reach = targets(facing, player_pos, fragments, active_tool.range)
+    if not in_reach:
+        return OUT_OF_RANGE, []
+    rate = active_tool.dps
+    if player is not None and player.winded:
+        # Running out slows digging rather than stopping it. Blocked outright,
+        # someone who came out for one bagful would be left standing still.
+        rate *= config.WINDED_MINING_RATE
+    refused: str | None = None
+    dug = False
+    collected: list[ItemKind] = []
+    for target in in_reach:
+        why = _refusal(active_tool, target.kind, backpack, hotbar)
+        if why is not None:
+            refused = refused or why  # the nearest one's reason is the one shown
+            continue
+        dug = True
+        if target.damage(rate * dt):
+            got = yield_of(target.kind)
+            carrying.store(got, 1, backpack, hotbar)
+            fragments.remove(target)
+            collected.append(got)
+    if not dug:
+        return refused or OUT_OF_RANGE, []
+    if player is not None:
+        player.drain(config.MINING_DRAIN * dt)
+    return (COLLECTED if collected else MINING), collected
+
+
+def _refusal(
+    tool: MiningTool, kind: ItemKind, backpack: Container | None, hotbar: Hotbar
+) -> str | None:
+    """Why ``tool`` may not touch a node of ``kind`` right now, or None.
+
+    Checked BEFORE any damage lands. A node that cannot be finished must not be
+    left half-chewed, or an unreachable ore sits there ruined for whoever comes
+    back with the right tool.
+    """
+    need = grades.need_for(kind)
+    if not _suits(tool.family, need.family):
+        return WRONG_TOOL
+    if tool.grade.rank < need.grade.rank:
+        return TOO_HARD
     # What comes out may not be what was swung at: the studded stone by the
     # lava gives obsidian.
-    got = yield_of(target.kind)
-    if carrying.room_for(got, backpack, hotbar) == 0:
-        return FULL, None  # block before damaging -> the node is preserved
-    # Digging costs wind, and running out slows it rather than stopping it.
-    # Blocked outright, someone who came out for one bagful would be left
-    # standing still -- this should be pressure, never punishment.
-    rate = active_tool.dps
-    if player is not None:
-        if player.winded:
-            rate *= config.WINDED_MINING_RATE
-        player.drain(config.MINING_DRAIN * dt)
-    if target.damage(rate * dt):
-        carrying.store(got, 1, backpack, hotbar)
-        fragments.remove(target)
-        return COLLECTED, got
-    return MINING, None
+    if carrying.room_for(yield_of(kind), backpack, hotbar) == 0:
+        return FULL
+    return None
 
 
 def _suits(family: str, wanted: str) -> bool:

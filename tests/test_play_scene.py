@@ -127,14 +127,18 @@ def test_no_backpack_is_lying_about_any_more():
     assert not any(f.kind is WORN_PACK for f in scene.fragments)
 
 
-def test_firing_weapon_spawns_projectile():
+def test_holding_the_action_key_swings_the_weapon_at_what_is_in_front():
     scene = PlayScene()
     scene.hotbar.select(4)  # weapon
-    scene._mouse_held = True
-    scene._mouse_screen = pygame.Vector2(0, 0)  # aim off to a side
+    scene.facing = pygame.Vector2(1, 0)
+    ahead = Golem(pos=scene.player.pos + pygame.Vector2(50, 0), hp=999)
+    behind = Golem(pos=scene.player.pos + pygame.Vector2(-50, 0), hp=999)
+    scene.enemies = [ahead, behind]
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
     scene.update(config.FIXED_DT)
-    assert len(scene.projectiles) >= 1
-    assert isinstance(scene.projectiles[0], Projectile)
+    assert ahead.hp < 999
+    assert behind.hp == 999
+    assert scene.projectiles == []  # a sweep, not a shot
 
 
 def test_space_triggers_dodge():
@@ -480,11 +484,11 @@ def _ready_to_build(scene, kind):
     return scene
 
 
-def test_clicking_with_a_station_in_hand_builds_it():
+def test_the_action_key_with_a_station_in_hand_builds_it():
     from game.items.item_kinds import BENCH
 
     scene = _ready_to_build(PlayScene(), BENCH)
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
     assert len(scene.stations) == 1
     assert scene.hotbar.count(BENCH) == 0  # the item is spent
 
@@ -495,7 +499,7 @@ def test_a_failed_build_keeps_the_item():
     scene = PlayScene()  # core never lit -> no ward -> nowhere to build
     scene.hotbar.slots[3] = Stack(BENCH, 1)
     scene.hotbar.select(3)
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
     assert scene.stations == []
     assert scene.hotbar.count(BENCH) == 1
 
@@ -506,8 +510,17 @@ def test_building_does_not_also_start_swinging():
     from game.items.item_kinds import BENCH
 
     scene = _ready_to_build(PlayScene(), BENCH)
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(480, 270)))
-    assert scene._mouse_held is False
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
+    assert scene._action_held is False
+
+
+def test_a_station_goes_down_in_front_of_the_player():
+    from game.items.item_kinds import BENCH
+
+    scene = _ready_to_build(PlayScene(), BENCH)
+    scene.facing = pygame.Vector2(1, 0)
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
+    assert scene.stations[0].pos.x > scene.player.pos.x
 
 
 def test_a_station_keeps_working_while_the_player_is_away():
@@ -543,6 +556,15 @@ def test_standing_by_a_finished_station_empties_it():
 
 def _press_c(scene):
     scene.handle_event(_key_event(pygame.K_c))
+
+
+def _craft_row(scene, output):
+    """Walk the recipe cursor down onto ``output``'s row and press Enter."""
+    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is output)
+    for _ in range(index):
+        scene.handle_event(_key_event(pygame.K_DOWN))
+    assert scene.craft_cursor == index
+    scene.handle_event(_key_event(pygame.K_RETURN))
 
 
 def test_c_opens_the_crafting_menu():
@@ -589,26 +611,22 @@ def test_affordable_rows_sort_to_the_top():
     assert rows[0][1] is True  # something is makeable and it is listed first
 
 
-def test_clicking_an_instant_recipe_makes_it():
+def test_confirming_an_instant_recipe_makes_it():
     from game.items.item_kinds import WOOD, WOOD_PICK
 
     scene = PlayScene()
     scene.hotbar.add(WOOD, 3)
     _press_c(scene)
-    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is WOOD_PICK)
-    at = scene._craft_row_rect(index).center
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    _craft_row(scene, WOOD_PICK)
     assert scene.hotbar.count(WOOD_PICK) == 1
 
 
-def test_clicking_an_unaffordable_row_does_nothing():
+def test_confirming_an_unaffordable_row_does_nothing():
     from game.items.item_kinds import BENCH
 
     scene = PlayScene()
     _press_c(scene)
-    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is BENCH)
-    at = scene._craft_row_rect(index).center
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    _craft_row(scene, BENCH)
     assert scene._carried(BENCH) == 0
 
 
@@ -623,9 +641,7 @@ def test_a_timed_recipe_goes_to_the_station_instead_of_the_hand():
     smelter = Station(pos=pygame.Vector2(scene.player.pos), kind=SMELTER)
     scene.stations.append(smelter)
     _press_c(scene)
-    index = next(i for i, (r, _) in enumerate(scene._craft_rows()) if r.output is COPPER_INGOT)
-    at = scene._craft_row_rect(index).center
-    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=at))
+    _craft_row(scene, COPPER_INGOT)
     assert smelter.is_busy is True
     assert scene.backpack.count(COPPER_ORE) == 2  # the ore went in
     assert scene._carried(COPPER_INGOT) == 0  # nothing yet -- it has to run
@@ -981,7 +997,7 @@ def test_holding_a_staff_is_read_off_the_item():
 
 def test_a_bare_staff_fires_nothing():
     scene = _with_staff(PlayScene())
-    scene._mouse_held = True
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_f))
     for _ in range(60):
         scene.update(config.FIXED_DT)
     assert scene.projectiles == []
@@ -1634,11 +1650,13 @@ def test_a_whole_room_fits_on_one_screen():
     assert config.TEMPLE_RADIUS < config.SCREEN_WIDTH / 2
 
 
-# --- the wheel zooms ------------------------------------------------------
+# --- the zoom keys ---------------------------------------------------------
 
 
 def _wheel(scene, y):
-    scene.handle_event(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=y))
+    key = pygame.K_EQUALS if y > 0 else pygame.K_MINUS
+    for _ in range(abs(y)):
+        scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
 
 
 def test_the_wheel_only_ever_narrows_the_view():
@@ -1648,7 +1666,7 @@ def test_the_wheel_only_ever_narrows_the_view():
     scene = PlayScene()
     widest = scene.camera.field_size
     _wheel(scene, 1)
-    assert scene.camera.field_size < widest
+    assert scene.camera.field_size < widest  # = narrows
     _wheel(scene, -1)
     assert scene.camera.field_size == widest
     _wheel(scene, -1)
@@ -1711,17 +1729,13 @@ def test_a_zoomed_out_world_still_gets_drawn():
     assert surface.get_at(middle)[:3] != config.BACKGROUND
 
 
-def test_the_mouse_still_aims_where_it_points_when_zoomed():
-    # Mining reads the mouse through the camera. Zoomed out, a click halfway
-    # across the window is twice as far into the world as it was.
+def test_zooming_does_not_turn_the_player():
+    # The aim is the body, not a point on the screen, so a zoom must leave
+    # the facing exactly where it was.
     scene = PlayScene()
-    scene.camera.center_on(scene.player.pos)
-    probe = pygame.Vector2(config.SCREEN_WIDTH, config.SCREEN_HEIGHT)
-    wide = scene.camera.screen_to_world(probe)
+    scene.facing = pygame.Vector2(1, 0)
     _wheel(scene, 1)
-    scene.camera.center_on(scene.player.pos)
-    close = scene.camera.screen_to_world(probe)
-    assert close.distance_to(scene.player.pos) < wide.distance_to(scene.player.pos)
+    assert scene.facing == pygame.Vector2(1, 0)
 
 
 def test_the_core_marker_is_not_drawn_while_the_core_is_in_view_and_zoomed_out():
@@ -1763,3 +1777,160 @@ def test_every_zoom_step_maps_whole_pixels_onto_the_window():
         ratio = config.SCREEN_WIDTH / round(config.SCREEN_WIDTH / step)
         assert ratio >= 1 or round(1 / ratio) == 1 / ratio
         assert ratio <= 1 or round(ratio) == ratio
+
+
+# --- keyboard only -----------------------------------------------------------
+
+
+def _key(scene, key):
+    scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
+
+
+def test_walking_turns_the_player_and_stopping_keeps_it():
+    scene = PlayScene()
+    _key(scene, pygame.K_a)
+    scene.update(config.FIXED_DT)
+    assert scene.facing == pygame.Vector2(-1, 0)
+    scene.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_a))
+    scene.update(config.FIXED_DT)
+    assert scene.facing == pygame.Vector2(-1, 0)
+
+
+def test_mouse_events_are_ignored():
+    scene = PlayScene()
+    scene.handle_event(pygame.event.Event(pygame.MOUSEBUTTONDOWN, button=1, pos=(10, 10)))
+    scene.handle_event(pygame.event.Event(pygame.MOUSEWHEEL, x=0, y=1))
+    assert scene._action_held is False
+    assert scene.camera.zoom == 1.0
+
+
+def test_the_belongings_cursor_picks_up_and_puts_down():
+    scene = PlayScene()
+    scene.backpack = Container.empty(config.BACKPACK_SLOTS)
+    scene.hotbar.slots[0] = Stack(STONE, 3)
+    scene.hotbar.select(0)
+    _key(scene, pygame.K_i)
+    assert scene.grid_cursor == (grid.HOTBAR, 0)
+    _key(scene, pygame.K_f)  # pick it up
+    assert scene.grid.held is not None
+    _key(scene, pygame.K_UP)  # climb into the pack's last row
+    assert scene.grid_cursor[0] == grid.PACK
+    _key(scene, pygame.K_RETURN)  # put it down
+    assert scene.grid.held is None
+    assert scene.backpack.count(STONE) == 3
+
+
+def test_the_belongings_cursor_wraps_along_the_hotbar():
+    scene = PlayScene()
+    _key(scene, pygame.K_i)
+    _key(scene, pygame.K_LEFT)
+    assert scene.grid_cursor == (grid.HOTBAR, len(scene.hotbar.slots) - 1)
+
+
+def test_a_menu_eats_the_walking_keys():
+    scene = PlayScene()
+    _key(scene, pygame.K_c)
+    _key(scene, pygame.K_d)
+    _key(scene, pygame.K_c)  # closed again
+    scene.update(config.FIXED_DT)
+    assert scene._move_dir() == pygame.Vector2(0, 0)
+
+
+def test_escape_closes_a_menu_before_it_leaves_the_game():
+    scene = PlayScene()
+    _key(scene, pygame.K_i)
+    _key(scene, pygame.K_ESCAPE)
+    assert scene.grid_open is False
+
+
+def test_f1_opens_the_key_settings_and_the_world_waits():
+    scene = PlayScene()
+    _key(scene, pygame.K_F1)
+    assert scene.settings_open
+    before = scene.clock.elapsed
+    scene.update(config.FIXED_DT)
+    assert scene.clock.elapsed > before  # time of day still runs, like a menu
+    _key(scene, pygame.K_d)
+    scene.update(config.FIXED_DT)
+    assert scene._move_dir() == pygame.Vector2(0, 0)
+
+
+def _rebind(scene, action, key):
+    from game.core import controls as ctl
+
+    _key(scene, pygame.K_F1)
+    for _ in range(ctl.ACTIONS.index(action)):
+        _key(scene, pygame.K_DOWN)
+    _key(scene, pygame.K_RETURN)
+    assert scene.settings_waiting
+    _key(scene, key)
+    _key(scene, pygame.K_ESCAPE)
+
+
+def test_a_rebound_action_key_is_the_one_that_swings():
+    from game.core import controls as ctl
+
+    scene = PlayScene()
+    _rebind(scene, ctl.ACTION, pygame.K_j)
+    assert not scene.settings_open
+    scene.hotbar.select(4)
+    scene.facing = pygame.Vector2(1, 0)
+    golem = Golem(pos=scene.player.pos + pygame.Vector2(50, 0), hp=999)
+    scene.enemies = [golem]
+    _key(scene, pygame.K_f)  # the old key does nothing now
+    scene.update(config.FIXED_DT)
+    assert golem.hp == 999
+    _key(scene, pygame.K_j)
+    scene.update(config.FIXED_DT)
+    assert golem.hp < 999
+
+
+def test_a_rebound_walking_key_walks():
+    from game.core import controls as ctl
+
+    scene = PlayScene()
+    _rebind(scene, ctl.MOVE_UP, pygame.K_t)
+    _key(scene, pygame.K_t)
+    assert scene._move_dir() == pygame.Vector2(0, -1)
+
+
+def test_escape_while_waiting_for_a_key_changes_nothing():
+    from game.core import controls as ctl
+
+    scene = PlayScene()
+    _key(scene, pygame.K_F1)
+    _key(scene, pygame.K_RETURN)
+    _key(scene, pygame.K_ESCAPE)
+    assert scene.settings_open  # only the wait was cancelled
+    assert scene.controls.keys_for(ctl.MOVE_UP) == (pygame.K_w,)
+
+
+def test_rebinding_saves_only_when_given_a_path(tmp_path):
+    from game.core import controls as ctl
+    from game.core.controls import Controls
+
+    path = tmp_path / "controls.json"
+    scene = PlayScene(Controls(), path)
+    _rebind(scene, ctl.ACTION, pygame.K_j)
+    assert Controls.load(path).keys_for(ctl.ACTION) == (pygame.K_j,)
+
+
+def test_the_settings_screen_draws():
+    scene = PlayScene()
+    _key(scene, pygame.K_F1)
+    _key(scene, pygame.K_RETURN)  # waiting row too
+    scene.draw(pygame.Surface(config.SCREEN_SIZE))
+
+
+def test_a_swing_and_the_open_menus_draw():
+    scene = PlayScene()
+    scene.hotbar.select(4)
+    _key(scene, pygame.K_f)
+    scene.update(config.FIXED_DT)
+    assert scene._swing_left > 0
+    surface = pygame.Surface(config.SCREEN_SIZE)
+    scene.draw(surface)
+    _key(scene, pygame.K_i)
+    scene.draw(surface)
+    _key(scene, pygame.K_c)
+    scene.draw(surface)

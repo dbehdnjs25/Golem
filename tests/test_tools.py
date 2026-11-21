@@ -7,7 +7,7 @@ def test_weapon_defaults():
     w = WeaponTool()
     assert w.damage == config.WEAPON_DAMAGE
     assert w.fire_rate == config.WEAPON_FIRE_RATE
-    assert w.projectile_speed == config.PROJECTILE_SPEED
+    assert w.reach == config.WEAPON_REACH
     assert isinstance(w.name, str)
 
 

@@ -21,52 +21,72 @@ CENTRE = WORLD.center
 UNLIT = Core(pos=pygame.Vector2(CENTRE))
 
 
-def _fire(steps, dt, *, held=True, weapon=None):
+RIGHT = pygame.Vector2(1, 0)
+
+
+def _swing(steps, dt, *, held=True, weapon=None, targets=None, facing=RIGHT):
     weapon = weapon or WeaponTool(fire_rate=2.0)  # interval 0.5s
+    targets = targets if targets is not None else [Golem(pos=pygame.Vector2(60, 0), hp=999)]
     timer = 0.0
-    shots = []
+    hits = []
     for _ in range(steps):
-        timer, new = combat.fire_weapon(
+        timer, new = combat.swing_weapon(
             dt,
             weapon=weapon,
             held=held,
-            aim_world=pygame.Vector2(100, 0),
+            facing=facing,
             player_pos=pygame.Vector2(0, 0),
             fire_timer=timer,
+            targets=targets,
         )
-        shots.extend(new)
-    return shots
+        hits.append(new)
+    return hits
 
 
-def test_fires_at_fire_rate_when_held():
-    shots = _fire(steps=4, dt=0.5)  # dt == interval -> one shot per step
-    assert len(shots) == 4
-    assert all(isinstance(s, Projectile) for s in shots)
+def test_swings_at_fire_rate_when_held():
+    hits = _swing(steps=4, dt=0.5)  # dt == interval -> one swing per step
+    assert all(len(h) == 1 for h in hits)
 
 
-def test_projectile_aims_at_target():
-    shots = _fire(steps=1, dt=0.5)
-    assert shots[0].vel.x > 0 and shots[0].vel.y == 0
+def test_a_swing_waits_for_its_beat():
+    hits = _swing(steps=4, dt=0.25)  # half the interval: every other step
+    assert [len(h) for h in hits] == [1, 0, 1, 0]
 
 
-def test_no_fire_when_not_held():
-    assert _fire(steps=4, dt=0.5, held=False) == []
+def test_a_swing_lands_the_weapons_damage():
+    golem = Golem(pos=pygame.Vector2(60, 0), hp=999)
+    _swing(steps=1, dt=0.5, targets=[golem], weapon=WeaponTool(damage=7, fire_rate=2.0))
+    assert golem.hp == 999 - 7
 
 
-def test_no_fire_with_non_weapon_tool():
-    assert _fire(steps=4, dt=0.5, weapon=MiningTool()) == []
+def test_a_swing_hits_everything_in_front():
+    near = Golem(pos=pygame.Vector2(50, 0), hp=999)
+    wide = Golem(pos=pygame.Vector2(50, 40), hp=999)
+    hits = _swing(steps=1, dt=0.5, targets=[near, wide])
+    assert set(map(id, hits[0])) == {id(near), id(wide)}
 
 
-def test_no_fire_on_degenerate_aim():
-    timer, shots = combat.fire_weapon(
-        0.5,
-        weapon=WeaponTool(fire_rate=2.0),
-        held=True,
-        aim_world=pygame.Vector2(0, 0),
-        player_pos=pygame.Vector2(0, 0),
-        fire_timer=0.0,
-    )
-    assert shots == []
+def test_a_swing_misses_what_is_behind_or_out_of_reach():
+    behind = Golem(pos=pygame.Vector2(-60, 0), hp=999)
+    far = Golem(pos=pygame.Vector2(config.WEAPON_REACH + 200, 0), hp=999)
+    hits = _swing(steps=1, dt=0.5, targets=[behind, far])
+    assert hits == [[]]
+    assert behind.hp == far.hp == 999
+
+
+def test_a_big_target_is_hit_by_its_edge():
+    # Reach is to the body, not the centre: a boss whose middle is just past
+    # the reach but whose side is in it has been hit.
+    golem = Golem(pos=pygame.Vector2(config.WEAPON_REACH + 5, 0), hp=999)
+    assert _swing(steps=1, dt=0.5, targets=[golem])[0]
+
+
+def test_no_swing_when_not_held():
+    assert _swing(steps=4, dt=0.5, held=False) == [[], [], [], []]
+
+
+def test_no_swing_with_non_weapon_tool():
+    assert _swing(steps=4, dt=0.5, weapon=MiningTool()) == [[], [], [], []]
 
 
 def test_projectile_hits_and_kills_enemy():

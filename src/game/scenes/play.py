@@ -12,6 +12,8 @@ from pathlib import Path
 import pygame
 
 from game import config
+from game.core import controls as ctl
+from game.core.controls import Controls
 from game.core.scene import Scene
 from game.entities.beast import Beast
 from game.entities.boss import BOSS_KINDS, Boss
@@ -52,6 +54,7 @@ from game.render.floor import Floor
 from game.render.resources import resource_image, world_resource_image
 from game.render.trees import tree_image, tree_shadow
 from game.systems import (
+    aim,
     arena,
     boss_moves,
     carrying,
@@ -80,9 +83,35 @@ from game.world import biomes, chasms, ice, lava, mires, structures, temples
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
-_MOVE_KEYS = {pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d}
-# Held, not tapped, so it rides in the same set as the movement keys.
-_SPRINT_KEYS = {pygame.K_LSHIFT, pygame.K_RSHIFT}
+# Held, not tapped: these ride in the held set rather than firing on a press.
+_HELD_ACTIONS = (
+    ctl.MOVE_UP,
+    ctl.MOVE_DOWN,
+    ctl.MOVE_LEFT,
+    ctl.MOVE_RIGHT,
+    ctl.SPRINT,
+    ctl.ACTION,
+)
+_STROKE_OF = {
+    ctl.DRAW_UP: strokes.UP,
+    ctl.DRAW_DOWN: strokes.DOWN,
+    ctl.DRAW_LEFT: strokes.LEFT,
+    ctl.DRAW_RIGHT: strokes.RIGHT,
+}
+# Moving a menu cursor: either hand works, so the walking keys and the drawing
+# keys both steer it. Enter confirms as well as the action key, because a menu
+# is the one place a player reaches for it without thinking.
+_MENU_STEP = {
+    ctl.MOVE_UP: (0, -1),
+    ctl.MOVE_DOWN: (0, 1),
+    ctl.MOVE_LEFT: (-1, 0),
+    ctl.MOVE_RIGHT: (1, 0),
+    ctl.DRAW_UP: (0, -1),
+    ctl.DRAW_DOWN: (0, 1),
+    ctl.DRAW_LEFT: (-1, 0),
+    ctl.DRAW_RIGHT: (1, 0),
+}
+_CONFIRM_KEYS = {pygame.K_RETURN, pygame.K_KP_ENTER}
 
 # Korean first, since every item name is Korean; the fallbacks are only so a
 # machine without these still draws something rather than raising.
@@ -451,7 +480,11 @@ def _draw_health_bar(surface: pygame.Surface, y: int, frac: float) -> None:
 
 
 class PlayScene(Scene):
-    def __init__(self) -> None:
+    def __init__(self, controls: Controls | None = None, controls_path: Path | None = None) -> None:
+        # Which key does what. Saved only when a path is given, so a test
+        # that rebinds a key never writes the player's settings file.
+        self.controls = controls if controls is not None else Controls()
+        self.controls_path = controls_path
         self.rng = random.Random(1234)
         self.world = WorldMap.create(self.rng)
         self.temple_sites = self.world.temple_sites(self.rng)
@@ -530,8 +563,17 @@ class PlayScene(Scene):
         self._respawn_timer = 0.0
 
         self._held_keys: set[int] = set()
-        self._mouse_screen = pygame.Vector2(config.SCREEN_WIDTH / 2, config.SCREEN_HEIGHT / 2)
-        self._mouse_held = False
+        # The body is the aim: the way they last walked. Down to start with,
+        # towards the camera, so the first swing lands somewhere visible.
+        self.facing = pygame.Vector2(0, 1)
+        self._swing_left = 0.0  # how long the last sweep stays drawn
+        # Menu cursors. The belongings screen starts on the hand that is
+        # selected; the recipe list starts at the top.
+        self.grid_cursor: tuple[str, int] = (grid.HOTBAR, 0)
+        self.craft_cursor = 0
+        self.settings_open = False
+        self.settings_cursor = 0
+        self.settings_waiting = False  # the next key pressed is the new binding
 
     def _scatter_starting_shards(self) -> None:
         """Seed the pedestal's surroundings with the shards that light the core.
@@ -603,77 +645,152 @@ class PlayScene(Scene):
         return taken + self.hotbar.remove(kind, n - taken)
 
     # --- input (event-driven, no polling) --------------------------------
-    def handle_event(self, event: pygame.event.Event) -> None:
-        if event.type == pygame.KEYDOWN:
-            if event.key in _MOVE_KEYS or event.key in _SPRINT_KEYS:
-                self._held_keys.add(event.key)
-            elif event.key == pygame.K_1:
-                self.hotbar.select(0)
-            elif event.key == pygame.K_2:
-                self.hotbar.select(1)
-            elif event.key == pygame.K_3:
-                self.hotbar.select(2)
-            elif event.key == pygame.K_4:
-                self.hotbar.select(3)
-            elif event.key == pygame.K_5:
-                self.hotbar.select(4)
-            elif event.key == pygame.K_SPACE:
-                self._dodge_pressed = True
-            elif event.key == pygame.K_e:
-                self._sync_pressed = True
-            elif event.key == pygame.K_i:
-                self._toggle_grid()
-            elif event.key == pygame.K_c:
-                self._toggle_craft()
-            elif strokes.of_key(event.key) is not None:
-                # Arrow keys draw. WASD is already walking, so both hands work
-                # at once -- which is the whole reason a spell is drawn rather
-                # than picked off a list.
-                way = strokes.of_key(event.key)
-                if way is not None:
-                    self.drawing.stroke(way)
-            elif event.key == pygame.K_f:
-                self._eat_held()
-            elif event.key == pygame.K_ESCAPE and self.manager is not None:
-                self.manager.pop()
-        elif event.type == pygame.KEYUP:
-            self._held_keys.discard(event.key)
-        elif event.type == pygame.MOUSEMOTION:
-            self._mouse_screen = pygame.Vector2(event.pos)
-        elif event.type == pygame.MOUSEWHEEL:
-            # Up is in. The camera keeps the middle of the view where it is,
-            # so the ground does not lurch sideways on every notch.
-            self.camera.zoom_by(event.y)
-        elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if self.grid_open:
-                self._click_grid(pygame.Vector2(event.pos))
-                return
-            if self.craft_open:
-                self._click_craft(pygame.Vector2(event.pos))
-                return
-            if self._try_place(pygame.Vector2(event.pos)):
-                return
-            self._mouse_held = True
-        elif event.type == pygame.MOUSEBUTTONUP and event.button == 1:
-            self._mouse_held = False
+    @property
+    def _action_held(self) -> bool:
+        return self.controls.any_held(self._held_keys, ctl.ACTION)
 
-    def _eat_held(self) -> None:
+    def handle_event(self, event: pygame.event.Event) -> None:
+        if event.type == pygame.KEYUP:
+            self._held_keys.discard(event.key)
+            return
+        if event.type != pygame.KEYDOWN:
+            return  # no mouse: the whole game is played from the keyboard
+        key = event.key
+        if self.settings_open:
+            self._settings_key(key)
+            return
+        if key == ctl.SETTINGS_KEY:
+            self._open_settings()
+            return
+        if self.grid_open or self.craft_open:
+            self._menu_key(key)
+            return
+        if key == ctl.BACK_KEY:
+            if self.manager is not None:
+                self.manager.pop()
+            return
+        controls = self.controls
+        if controls.is_key(key, ctl.ACTION):
+            # A press is spent on building or eating if that is what is in
+            # hand; otherwise it is the start of holding a swing or a dig.
+            if self._try_place() or self._eat_held():
+                return
+            self._held_keys.add(key)
+            return
+        if any(controls.is_key(key, action) for action in _HELD_ACTIONS):
+            self._held_keys.add(key)
+            return
+        action = controls.action_of(key)
+        if action in ctl.SLOTS:
+            self.hotbar.select(ctl.SLOTS.index(action))
+        elif action == ctl.DODGE:
+            self._dodge_pressed = True
+        elif action == ctl.SYNC:
+            self._sync_pressed = True
+        elif action == ctl.INVENTORY:
+            self._toggle_grid()
+        elif action == ctl.CRAFT:
+            self._toggle_craft()
+        elif action == ctl.ZOOM_IN:
+            self.camera.zoom_by(1)
+        elif action == ctl.ZOOM_OUT:
+            self.camera.zoom_by(-1)
+        elif action in _STROKE_OF:
+            # The drawing keys draw. The walking keys are already walking, so
+            # both hands work at once -- which is the whole reason a spell is
+            # drawn rather than picked off a list.
+            self.drawing.stroke(_STROKE_OF[action])
+
+    def _menu_key(self, key: int) -> None:
+        """A key while the belongings or the recipe screen is up."""
+        action = self.controls.action_of(key)
+        if key == ctl.BACK_KEY:
+            self._close_menus()
+        elif action == ctl.INVENTORY:
+            self._toggle_grid()
+        elif action == ctl.CRAFT:
+            self._toggle_craft()
+        elif key in _CONFIRM_KEYS or action == ctl.ACTION:
+            if self.grid_open:
+                self._confirm_grid()
+            else:
+                self._confirm_craft()
+        elif action in _MENU_STEP:
+            dx, dy = _MENU_STEP[action]
+            if self.grid_open:
+                self._step_grid(dx, dy)
+            else:
+                self._step_craft(dy)
+        elif action in ctl.SLOTS:
+            self.hotbar.select(ctl.SLOTS.index(action))
+
+    def _close_menus(self) -> None:
+        if self.grid_open:
+            self._toggle_grid()
+        self.craft_open = False
+
+    # --- the key settings screen -----------------------------------------
+    def _open_settings(self) -> None:
+        self._close_menus()
+        self.settings_open = True
+        self.settings_cursor = 0
+        self.settings_waiting = False
+        # Whatever was held would stay held otherwise, and walk on by itself
+        # once the screen closes, because its key-up went to the menu.
+        self._held_keys.clear()
+
+    def _settings_key(self, key: int) -> None:
+        rows = len(ctl.ACTIONS) + 1  # the last row puts everything back
+        if self.settings_waiting:
+            self.settings_waiting = False
+            if key == ctl.BACK_KEY:
+                return  # cancelled, nothing changed
+            if self.controls.rebind(ctl.ACTIONS[self.settings_cursor], key):
+                self._save_controls()
+            else:
+                self._say(f"{ctl.key_label(key)} 키는 쓸 수 없다")
+            return
+        controls = self.controls
+        if key in (ctl.BACK_KEY, ctl.SETTINGS_KEY):
+            self.settings_open = False
+        elif key == pygame.K_UP or controls.is_key(key, ctl.MOVE_UP):
+            self.settings_cursor = (self.settings_cursor - 1) % rows
+        elif key == pygame.K_DOWN or controls.is_key(key, ctl.MOVE_DOWN):
+            self.settings_cursor = (self.settings_cursor + 1) % rows
+        elif key in _CONFIRM_KEYS or controls.is_key(key, ctl.ACTION):
+            if self.settings_cursor == len(ctl.ACTIONS):
+                controls.reset()
+                self._save_controls()
+            else:
+                self.settings_waiting = True
+
+    def _save_controls(self) -> None:
+        if self.controls_path is None:
+            return
+        try:
+            self.controls.save(self.controls_path)
+        except OSError:
+            self._say("키 설정을 저장하지 못했다")
+
+    def _eat_held(self) -> bool:
         """Use up whatever is in hand, if it is food.
 
         Refused on a full tank rather than spent for nothing: a stack quietly
-        eaten to no effect is worse than the key doing nothing.
+        eaten to no effect is worse than the key doing nothing. Returns True
+        whenever the hand held food, so the same press does not also swing.
         """
         held = self.hotbar.active_stack
         if held is None:
-            return
+            return False
         kind = held.kind
         if kind not in consume.EDIBLE:
-            return
+            return False
         if not consume.eat(kind, self.player):
             self._say(f"{kind.name} — 지금은 필요 없다")
-            return
+            return True
         self._spend(kind, 1)
         self._say(f"{kind.name}{_object_particle(kind.name)} 먹었다")
+        return True
 
     @property
     def on_ice(self) -> bool:
@@ -709,17 +826,18 @@ class PlayScene(Scene):
 
     @property
     def sprinting(self) -> bool:
-        return bool(self._held_keys & _SPRINT_KEYS)
+        return self.controls.any_held(self._held_keys, ctl.SPRINT)
 
     def _move_dir(self) -> pygame.Vector2:
+        held, controls = self._held_keys, self.controls
         direction = pygame.Vector2(0, 0)
-        if pygame.K_w in self._held_keys:
+        if controls.any_held(held, ctl.MOVE_UP):
             direction.y -= 1
-        if pygame.K_s in self._held_keys:
+        if controls.any_held(held, ctl.MOVE_DOWN):
             direction.y += 1
-        if pygame.K_a in self._held_keys:
+        if controls.any_held(held, ctl.MOVE_LEFT):
             direction.x -= 1
-        if pygame.K_d in self._held_keys:
+        if controls.any_held(held, ctl.MOVE_RIGHT):
             direction.x += 1
         return direction
 
@@ -741,7 +859,8 @@ class PlayScene(Scene):
         for station in self.stations:
             station.update(dt)
 
-        if self.grid_open or self.craft_open:
+        self._swing_left = max(0.0, self._swing_left - dt)
+        if self.grid_open or self.craft_open or self.settings_open:
             return  # the world waits while a screen is open
 
         down = self._respawn_timer > 0
@@ -828,37 +947,29 @@ class PlayScene(Scene):
 
     def _update_living(self, dt: float, dodge: bool, sync: bool) -> None:
         """The half of a step that only happens while the player is on their feet."""
-        self.player.update(
-            dt, self._move_dir(), self.world, dodge, self.sprinting, slippery=self.on_ice
-        )
-        aim_world = self.camera.screen_to_world(self._mouse_screen)
+        move = self._move_dir()
+        self.player.update(dt, move, self.world, dodge, self.sprinting, slippery=self.on_ice)
+        self.facing = aim.face(move, self.facing)
 
         tool = self.hotbar.active_tool
         _, mined = mining.update_mining(
             dt,
             active_tool=tool,
-            held=self._mouse_held,
-            aim_world=aim_world,
+            held=self._action_held,
+            facing=self.facing,
             player_pos=self.player.pos,
             fragments=self.fragments,
             backpack=self.backpack,
             hotbar=self.hotbar,
             player=self.player,
         )
-        self._wear_if_pack(mined)
-        # Magic is drawn, not clicked, so the mouse always means the weapon --
-        # and the staff always cools, slung or in hand: put away to swing
-        # something else, it should not come back out as hot as it went in.
+        for kind in mined:
+            self._wear_if_pack(kind)
+        # Magic is drawn, not pressed, so the action key always means the
+        # weapon -- and the staff always cools, slung or in hand: put away to
+        # swing something else, it should not come back out as hot as it went in.
         self._cast_drawn(dt)
-        self._fire_timer, shots = combat.fire_weapon(
-            dt,
-            weapon=tool,
-            held=self._mouse_held,
-            aim_world=aim_world,
-            player_pos=self.player.pos,
-            fire_timer=self._fire_timer,
-        )
-        self.projectiles.extend(shots)
+        self._swing(dt, tool)
         survival.update_regen(dt, self.player, self.core)
         survival.update_mire(
             dt, self.player, self.mires, moving=self._move_dir().length_squared() > 0
@@ -929,6 +1040,7 @@ class PlayScene(Scene):
         self._draw_detector(surface)
         self._draw_grid(surface)
         self._draw_craft(surface)
+        self._draw_settings(surface)
 
     def _field_surface(self, surface: pygame.Surface) -> pygame.Surface:
         """The surface the world is drawn onto, kept between frames.
@@ -992,17 +1104,94 @@ class PlayScene(Scene):
         self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
         at = self.camera.world_to_screen(self.player.pos)
+        self._draw_swing(surface, at)
         pygame.draw.circle(surface, config.PLAYER_COLOR, at, self.player.radius)
+        self._draw_facing(surface, at)
         if self.player.shocked:
             # Shown on the body rather than in the corner: what it takes away
             # is the dodge, and the dodge is pressed while looking here.
             pygame.draw.circle(surface, config.SHOCK_COLOR, at, self.player.radius + 5, 2)
+
+    def _draw_facing(self, surface: pygame.Surface, at: pygame.Vector2) -> None:
+        """A small wedge on the body's rim, pointing where a swing will go."""
+        if self.facing.length_squared() == 0:
+            return
+        ahead = self.facing.normalize()
+        side = pygame.Vector2(-ahead.y, ahead.x)
+        tip = at + ahead * (self.player.radius + 7)
+        base = at + ahead * (self.player.radius + 1)
+        pygame.draw.polygon(surface, config.WHITE, [tip, base + side * 5, base - side * 5])
+
+    def _draw_swing(self, surface: pygame.Surface, at: pygame.Vector2) -> None:
+        """The fan the last swing swept, for a blink after it went round.
+
+        Without it a swing that hit nothing looks like the key did nothing,
+        and the player cannot learn how wide the fan is.
+        """
+        if self._swing_left <= 0 or self.facing.length_squared() == 0:
+            return
+        tool = self.hotbar.active_tool
+        reach = tool.reach if isinstance(tool, WeaponTool) else config.WEAPON_REACH
+        heading = math.atan2(self.facing.y, self.facing.x)
+        half = math.radians(config.AIM_HALF_ANGLE)
+        points = [pygame.Vector2(at)]
+        for i in range(13):
+            angle = heading - half + 2 * half * i / 12
+            points.append(at + pygame.Vector2(math.cos(angle), math.sin(angle)) * reach)
+        fade = self._swing_left / config.SWING_FLASH
+        layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        pygame.draw.polygon(layer, (255, 255, 255, int(70 * fade)), points)
+        pygame.draw.lines(layer, (255, 255, 255, int(160 * fade)), False, points[1:], 2)
+        surface.blit(layer, (0, 0))
+
+    def _draw_settings(self, surface: pygame.Surface) -> None:
+        """The key list: what each does, and what it is bound to now."""
+        if not self.settings_open:
+            return
+        overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        overlay.fill((0, 0, 0, 170))
+        surface.blit(overlay, (0, 0))
+        row_h = 20
+        rows = len(ctl.ACTIONS) + 1
+        panel = pygame.Rect(0, 0, 440, rows * row_h + 64)
+        panel.center = (surface.get_width() // 2, surface.get_height() // 2)
+        pygame.draw.rect(surface, config.GRID_PANEL, panel, border_radius=6)
+        title = _font(15).render("키 설정", True, config.WHITE)
+        surface.blit(title, (panel.left + 14, panel.top + 10))
+        hint = (
+            "새 키를 누르세요 · Esc 취소"
+            if self.settings_waiting
+            else "↑↓ 고르기 · Enter 바꾸기 · Esc 닫기"
+        )
+        tip = _font(12).render(hint, True, (170, 170, 185))
+        surface.blit(tip, (panel.right - tip.get_width() - 14, panel.top + 13))
+        top = panel.top + 40
+        for index in range(rows):
+            rect = pygame.Rect(panel.left + 10, top + index * row_h, panel.width - 20, row_h - 2)
+            chosen = index == self.settings_cursor
+            if chosen:
+                pygame.draw.rect(surface, (64, 64, 84), rect, border_radius=3)
+            if index == len(ctl.ACTIONS):
+                label = _font(13).render("기본값으로 되돌리기", True, config.WHITE)
+                surface.blit(label, (rect.left + 6, rect.top + 2))
+                continue
+            action = ctl.ACTIONS[index]
+            label = _font(13).render(ctl.LABELS[action], True, config.WHITE)
+            surface.blit(label, (rect.left + 6, rect.top + 2))
+            if chosen and self.settings_waiting:
+                bound, ink = "...", config.LOOT_COLOR
+            else:
+                bound = " / ".join(ctl.key_label(k) for k in self.controls.keys_for(action))
+                ink = (200, 200, 215)
+            keys = _font(13).render(bound, True, ink)
+            surface.blit(keys, (rect.right - keys.get_width() - 6, rect.top + 2))
 
     # --- the belongings screen -------------------------------------------
     def _toggle_grid(self) -> None:
         self.grid_open = not self.grid_open
         if self.grid_open:
             self.craft_open = False  # one screen at a time
+            self.grid_cursor = (grid.HOTBAR, self.hotbar.selected)
         else:
             self.grid.close(self.backpack, self.hotbar)
 
@@ -1010,6 +1199,7 @@ class PlayScene(Scene):
     def _toggle_craft(self) -> None:
         self.craft_open = not self.craft_open
         if self.craft_open:
+            self.craft_cursor = 0
             if self.grid_open:
                 self.grid.close(self.backpack, self.hotbar)
             self.grid_open = False
@@ -1052,19 +1242,39 @@ class PlayScene(Scene):
         thrown = self.staff.fire(glyph)
         if thrown is None:
             return
-        aim = self.camera.screen_to_world(self._mouse_screen) - self.player.pos
-        if aim.length_squared() == 0:
+        if self.facing.length_squared() == 0:
             return
         self.projectiles.append(
             Projectile(
                 pos=pygame.Vector2(self.player.pos),
-                vel=aim.normalize() * config.PROJECTILE_SPEED,
+                vel=self.facing.normalize() * config.PROJECTILE_SPEED,
                 damage=self.staff.power_of(thrown),
                 radius=config.PROJECTILE_RADIUS,
                 ttl=self.staff.range_of(),
                 gimmick=thrown.gimmick if thrown.tier == glyph_table.SUPREME else None,
             )
         )
+
+    def _swing(self, dt: float, tool: object | None) -> None:
+        """Sweep the weapon through the fan in front, on its own beat."""
+        targets: list[combat.Hurtable] = [*self.enemies, *self.beasts, *self._breakables()]
+        if self.boss is not None:
+            targets.insert(0, self.boss)
+        before = self._fire_timer
+        self._fire_timer, hit = combat.swing_weapon(
+            dt,
+            weapon=tool,
+            held=self._action_held,
+            facing=self.facing,
+            player_pos=self.player.pos,
+            fire_timer=self._fire_timer,
+            targets=targets,
+        )
+        if self._fire_timer > before:  # a swing went round, hit or miss
+            self._swing_left = config.SWING_FLASH
+        if any(target.is_dead for target in hit):
+            # Beasts are cleared (and drop their makings) by update_beasts.
+            self.enemies[:] = [e for e in self.enemies if not e.is_dead]
 
     def _craft_rows(self) -> list[tuple[Recipe, bool]]:
         """What is offered where the player is standing, affordable first.
@@ -1093,19 +1303,24 @@ class PlayScene(Scene):
             config.CRAFT_ROW_HEIGHT - 2,
         )
 
-    def _click_craft(self, where: pygame.Vector2) -> None:
-        for index, (recipe, afford) in enumerate(self._craft_rows()):
-            if index >= config.CRAFT_ROWS_VISIBLE:
-                break
-            if not self._craft_row_rect(index).collidepoint(where):
-                continue
-            if not afford:
-                return
-            if recipe.seconds > 0:
-                self._start_job(recipe)
-            else:
-                crafting.craft(recipe, self.backpack, self.hotbar)
+    def _step_craft(self, dy: int) -> None:
+        shown = min(len(self._craft_rows()), config.CRAFT_ROWS_VISIBLE)
+        if shown:
+            self.craft_cursor = (self.craft_cursor + dy) % shown
+
+    def _confirm_craft(self) -> None:
+        """Make the recipe under the cursor, if it can be afforded."""
+        rows = self._craft_rows()[: config.CRAFT_ROWS_VISIBLE]
+        if not rows:
             return
+        self.craft_cursor = min(self.craft_cursor, len(rows) - 1)
+        recipe, afford = rows[self.craft_cursor]
+        if not afford:
+            return
+        if recipe.seconds > 0:
+            self._start_job(recipe)
+        else:
+            crafting.craft(recipe, self.backpack, self.hotbar)
 
     def _start_job(self, recipe: Recipe) -> None:
         """Hand a timed recipe to a station in reach that can take it."""
@@ -1134,6 +1349,8 @@ class PlayScene(Scene):
                 break
             rect = self._craft_row_rect(index)
             pygame.draw.rect(surface, (48, 48, 62), rect, border_radius=3)
+            if index == self.craft_cursor:
+                pygame.draw.rect(surface, config.WHITE, rect, 2, border_radius=3)
             swatch = pygame.Rect(rect.left + 4, rect.top + 4, 16, rect.height - 8)
             # Dim when it cannot be made, so "what can I do now" reads at a glance.
             colour = recipe.output.color if afford else tuple(c // 3 for c in recipe.output.color)
@@ -1166,21 +1383,47 @@ class PlayScene(Scene):
         x, y = self._grid_origin()
         return pygame.Rect(x + col * step, y + row * step, config.GRID_CELL, config.GRID_CELL)
 
-    def _click_grid(self, where: pygame.Vector2) -> None:
-        """Turn a screen point into a slot and hand it to the pure Grid."""
-        rows = self._pack_rows()
-        for row in range(rows):
-            for col in range(config.GRID_COLS):
-                index = row * config.GRID_COLS + col
-                if self.backpack is not None and index >= self.backpack.size:
-                    break
-                if self._cell_rect(row, col).collidepoint(where):
-                    self.grid.click(grid.PACK, index, self.backpack, self.hotbar)
-                    return
-        for col in range(len(self.hotbar.slots)):
-            if self._cell_rect(rows + 1, col).collidepoint(where):  # +1 leaves a gap
-                self.grid.click(grid.HOTBAR, col, self.backpack, self.hotbar)
-                return
+    def _confirm_grid(self) -> None:
+        """Pick up or put down at the cursor -- the pure Grid does the rest."""
+        where, index = self.grid_cursor
+        self.grid.click(where, index, self.backpack, self.hotbar)
+
+    def _step_grid(self, dx: int, dy: int) -> None:
+        """Move the cursor a cell, stepping between the pack and the hotbar.
+
+        The pack sits above the hotbar, so walking off the bottom of the pack
+        lands on the hotbar and walking off its top climbs back into the pack.
+        Left and right wrap round within a row.
+        """
+        where, index = self.grid_cursor
+        cols = config.GRID_COLS
+        size = self.backpack.size if self.backpack is not None else 0
+        belt = len(self.hotbar.slots)
+        if where == grid.HOTBAR:
+            if dx:
+                self.grid_cursor = (grid.HOTBAR, (index + dx) % belt)
+            elif dy < 0 and size:
+                last_row = (size - 1) // cols
+                self.grid_cursor = (grid.PACK, min(last_row * cols + index, size - 1))
+            return
+        row, col = divmod(index, cols)
+        if dx:
+            row_len = min(cols, size - row * cols)
+            self.grid_cursor = (grid.PACK, row * cols + (col + dx) % row_len)
+        elif dy > 0:
+            below = index + cols
+            if below < size:
+                self.grid_cursor = (grid.PACK, below)
+            else:
+                self.grid_cursor = (grid.HOTBAR, min(col, belt - 1))
+        elif dy < 0 and row > 0:
+            self.grid_cursor = (grid.PACK, index - cols)
+
+    def _cursor_rect(self) -> pygame.Rect:
+        where, index = self.grid_cursor
+        if where == grid.HOTBAR:
+            return self._cell_rect(self._pack_rows() + 1, index)  # +1 leaves a gap
+        return self._cell_rect(*divmod(index, config.GRID_COLS))
 
     def _draw_grid(self, surface: pygame.Surface) -> None:
         """The pack above, the hotbar below, and whatever is in hand on top."""
@@ -1217,7 +1460,7 @@ class PlayScene(Scene):
                 rect = self._cell_rect(row, col)
                 slot = self.backpack.slots[index]
                 self._draw_cell(surface, rect, slot)
-                if slot is not None and rect.collidepoint(self._mouse_screen):
+                if self.grid_cursor == (grid.PACK, index):
                     hovered = slot
         # The hotbar holds tools as well as stacks, so its slots are wider than
         # the pack's. Named apart rather than reusing the loop above's, which
@@ -1225,24 +1468,28 @@ class PlayScene(Scene):
         for col, belt_slot in enumerate(self.hotbar.slots):
             rect = self._cell_rect(rows + 1, col)
             self._draw_cell(surface, rect, belt_slot, selected=col == self.hotbar.selected)
-            if belt_slot is not None and rect.collidepoint(self._mouse_screen):
+            if self.grid_cursor == (grid.HOTBAR, col):
                 hovered = belt_slot
 
+        cursor = self._cursor_rect()
+        pygame.draw.rect(surface, config.WHITE, cursor.inflate(6, 6), 2, border_radius=4)
         held = self.grid.held
         if held is not None:
+            # Lifted up and to the side of the cursor, so what is under it
+            # still shows.
             at = pygame.Rect(0, 0, config.GRID_CELL - 10, config.GRID_CELL - 10)
-            at.center = (int(self._mouse_screen.x), int(self._mouse_screen.y))
+            at.center = (cursor.right - 6, cursor.top + 6)
             self._draw_contents(surface, at, held)
         elif hovered is not None:
-            self._draw_item_tooltip(surface, hovered)
+            self._draw_item_tooltip(surface, hovered, cursor)
 
-    def _draw_item_tooltip(self, surface: pygame.Surface, slot: object) -> None:
+    def _draw_item_tooltip(self, surface: pygame.Surface, slot: object, cell: pygame.Rect) -> None:
         name = slot.kind.name if isinstance(slot, Stack) else getattr(slot, "name", "")
         if not name:
             return
         image = _ui_asset("item_tooltip.png")
-        left = min(int(self._mouse_screen.x) + 18, surface.get_width() - image.get_width() - 8)
-        top = min(int(self._mouse_screen.y) + 18, surface.get_height() - image.get_height() - 8)
+        left = min(cell.centerx + 18, surface.get_width() - image.get_width() - 8)
+        top = min(cell.bottom + 6, surface.get_height() - image.get_height() - 8)
         left, top = max(8, left), max(8, top)
         surface.blit(image, (left, top))
         label = name if not isinstance(slot, Stack) else f"{name}  x{slot.count}"
@@ -1314,18 +1561,23 @@ class PlayScene(Scene):
                 if left:
                     station.output.add(kind, left)  # no room: leave it in there
 
-    def _try_place(self, where: pygame.Vector2) -> bool:
-        """Put down the selected station item, if that is what is held.
+    def _place_spot(self) -> pygame.Vector2:
+        """Where a station would go: just clear of the player, in front."""
+        gap = self.player.radius + config.STATION_RADIUS + 4
+        return aim.ahead(self.player.pos, self.facing, gap)
 
-        Returns True when the click was spent on building, so the same press
+    def _try_place(self) -> bool:
+        """Put down the selected station item in front, if that is what is held.
+
+        Returns True when the press was spent on building, so the same press
         does not also start swinging a tool at whatever is underneath.
         """
         held = self.hotbar.active_stack
         if held is None or held.kind not in STATION_OF:
             return False
-        at = self.camera.screen_to_world(where)
-        if not place(held.kind, at, self.stations, self.core):
-            return True  # the click was a build attempt; it simply failed
+        if not place(held.kind, self._place_spot(), self.stations, self.core):
+            self._say("여기에는 놓을 수 없다")
+            return True  # the press was a build attempt; it simply failed
         self.hotbar.remove(held.kind, 1)
         return True
 
@@ -1357,16 +1609,12 @@ class PlayScene(Scene):
         """
         # An empty hand still reaches for litter, so it gets a reach too.
         tool = self.hotbar.active_tool or BARE_HAND
-        aimed = (
-            mining.pick_target(
-                self.camera.screen_to_world(self._mouse_screen),
-                self.player.pos,
-                self.fragments,
-                tool.range,
-            )
+        in_reach = (
+            mining.targets(self.facing, self.player.pos, self.fragments, tool.range)
             if isinstance(tool, MiningTool)
-            else None
+            else []
         )
+        aimed = {id(node) for node in in_reach}
         for node in sorted(self.fragments, key=lambda fragment: fragment.pos.y):
             at = self.camera.world_to_screen(node.pos)
             tree = tree_image(node.kind)
@@ -1387,7 +1635,7 @@ class PlayScene(Scene):
             if held is not node.kind:
                 pygame.draw.circle(surface, held.color, at, config.FRAGMENT_RADIUS * 0.45)
                 pygame.draw.circle(surface, config.OBSIDIAN_GLINT, at, config.FRAGMENT_RADIUS * 0.2)
-            if node is aimed:
+            if id(node) in aimed:
                 usable = mining.can_take(tool, node.kind)
                 ring = config.WHITE if usable else config.BLOCKED_COLOR
                 radius = (
