@@ -11,7 +11,9 @@ asset's details on the right. Files that share a name (``tree.aseprite`` and
 - Right-click for open / show in Explorer / copy path / delete.
 - Arrows move, Ctrl+A selects all shown, Delete sends to the Recycle Bin,
   Ctrl+F searches, Esc clears, F5 reloads. The list also reloads by itself
-  when files change on disk.
+  the moment files change on disk, and a newly saved asset is selected.
+- The left list is fixed categories (타일 / 나무 / 아이템 / 엔티티 / UI / 기타),
+  not folders; ``categorize`` says which file goes where.
 
 Badges: ASE / PNG / WEBP say which files exist. "갱신 필요" means the
 exported image no longer matches the Aseprite source's first frame, so the
@@ -58,6 +60,98 @@ SORTS = {
 }
 FILTERS = ("전체", "갱신 필요", "Aseprite 원본만", "이미지만 (원본 없음)", "게임에서 사용")
 
+# --- categories -----------------------------------------------------------------
+# The left-hand list is not the folders on disk but these fixed categories, in
+# this order. A row is the "/"-joined labels from the top, so "엔티티/골렘/늪지".
+# An asset that matches a category but none of its children (a snowfield tile,
+# a working file under trees/) sits on the parent row itself.
+BIOME_LABELS = ("초원", "사막", "불탄 숲", "바람 고원", "늪지")
+ITEM_LABELS = ("도구", "광석", "주괴", "기타")
+Node = tuple[str, tuple["Node", ...]]  # a label and the rows under it
+CATEGORY_TREE: tuple[Node, ...] = (
+    ("타일", tuple((b, ()) for b in BIOME_LABELS)),
+    ("나무", tuple((b, ()) for b in BIOME_LABELS)),
+    ("아이템", tuple((i, ()) for i in ITEM_LABELS)),
+    ("엔티티", (("동물", ()), ("골렘", tuple((b, ()) for b in BIOME_LABELS)))),
+    ("UI", ()),
+    ("기타", ()),
+)
+# Folder and file name words that name a biome. Snowfield has no row of its
+# own, so it is deliberately absent and its art lands on the parent row.
+BIOME_WORDS = {
+    "grassland": "초원",
+    "desert": "사막",
+    "wasteland": "사막",
+    "burnt-forest": "불탄 숲",
+    "burnt_forest": "불탄 숲",
+    "wind_plateau": "바람 고원",
+    "wind": "바람 고원",
+    "bog": "늪지",
+}
+TILE_ROOTS = {"grassland", "desert", "burnt-forest", "wind_plateau", "bog", "snowfield", "temple"}
+
+
+def _biome_of(parts: tuple[str, ...], name: str) -> str | None:
+    """The biome named by a folder on the way, else by the start of the name."""
+    for part in parts:
+        if part in BIOME_WORDS:
+            return BIOME_WORDS[part]
+    for word, label in BIOME_WORDS.items():
+        if name == word or name.startswith(word + "_"):
+            return label
+    return None
+
+
+def _item_kind(name: str) -> str:
+    if name.endswith(("_axe", "_pick", "_detector")) or name == "staff":
+        return "도구"
+    if name.endswith("_ore") or name == "stone" or name.endswith("_stone"):
+        return "광석"
+    if name.endswith("_ingot"):
+        return "주괴"
+    return "기타"
+
+
+def categorize(rel: str) -> str:
+    """Which row of the category list an asset (path under assets/, no
+    extension) belongs on. New art lands in the right place by where it is
+    saved: ``<biome>/tiles32/``, ``trees/<biome>``, ``resources/items/``,
+    ``entities/animals/``, ``entities/golems/<biome>/`` (or ``<biome>_golem``),
+    ``ui/``. Anything else is 기타."""
+    parts = tuple(p.casefold() for p in rel.split("/"))
+    folders, name = parts[:-1], parts[-1]
+    top = folders[0] if folders else ""
+    if top == "ui":
+        return "UI"
+    if top == "entities":
+        if "golem" in name or any("golem" in p for p in folders):
+            biome = _biome_of(folders[1:], name)
+            return f"엔티티/골렘/{biome}" if biome else "엔티티/골렘"
+        return "엔티티/동물"
+    if top == "trees" or "tree" in name:
+        biome = _biome_of(folders[1:], name) if top == "trees" else _biome_of(folders, name)
+        return f"나무/{biome}" if biome else "나무"
+    if top == "resources":
+        return f"아이템/{_item_kind(name)}"
+    if top in TILE_ROOTS and "tiles32" in folders:
+        biome = _biome_of(folders, name)
+        return f"타일/{biome}" if biome else "타일"
+    return "기타"
+
+
+def category_rows() -> list[tuple[str, int]]:
+    """Every row of the fixed list, top to bottom: its path and its depth."""
+    rows: list[tuple[str, int]] = []
+
+    def walk(prefix: str, nodes: tuple[Node, ...], depth: int) -> None:
+        for label, kids in nodes:
+            path = f"{prefix}/{label}" if prefix else label
+            rows.append((path, depth))
+            walk(path, kids, depth + 1)
+
+    walk("", CATEGORY_TREE, 1)
+    return rows
+
 
 # --- data ---------------------------------------------------------------------
 
@@ -87,6 +181,10 @@ class Asset:
     @property
     def rel(self) -> str:
         return self.key.relative_to(ROOT).as_posix()
+
+    @property
+    def category(self) -> str:
+        return categorize(self.rel)
 
     @property
     def mtime(self) -> float:
@@ -184,6 +282,44 @@ def signature() -> tuple[tuple[str, float], ...]:
             with contextlib.suppress(OSError):
                 marks.append((str(path), path.stat().st_mtime))
     return tuple(sorted(marks))
+
+
+class FolderWatch:
+    """Tells the library the moment anything under assets/ is created, renamed,
+    deleted or saved -- so a new sprite shows up as soon as Aseprite writes it,
+    not on the next 3-second check. Windows' change notification does the
+    waiting on a background thread; the window only reads a timestamp."""
+
+    FLAGS = 0x1 | 0x2 | 0x10  # file name, folder name, last write
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.last_change = 0.0  # monotonic time of the latest notice; 0 = none
+        if os.name == "nt":
+            threading.Thread(target=self._work, daemon=True).start()
+
+    def _work(self) -> None:
+        kernel = ctypes.windll.kernel32
+        kernel.FindFirstChangeNotificationW.restype = wintypes.HANDLE
+        handle = kernel.FindFirstChangeNotificationW(str(self.root), True, self.FLAGS)
+        if handle in (None, wintypes.HANDLE(-1).value):
+            return  # the 3-second check still covers it
+        try:
+            while kernel.WaitForSingleObject(handle, 0xFFFFFFFF) == 0:
+                self.last_change = time.monotonic()
+                if not kernel.FindNextChangeNotification(handle):
+                    return
+        finally:
+            kernel.FindCloseChangeNotification(handle)
+
+    def settled(self, quiet: float = 0.25) -> bool:
+        """A change arrived and nothing more for ``quiet`` seconds: a save that
+        writes the source and then its PNG is read once, after both."""
+        changed = self.last_change
+        if changed and time.monotonic() - changed >= quiet:
+            self.last_change = 0.0 if self.last_change == changed else self.last_change
+            return True
+        return False
 
 
 def recycle_file(path: Path) -> None:
@@ -442,6 +578,7 @@ class Gallery:
         self.window = window
         self.ui = window.winfo_fpixels("1i") / 96  # 1.0 at 100% Windows scaling
         self.loader = Loader()
+        self.folder_watch = FolderWatch(ROOT)
         self.assets: list[Asset] = []
         self.shown: list[Asset] = []
         self.images: dict[tuple[str, float], Image.Image | str] = {}
@@ -455,7 +592,8 @@ class Gallery:
         self.hover: int | None = None
         self.side_hover: int | None = None
         self.folder = ALL
-        self.expanded: set[str] = {ALL}
+        # The top level starts open; the rows below it start folded.
+        self.expanded: set[str] = {ALL} | {label for label, _ in CATEGORY_TREE}
         self.counts: dict[str, int] = {}
         self.rows: list[tuple[str, int, bool]] = []  # folder path, depth, has children
         self.filter = FILTERS[0]
@@ -855,22 +993,15 @@ class Gallery:
 
     # --- the folder list ------------------------------------------------------------
     def _build_rows(self) -> None:
-        children: dict[str, list[str]] = {}
-        for path in self.counts:
-            if path == ALL:
-                continue
-            parent = path.rpartition("/")[0] or ALL
-            children.setdefault(parent, []).append(path)
-        rows: list[tuple[str, int, bool]] = []
-
-        def walk(path: str, depth: int) -> None:
-            kids = sorted(children.get(path, []))
-            rows.append((path, depth, bool(kids)))
-            if path in self.expanded:
-                for kid in kids:
-                    walk(kid, depth + 1)
-
-        walk(ALL, 0)
+        """The fixed category list, minus the rows under a collapsed parent."""
+        every = category_rows()
+        parents = {path.rpartition("/")[0] for path, _ in every}
+        rows: list[tuple[str, int, bool]] = [(ALL, 0, True)]
+        if ALL in self.expanded:
+            for path, depth in every:
+                above = path.split("/")[:-1]
+                if all("/".join(above[: i + 1]) in self.expanded for i in range(len(above))):
+                    rows.append((path, depth, path in parents))
         self.rows = rows
 
     def _side_geometry(self) -> tuple[int, int]:
@@ -937,7 +1068,7 @@ class Gallery:
             self.px(22),
             self.px(28),
             anchor="w",
-            text="폴더",
+            text="분류",
             fill=TEXT,
             font=self.font(12, "bold"),
             tags="content",
@@ -982,6 +1113,7 @@ class Gallery:
 
     # --- data -----------------------------------------------------------------
     def reload(self) -> None:
+        before = {a.key for a in self.assets}
         self.assets = collect()
         self.last_signature = signature()
         stamps = {a.stamp for a in self.assets}
@@ -999,15 +1131,34 @@ class Gallery:
                 self.loader.compare(pair)
         counts: dict[str, int] = {ALL: len(self.assets)}
         for asset in self.assets:
-            parts = asset.folder.split("/") if asset.folder else []
+            parts = asset.category.split("/")
             for depth in range(1, len(parts) + 1):
                 path = "/".join(parts[:depth])
                 counts[path] = counts.get(path, 0) + 1
         self.counts = counts
-        if self.folder not in counts:
-            self.folder = ALL
-        if self.expanded == {ALL}:
-            self.expanded |= {p for p in counts if "/" not in p}  # top level open
+        self._build_rows()
+        self._refilter(keep_scroll=True)
+        added = [a for a in self.assets if a.key not in before]
+        if before and added:
+            self._point_at(max(added, key=lambda a: a.mtime), len(added))
+
+    def _point_at(self, asset: Asset, count: int) -> None:
+        """Select a freshly saved asset, open its category and scroll to it."""
+        parts = asset.category.split("/")
+        self.expanded |= {"/".join(parts[: i + 1]) for i in range(len(parts) - 1)}
+        self._build_rows()
+        index = {a.key: i for i, a in enumerate(self.shown)}.get(asset.key)
+        if index is not None:
+            self.selected = {asset.key}
+            self.focus = self.anchor = index
+            self._measure_grid()
+            self._ensure_visible(index)
+            self._after_selection()
+        more = f" 외 {count - 1}개" if count > 1 else ""
+        self._say(f"새 에셋: {asset.name}{more}  →  {asset.category.replace('/', ' › ')}")
+        self.draw_side()
+
+    def _rest_of_reload(self) -> None:
         self._build_rows()
         self._refilter(keep_scroll=True)
 
@@ -1017,7 +1168,8 @@ class Gallery:
         mode = self.filter
         out = []
         for asset in self.assets:
-            if folder and not (asset.folder == folder or asset.folder.startswith(folder + "/")):
+            where = asset.category
+            if folder and not (where == folder or where.startswith(folder + "/")):
                 continue
             if text and text not in asset.rel.casefold():
                 continue
@@ -1733,6 +1885,8 @@ class Gallery:
             if self.filter == "갱신 필요":
                 self._refilter(keep_scroll=True)
             self.draw_bottom()
+        if self.folder_watch.settled() and signature() != self.last_signature:
+            self.reload()
         if arrived or compared:
             self._schedule_draw()
             focus = self._focused()
