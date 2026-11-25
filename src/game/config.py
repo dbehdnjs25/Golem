@@ -324,10 +324,17 @@ DUNGEON_BRANCH_EXTRA: Final[int] = 2  # how much further a branch may run
 ROOM_WIDTH: Final[float] = 1600.0
 ROOM_HEIGHT: Final[float] = 900.0
 DOOR_WIDTH: Final[float] = 150.0
+ROOM_WALL: Final[float] = 36.0  # how thick the walls are drawn and held at
+# How far inside a room a body lands when it comes through a door. Right on
+# the threshold, the next step reads as walking straight back out again.
+DOOR_STEP: Final[float] = 90.0
+ROOM_GUARD_RING: Final[float] = 0.28  # share of the room they are scattered over
 # A tenth of the chests hold a drawing; the rest hold what the biome is made
 # of. Rare enough that finding one is an event, common enough that opening
 # chests is never pointless.
 CHEST_GLYPH_CHANCE: Final[float] = 0.10
+CHEST_SPOIL_MIN: Final[int] = 3
+CHEST_SPOIL_MAX: Final[int] = 8
 
 # --- Arenas ---------------------------------------------------------------
 # What the floor becomes when a boss is called. Each biome lays its own, so
@@ -359,6 +366,10 @@ TEMPLE_WALL: Final[tuple[int, int, int]] = (164, 158, 176)
 # without having to walk to the edge and find out.
 TEMPLE_SEALED: Final[tuple[int, int, int]] = (214, 92, 84)
 TEMPLE_DOOR: Final[tuple[int, int, int]] = (120, 255, 180)
+# A door that will not open, and the one that only the key opens. Read from
+# across the room, before walking into it.
+DOOR_SHUT: Final[tuple[int, int, int]] = (150, 70, 70)
+DOOR_BOSS: Final[tuple[int, int, int]] = (236, 196, 96)
 CHEST_COLOR: Final[tuple[int, int, int]] = (196, 152, 92)
 ALTAR_COLOR: Final[tuple[int, int, int]] = (235, 210, 120)
 ALTAR_SPENT: Final[tuple[int, int, int]] = (110, 104, 96)

@@ -15,15 +15,21 @@ from game.world import biomes
 
 
 def _ready(index: int = 0) -> tuple[PlayScene, object]:
-    """A scene standing at a temple's altar, guards already seen to."""
+    """A scene standing over the sleeping thing in a temple's last room.
+
+    Walked straight to it rather than through the building: what thirteen
+    rooms and a locked door do is tests/test_dungeon_in_play's business, and
+    this is about what happens once the boss opens its eyes.
+    """
     scene = PlayScene()
     scene.core.ignite()
     temple = scene.temples[index]
-    temple.guards_down = True
+    place = temple.interior()
+    place.at = place.boss_room.index
     scene.player.pos.update(temple.pos + pygame.Vector2(temple.radius * 0.6, 0))
-    scene.update(config.FIXED_DT)  # walking in draws the room
-    assert temple.layout is not None
-    scene.player.pos.update(temple.layout.altar)
+    scene.update(config.FIXED_DT)  # walking in puts them inside
+    place.at = place.boss_room.index  # and straight to the last room
+    scene.player.pos.update(temple.pos)
     return scene, temple
 
 
@@ -49,13 +55,15 @@ def test_calling_seals_the_room():
     assert scene.arena.sealed
 
 
-def test_the_guard_still_has_to_be_down():
+def test_nothing_wakes_in_a_room_that_is_not_the_last_one():
+    # The start room is the one the player lands in, and there is nothing
+    # asleep in it.
     scene = PlayScene()
     scene.core.ignite()
     temple = scene.temples[0]
     scene.player.pos.update(temple.pos + pygame.Vector2(temple.radius * 0.6, 0))
     scene.update(config.FIXED_DT)
-    scene.player.pos.update(temple.layout.altar)
+    scene.player.pos.update(temple.pos)
     _call(scene)
     assert scene.boss is None
 
@@ -158,7 +166,7 @@ def test_a_dead_boss_cannot_be_called_back():
     _call(scene)
     _kill(scene)
     assert temple.boss_killed
-    scene.player.pos.update(temple.layout.altar)
+    scene.player.pos.update(temple.pos)
     _call(scene)
     assert scene.boss is None
 

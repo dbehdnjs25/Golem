@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import replace
 from pathlib import Path
 
 import pygame
@@ -82,7 +81,7 @@ from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
 from game.systems.spawner import Spawner
-from game.world import biomes, chasms, ice, lava, mires, structures, temples
+from game.world import biomes, chasms, dungeon, ice, lava, mires, rooms, structures, temples
 from game.world.biomes import Biome
 from game.world.map import WorldMap
 
@@ -505,6 +504,9 @@ class PlayScene(Scene):
         self.arena = arena.Ground()
         self.boss: Boss | None = None  # at most one, and only inside a temple
         self.boss_temple: Temple | None = None  # which room it is holding
+        # The temple the player is INSIDE, which is a different question
+        # from which one they are standing on top of on the map.
+        self.inside: Temple | None = None
         self.brawl: boss_moves.Brawl | None = None  # its hands, while it has any
         center = self.world.center
         self.core = Core(pos=pygame.Vector2(center))
@@ -1078,7 +1080,7 @@ class PlayScene(Scene):
         if sync:
             self._open_structure()
             self._open_chest()
-            self._use_altar()
+            self._wake_boss()
         if sync and self.core.is_in_sync_range(self.player.pos):
             if self.core.ignited:
                 # Mending first. The same key already means "deal with the
@@ -1200,7 +1202,6 @@ class PlayScene(Scene):
         # everything on a clock is drawn over it, because a wolf you cannot
         # tell from yourself is not atmosphere, it is a lost fight -- and a
         # loot pile with five minutes left should not be hidden by the hour.
-        self._draw_arena(surface)  # the floor this fight was given
         self._draw_patches(surface)  # ground, so under what stands on it
         self._draw_night(surface)
         self._draw_loot(surface)
@@ -1883,61 +1884,102 @@ class PlayScene(Scene):
         self.note = line
         self.note_left = config.NOTE_SECONDS
 
-    # --- temples ----------------------------------------------------------
+    # --- the building behind the door --------------------------------------
     def _visit_temples(self) -> None:
-        """Notice the player crossing a threshold, and redraw what they walk into.
+        """Notice the player walking into a temple, and put them inside it.
 
-        Only on the way IN from outside: the room is redrawn by ``enter`` and
-        a player who merely wanders near the door gets the same room back.
+        Crossing the circle on the map is the door. What is behind it is the
+        building -- ``world/dungeon`` -- and from then on the player is in a
+        room rather than on the map, until they walk back out of the one they
+        came in by.
         """
+        if self.inside is not None:
+            self._walk_rooms()
+            return
         for temple in self.temples:
             if temple.contains(self.player.pos):
-                was = temple.layout
-                temple.enter(self.player.pos)
-                if temple.layout is not was and not temple.guards_down:
-                    self._raise_guards(temple)
-                elif not temple.guards_down:
-                    self._lower_guards_if_cleared(temple)
-            elif temple.inside:
-                temple.leave()
-                # The ring goes with the room. A guard is a golem, and a golem
-                # marches on the core -- left standing when the player walks
-                # out, a ring raised by nothing more than peering through the
-                # door escorted itself across the map to a core nobody was
-                # defending. Walking back in redraws the room anyway, so
-                # nothing is lost by them not being there in between.
-                self.enemies = [e for e in self.enemies if not e.guarding]
-        # A sealed room holds against ITS temple, not against whichever one the
-        # player is currently counted as standing in. One long step -- a shove,
-        # a dodge, anything that moves further than the wall is thick -- would
-        # otherwise land outside, be read as having left, and never be pulled
-        # back.
-        held = self.boss_temple if self.arena.sealed else self.standing_in
-        if held is not None:
-            arena.hold(self.player.pos, held, self.arena)
+                self._enter(temple)
+                return
+
+    def _enter(self, temple: Temple) -> None:
+        """Step into a temple, at the door of whichever room they left off in."""
+        self.inside = temple
+        temple.inside = True
+        place = temple.interior()
+        self.player.pos.update(rooms.arrival(temple.pos, dungeon.SOUTH))
+        self._stock_room()
+        here = place.room
+        self._say(
+            f"{temple.biome.name} 사원 · {len(place.rooms)}개의 방"
+            if here.kind is dungeon.START
+            else f"{temple.biome.name} 사원"
+        )
+
+    def _leave_building(self) -> None:
+        """Back out onto the map, through the door that was walked in by."""
+        temple = self.inside
+        if temple is None:
+            return
+        temple.inside = False
+        self.inside = None
+        self.enemies = [e for e in self.enemies if not e.guarding]
+        # Put down outside the circle, or the next step would walk straight
+        # back in.
+        away = self.player.pos - temple.pos
+        if away.length_squared() == 0:
+            away = pygame.Vector2(0, 1)
+        self.player.pos.update(temple.pos + away.normalize() * (temple.radius + 40))
 
     @property
     def standing_in(self) -> Temple | None:
-        for temple in self.temples:
-            if temple.inside:
-                return temple
-        return None
+        return self.inside
 
-    def _raise_guards(self, temple: Temple) -> None:
-        """Set this drawing's guard on their feet.
+    @property
+    def here(self) -> dungeon.Room | None:
+        """The room the player is standing in, if they are inside anything."""
+        return self.inside.interior().room if self.inside is not None else None
 
-        That biome's own golem, not a plain one. A temple is the first place
-        the player meets the thing that will later walk in the raids, and
-        meeting it one ring at a time -- in the biome it belongs to, with the
-        ring's own toughness on it -- is the introduction.
+    def _walk_rooms(self) -> None:
+        """Hold the player in the room, and move them on when they take a door."""
+        temple = self.inside
+        if temple is None:
+            return
+        place = temple.interior()
+        # Whatever is left standing is what the door answers to.
+        place.room.standing = sum(1 for e in self.enemies if e.guarding)
 
-        Any ring still standing somewhere else is cleared first. Only one room
-        is ever being stood in, and guards left over from a temple the player
-        walked out of would follow the fight around the map.
-        """
+        if self.arena.sealed:
+            arena.hold(self.player.pos, temple.pos, rooms.arena_radius(), self.arena)
+            return
+
+        for way in (dungeon.NORTH, dungeon.EAST, dungeon.WEST, dungeon.SOUTH):
+            if not rooms.in_doorway(self.player.pos, temple.pos, way):
+                continue
+            if way is dungeon.SOUTH and place.room.back is None:
+                if place.room.cleared:
+                    self._leave_building()
+                    return
+                break
+            if place.through(way) is None:
+                continue
+            refused = place.locked(way)
+            if refused is not None:
+                self._say(refused)
+                break
+            place.walk(way)
+            self.player.pos.update(rooms.arrival(temple.pos, place.opposite(way)))
+            self._stock_room()
+            return
+        rooms.hold(self.player.pos, temple.pos, self.player.radius)
+
+    def _stock_room(self) -> None:
+        """Stand up whatever is in the room the player just walked into."""
+        temple = self.inside
+        if temple is None:
+            return
         self.enemies = [e for e in self.enemies if not e.guarding]
-        assert temple.layout is not None
-        for spot in temple.layout.guards:
+        here = temple.interior().room
+        for spot in rooms.scatter(temple.pos, here.standing, self.rng):
             self.enemies.append(
                 Golem(
                     pos=pygame.Vector2(spot),
@@ -1947,60 +1989,72 @@ class PlayScene(Scene):
                 )
             )
 
-    def _lower_guards_if_cleared(self, temple: Temple) -> None:
-        """Open the altar once nothing is left standing around it.
-
-        This is the door to the whole of the boss content: nothing else in the
-        game sets ``guards_down``, so before this the altar refused forever and
-        the five bosses could only be reached by a dev script.
-
-        The drawing forgets them as well as the temple, or walking out and back
-        in would show a ring that is not there.
-        """
-        if any(enemy.guarding for enemy in self.enemies):
-            return
-        temple.guards_down = True
-        if temple.layout is not None:
-            temple.layout = replace(temple.layout, guards=())
-        self._say("수호 골렘이 쓰러졌다 · 제단이 열렸다")
-
     def _open_chest(self) -> None:
-        """Take what the temple's chest holds: that biome's greater glyph."""
-        temple = self.standing_in
-        if temple is None or temple.layout is None or temple.layout.chest is None:
-            return
-        if temple.layout.chest.distance_to(self.player.pos) > config.ALTAR_REACH:
-            return
-        greater = next(
-            (g for g in glyph_table.glyphs_of(temple.biome) if g.tier == glyph_table.GREATER),
-            None,
-        )
-        temple.chest_opened = True
-        temple.layout = replace(temple.layout, chest=None)
-        if greater is None:  # pragma: no cover - the catalogue has one per biome
-            return
-        fresh = self.grimoire.learn(greater)
-        said = "배웠다" if fresh else "— 이미 아는 그림"
-        self._say(f"{greater.name}{_object_particle(greater.name)} {said}")
+        """Take what this room's chest holds.
 
-    def _use_altar(self) -> None:
-        """Stand at the plinth and call. Nothing answers yet -- see task 3."""
-        temple = self.standing_in
-        if temple is None or temple.layout is None:
+        Mostly what the biome is made of, and once in a while one of its
+        drawings. The key to the boss's door is in one of them, and which one
+        is the only reason to open every chest in the place.
+        """
+        temple = self.inside
+        if temple is None:
             return
-        if temple.layout.altar.distance_to(self.player.pos) > config.ALTAR_REACH:
+        place = temple.interior()
+        here = place.room
+        if not here.has_chest or here.chest_opened:
             return
-        refused = arena.why_not(temple)
-        if refused is not None:
-            self._say(refused)
+        if temple.pos.distance_to(self.player.pos) > config.ALTAR_REACH:
             return
-        if not arena.summon(temple, self.arena, self.rng):
-            return  # one is already up
+        if not here.cleared:
+            self._say("골렘이 아직 서 있다")
+            return
+        had_key = here.has_key
+        if not place.open_chest():
+            return
+        if self.rng.random() < config.CHEST_GLYPH_CHANCE:
+            self._take_glyph(temple)
+        else:
+            self._take_spoil(temple)
+        if had_key:
+            self._say("보스 방의 열쇠를 찾았다")
+
+    def _take_glyph(self, temple: Temple) -> None:
+        drawings = glyph_table.glyphs_of(temple.biome)
+        if not drawings:  # pragma: no cover - every ring biome has them
+            return
+        glyph = self.rng.choice(list(drawings))
+        fresh = self.grimoire.learn(glyph)
+        said = "배웠다" if fresh else "— 이미 아는 그림"
+        self._say(f"{glyph.name}{_object_particle(glyph.name)} {said}")
+
+    def _take_spoil(self, temple: Temple) -> None:
+        """What the biome is made of, by the handful."""
+        kinds = [k for k in (temple.biome.material, temple.biome.timber) if k is not None]
+        if not kinds:  # pragma: no cover - every ring biome yields something
+            return
+        kind = self.rng.choice(kinds)
+        count = self.rng.randint(config.CHEST_SPOIL_MIN, config.CHEST_SPOIL_MAX)
+        carrying.store(kind, count, self.backpack, self.hotbar)
+        self._say(f"{kind.name} x{count}")
+
+    def _wake_boss(self) -> None:
+        """Lay a hand on the sleeping thing in the middle of the last room."""
+        temple = self.inside
+        if temple is None or self.boss is not None:
+            return
+        place = temple.interior()
+        here = place.room
+        if here.kind is not dungeon.BOSS or here.boss_woken:
+            return
+        if temple.pos.distance_to(self.player.pos) > config.ALTAR_REACH:
+            return
+        here.boss_woken = True
+        arena.seal(self.arena)
         kind = BOSS_KINDS[biomes.RING_BIOMES.index(temple.biome)]
         self.boss = Boss(pos=pygame.Vector2(temple.pos), kind=kind)
         self.boss_temple = temple
         self.brawl = boss_moves.Brawl(rng=self.rng)
-        self._say(f"{kind.name}{_subject_particle(kind.name)} 일어난다")
+        self._say(f"{kind.name}{_subject_particle(kind.name)} 눈을 뜬다")
 
     def _open_structure(self) -> None:
         """Read whatever ruin the player is standing at.
@@ -2156,12 +2210,11 @@ class PlayScene(Scene):
         temple = self.boss_temple
         # It walks only between blows. Stepping forward through its own
         # wind-up would move the telegraph out from under itself.
+        reach = rooms.arena_radius()
         if self.brawl is None or not self.brawl.busy:
-            boss.update(dt, self.player.pos, temple.pos, temple.radius)
+            boss.update(dt, self.player.pos, temple.pos, reach)
         if self.brawl is not None:
-            self.brawl.update(
-                dt, boss, self.player, temple.pos, temple.radius, patches=self.patches
-            )
+            self.brawl.update(dt, boss, self.player, temple.pos, reach, patches=self.patches)
         reach = boss.radius + self.player.radius
         if boss.pos.distance_to(self.player.pos) <= reach and self.player.iframe_timer <= 0:
             self.player.hp -= boss.contact_dps * dt
@@ -2188,30 +2241,6 @@ class PlayScene(Scene):
             f"{boss.kind.name}{_object_particle(boss.kind.name)} 쓰러뜨렸다"
             f" · {glyph.name}{_object_particle(glyph.name)} 배웠다"
         )
-
-    def _draw_arena(self, surface: pygame.Surface) -> None:
-        """The hazards a summon laid on the temple floor.
-
-        Drawn from the arena's own lists rather than the world's: the room gets
-        a fresh floor every fight and the map must not keep it.
-        """
-        ground = self.arena
-        for pool in ground.lava:
-            at = self.camera.world_to_screen(pool.pos)
-            pygame.draw.circle(surface, config.LAVA_COLOR, at, pool.radius)
-            pygame.draw.circle(surface, config.LAVA_RIM_COLOR, at, pool.radius, 4)
-        for sheet in ground.ice:
-            at = self.camera.world_to_screen(sheet.pos)
-            pygame.draw.circle(surface, config.ICE_COLOR, at, sheet.radius)
-            pygame.draw.circle(surface, config.ICE_RIM_COLOR, at, sheet.radius, 3)
-        for hole in ground.chasms:
-            at = self.camera.world_to_screen(hole.pos)
-            pygame.draw.circle(surface, config.CHASM_COLOR, at, hole.radius)
-            pygame.draw.circle(surface, config.CHASM_RIM_COLOR, at, hole.radius, 4)
-        for bog in ground.mires:
-            at = self.camera.world_to_screen(bog.pos)
-            pygame.draw.circle(surface, config.MIRE_COLOR, at, bog.radius)
-            pygame.draw.circle(surface, config.MIRE_RIM_COLOR, at, bog.radius, 3)
 
     def _draw_charge_lane(self, surface: pygame.Surface) -> None:
         """The rectangle a charge is about to run down, while it winds.
@@ -2480,34 +2509,63 @@ class PlayScene(Scene):
             pygame.draw.circle(surface, config.MARK_COLOR, at, 10, 3)
 
     def _draw_temples(self, surface: pygame.Surface) -> None:
-        """The buildings, and whatever this visit's drawing put inside them.
+        """The doors on the map, or the room the player is standing in.
 
-        A wall and a door read from outside; the chest, the plinth and the
-        guard only exist once somebody has walked in, because the room is not
-        drawn until then.
+        Never both. From outside a temple is a circle with a way in; from
+        inside there is no map, only the room -- which is the whole of what
+        "one room, one screen" means.
         """
+        if self.inside is not None:
+            self._draw_room(surface, self.inside)
+            return
         for temple in self.temples:
             at = self.camera.world_to_screen(temple.pos)
             pygame.draw.circle(surface, config.TEMPLE_FLOOR, at, temple.radius)
-            wall = (
-                config.TEMPLE_SEALED
-                if self.arena.sealed and temple.inside
-                else (config.TEMPLE_WALL)
-            )
-            pygame.draw.circle(surface, wall, at, temple.radius, 6)
-            layout = temple.layout
-            if layout is None:
+            pygame.draw.circle(surface, config.TEMPLE_WALL, at, temple.radius, 6)
+            lit = config.ALTAR_SPENT if temple.boss_killed else config.TEMPLE_DOOR
+            pygame.draw.circle(surface, lit, at, 22)
+
+    def _draw_room(self, surface: pygame.Surface, temple: Temple) -> None:
+        """One room: its floor, its walls, its doors, and what is in it."""
+        place = temple.interior()
+        here = place.room
+        box = rooms.rect(temple.pos)
+        at = self.camera.world_to_screen(pygame.Vector2(box.topleft))
+        floor = pygame.Rect(at.x, at.y, box.width, box.height)
+        pygame.draw.rect(surface, config.TEMPLE_FLOOR, floor)
+        wall = config.TEMPLE_SEALED if self.arena.sealed else config.TEMPLE_WALL
+        pygame.draw.rect(surface, wall, floor, int(config.ROOM_WALL))
+
+        for way in (dungeon.NORTH, dungeon.EAST, dungeon.WEST, dungeon.SOUTH):
+            target = place.through(way)
+            if target is None:
                 continue
-            pygame.draw.circle(
-                surface, config.TEMPLE_DOOR, self.camera.world_to_screen(layout.door), 16
+            gap = rooms.doorway(temple.pos, way)
+            spot = self.camera.world_to_screen(pygame.Vector2(gap.topleft))
+            # Shut while anything is standing, and shut again at the boss's
+            # door until the key is found. The colour is the only warning the
+            # player gets before walking into it.
+            colour = (
+                config.DOOR_SHUT
+                if place.locked(way) is not None
+                else (
+                    config.DOOR_BOSS
+                    if place.rooms[target].kind is dungeon.BOSS
+                    else config.TEMPLE_DOOR
+                )
             )
-            if layout.chest is not None:
-                spot = self.camera.world_to_screen(layout.chest)
-                pygame.draw.rect(surface, config.CHEST_COLOR, (spot.x - 16, spot.y - 12, 32, 24))
-                pygame.draw.rect(surface, config.WHITE, (spot.x - 16, spot.y - 12, 32, 24), 2)
-            plinth = self.camera.world_to_screen(layout.altar)
-            lit = config.ALTAR_SPENT if temple.boss_killed else config.ALTAR_COLOR
-            pygame.draw.circle(surface, lit, plinth, 30, 5)
+            pygame.draw.rect(surface, colour, pygame.Rect(spot.x, spot.y, gap.width, gap.height))
+
+        middle = self.camera.world_to_screen(temple.pos)
+        if here.has_chest and not here.chest_opened:
+            pygame.draw.rect(surface, config.CHEST_COLOR, (middle.x - 24, middle.y - 18, 48, 36))
+            pygame.draw.rect(surface, config.WHITE, (middle.x - 24, middle.y - 18, 48, 36), 3)
+        if here.kind is dungeon.BOSS and not here.boss_woken:
+            # Asleep: the same circle the boss will be, drawn dim and ringed,
+            # so what wakes up is plainly the thing that was lying there.
+            kind = BOSS_KINDS[biomes.RING_BIOMES.index(temple.biome)]
+            pygame.draw.circle(surface, config.ALTAR_SPENT, middle, kind.radius)
+            pygame.draw.circle(surface, kind.color, middle, kind.radius, 4)
 
     def detector_reading(self) -> tuple[float, str, Biome] | None:
         """Bearing, distance word and biome for the detector in hand.
