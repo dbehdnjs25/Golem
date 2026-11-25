@@ -930,8 +930,11 @@ class PlayScene(Scene):
                 down = False
 
         # The camera keeps following even while down, so the wait shows the
-        # world carrying on rather than a frozen frame.
-        self.camera.update(dt, self.player.pos)
+        # world carrying on rather than a frozen frame. Inside a temple it
+        # follows nothing: one room fills the screen, and a view that drifted
+        # with the player would push the far wall and its doors off the edge
+        # of the very thing they are meant to be read from.
+        self.camera.update(dt, self.inside.pos if self.inside is not None else self.player.pos)
 
         if not down:
             self._update_living(dt, dodge, sync)

@@ -1584,6 +1584,7 @@ def test_off_the_ice_letting_go_stops_you():
     scene.update(config.FIXED_DT)
     assert scene.player.pos == was
 
+
 def test_a_whole_room_fits_on_one_screen():
     # Two screens across, the walk from door to plinth is taken without ever
     # seeing both ends of it.
@@ -1597,6 +1598,10 @@ def _wheel(scene, y):
     key = pygame.K_EQUALS if y > 0 else pygame.K_MINUS
     for _ in range(abs(y)):
         scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
+    # A notch asks; the camera takes a fifth of a second to get there. Every
+    # test below is about where it ENDS up, so let it arrive.
+    for _ in range(int(config.ZOOM_GLIDE / config.FIXED_DT) + 2):
+        scene.update(config.FIXED_DT)
 
 
 def test_the_wheel_only_ever_narrows_the_view():

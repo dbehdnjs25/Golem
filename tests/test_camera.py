@@ -126,13 +126,15 @@ def test_every_step_keeps_tiles_on_whole_pixels():
 
 
 def test_the_wheel_walks_the_steps_and_stops_at_the_ends():
+    # What the wheel sets is where the camera is GOING. Getting there takes a
+    # fraction of a second -- see the journey tests at the foot of this file.
     cam = _cam()
     for _ in range(20):
         cam.zoom_by(-1)
-    assert cam.zoom == min(Camera.ZOOM_STEPS)
+    assert cam.wanted == min(Camera.ZOOM_STEPS)
     for _ in range(20):
         cam.zoom_by(1)
-    assert cam.zoom == max(Camera.ZOOM_STEPS)
+    assert cam.wanted == max(Camera.ZOOM_STEPS)
 
 
 def test_a_zoomed_out_view_is_still_held_inside_the_world():
@@ -162,3 +164,107 @@ def test_it_still_follows_a_player_standing_between_pixels():
     cam = _cam()
     cam.update(1 / 60, pygame.Vector2(1200.4, 800.7))
     assert cam.offset == pygame.Vector2(720, 530)
+
+
+# --- the wheel asks; the camera travels -----------------------------------
+
+
+def _wheeled(zoom: float = 1.0) -> Camera:
+    camera = Camera(
+        offset=pygame.Vector2(0, 0),
+        view_size=config.SCREEN_SIZE,
+        world_size=(100_000, 100_000),
+    )
+    camera.set_zoom(zoom)
+    camera.center_on(pygame.Vector2(50_000, 50_000))
+    return camera
+
+
+def test_a_notch_does_not_move_the_view_on_its_own():
+    # It asks. A view that snaps between two sizes reads as the picture
+    # breaking rather than as the camera moving.
+    camera = _wheeled()
+    camera.zoom_by(1)
+    assert camera.wanted == 2.0
+    assert camera.zoom == 1.0
+
+
+def test_the_camera_travels_towards_what_was_asked_for():
+    camera = _wheeled()
+    camera.zoom_by(1)
+    camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    assert 1.0 < camera.zoom < 2.0
+
+
+def test_it_arrives_exactly():
+    # The steps are sharp and everything between them is not, so the last
+    # fraction is snapped away rather than approached forever.
+    camera = _wheeled()
+    camera.zoom_by(1)
+    for _ in range(int(1.0 / config.FIXED_DT)):
+        camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    assert camera.zoom == 2.0
+
+
+def test_it_arrives_quickly_enough_to_feel_like_a_wheel():
+    # A fifth of a second. Long enough to read as movement, short enough that
+    # nobody waits for it.
+    assert config.ZOOM_GLIDE <= 0.25
+    camera = _wheeled()
+    camera.zoom_by(1)
+    for _ in range(int(config.ZOOM_GLIDE / config.FIXED_DT) + 2):
+        camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    assert camera.zoom == 2.0
+
+
+def test_it_travels_back_down_as_well():
+    camera = _wheeled(2.0)
+    camera.zoom_by(-1)
+    for _ in range(int(1.0 / config.FIXED_DT)):
+        camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    assert camera.zoom == 1.0
+
+
+def test_the_wheel_cannot_ask_past_the_ends():
+    camera = _wheeled()
+    camera.zoom_by(-3)
+    assert camera.wanted == 1.0
+    camera.zoom_by(9)
+    assert camera.wanted == 2.0
+
+
+def test_turning_back_mid_journey_is_obeyed():
+    camera = _wheeled()
+    camera.zoom_by(1)
+    camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    camera.zoom_by(-1)
+    assert camera.wanted == 1.0
+    for _ in range(int(1.0 / config.FIXED_DT)):
+        camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+    assert camera.zoom == 1.0
+
+
+def test_the_field_is_whole_pixels_the_whole_way():
+    # It is a real surface every frame of the journey, and half a pixel of one
+    # does not exist.
+    camera = _wheeled()
+    camera.zoom_by(1)
+    for _ in range(int(0.5 / config.FIXED_DT)):
+        camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
+        wide, high = camera.field_size
+        assert wide == int(wide) and high == int(high)
+
+
+def test_the_middle_stays_put_while_it_travels():
+    camera = _wheeled()
+    camera.center_on(pygame.Vector2(50_000, 50_000))
+    camera.zoom_by(1)
+    for _ in range(int(0.5 / config.FIXED_DT)):
+        camera._glide(config.FIXED_DT)
+    assert camera.middle.distance_to(pygame.Vector2(50_000, 50_000)) <= 2
+
+
+def test_setting_a_zoom_outright_leaves_nothing_to_travel():
+    camera = _wheeled()
+    camera.set_zoom(2.0)
+    assert camera.zoom == camera.wanted == 2.0

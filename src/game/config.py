@@ -16,6 +16,11 @@ from typing import Final
 # with, the view is never stretched up to reach it, and the zoom only ever
 # REDUCES how much world is on screen.
 TITLE: Final[str] = "Golem"
+# How long the camera takes to travel between zoom steps. The steps
+# themselves are exact -- see systems/camera -- and this is only the journey
+# between them: a wheel notch that teleports the ground reads as a glitch
+# rather than as zooming.
+ZOOM_GLIDE: Final[float] = 0.18  # how long the whole journey takes
 SCREEN_WIDTH: Final[int] = 1600
 SCREEN_HEIGHT: Final[int] = 900
 SCREEN_SIZE: Final[tuple[int, int]] = (SCREEN_WIDTH, SCREEN_HEIGHT)

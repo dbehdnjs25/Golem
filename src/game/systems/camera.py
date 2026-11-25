@@ -21,13 +21,29 @@ from dataclasses import dataclass
 
 import pygame
 
+from game import config
+
 
 @dataclass
 class Camera:
     offset: pygame.Vector2  # world coord shown at the view's top-left
     view_size: tuple[int, int]
     world_size: tuple[int, int]
+    # What the world is being drawn at right now, and what the wheel last
+    # asked for. They are the same number except for the tenth of a second
+    # after a notch, and that tenth of a second is the whole point: a view
+    # that snaps between two sizes reads as the picture breaking rather than
+    # as the camera moving.
     zoom: float = 1.0
+    wanted: float = 1.0
+    # The journey itself: where it set off from, how long it has been going,
+    # and the world point to keep in the middle while it does. The anchor is
+    # held rather than re-read each frame because ``center_on`` lands on whole
+    # pixels, and half a pixel of rounding per frame adds up to the ground
+    # sliding away under a wheel that was only supposed to zoom.
+    _from: float = 1.0
+    _travelled: float = 0.0
+    _anchor: pygame.Vector2 | None = None
 
     # The zoom only ever REDUCES how much world is on screen. 1.0 draws the
     # field at the window's own size and hands it over untouched; 2.0 draws
@@ -62,20 +78,66 @@ class Camera:
     def screen_to_world(self, point: pygame.Vector2) -> pygame.Vector2:
         return pygame.Vector2(point) / self.zoom + self.offset
 
-    def set_zoom(self, zoom: float) -> None:
-        """Change the zoom, keeping whatever is in the middle of the view there.
+    @property
+    def middle(self) -> pygame.Vector2:
+        """The world point in the middle of the view."""
+        return self.offset + pygame.Vector2(self.field_size) / 2
 
-        Without that the ground lurches sideways on every notch of the wheel.
+    def set_zoom(self, zoom: float) -> None:
+        """Put the camera at a zoom immediately, with nothing to travel.
+
+        Keeps whatever is in the middle of the view there; without that the
+        ground lurches sideways. Used where there is no clock to glide on --
+        setting up a scene, and tests.
         """
-        middle = self.offset + pygame.Vector2(self.field_size) / 2
-        self.zoom = zoom
+        middle = self.middle
+        self.zoom = self.wanted = self._from = zoom
+        self._anchor = None
+        self._travelled = 0.0
         self.center_on(middle)
 
     def zoom_by(self, notches: int) -> None:
-        """Walk ``notches`` along the steps, stopping at either end."""
+        """Ask for a step ``notches`` along, stopping at either end.
+
+        Only ASKS. The camera travels there over the next few frames, which is
+        what a wheel notch is supposed to feel like.
+        """
         steps = self.ZOOM_STEPS
-        where = min(range(len(steps)), key=lambda i: abs(steps[i] - self.zoom))
-        self.set_zoom(steps[max(0, min(len(steps) - 1, where + notches))])
+        where = min(range(len(steps)), key=lambda i: abs(steps[i] - self.wanted))
+        asked = steps[max(0, min(len(steps) - 1, where + notches))]
+        if asked == self.wanted:
+            return  # already going there, or already there; do not restart it
+        self.wanted = asked
+        self._from = self.zoom
+        self._travelled = 0.0
+        self._anchor = self.middle
+
+    def _glide(self, dt: float) -> None:
+        """Close most of the distance to what the wheel asked for.
+
+        A journey of a known length, eased at both ends: it leaves and
+        arrives the way a hand would move a lens rather than starting and
+        stopping dead. Measured against ``dt``, so a slow frame travels as far
+        as the time it took rather than as far as one tick.
+
+        It LANDS. The steps are exact on purpose -- 1.0 hands the field over
+        untouched and 2.0 doubles it, and both are sharp -- so the last
+        fraction is snapped away rather than approached forever. Everything in
+        between is only ever passed through.
+        """
+        if self._anchor is None:
+            return
+        self._travelled += dt
+        share = min(1.0, self._travelled / config.ZOOM_GLIDE)
+        # Slow at both ends: it leaves and arrives the way a hand would move
+        # a lens, rather than starting and stopping dead.
+        eased = share * share * (3 - 2 * share)
+        self.zoom = self._from + (self.wanted - self._from) * eased
+        anchor = self._anchor
+        if share >= 1.0:
+            self.zoom = self.wanted
+            self._anchor = None
+        self.center_on(anchor)
 
     def _clamp(self) -> None:
         field_w, field_h = self.field_size
@@ -96,9 +158,8 @@ class Camera:
         self._clamp()
 
     def update(self, dt: float, player_pos: pygame.Vector2) -> None:
-        """Follow the player. The ``dt`` is kept because every other system's
-        update takes one, and a single odd signature is worse than an unused
-        argument."""
+        """Travel whatever the wheel asked for, then follow the player."""
+        self._glide(dt)
         self.center_on(player_pos)
 
 
