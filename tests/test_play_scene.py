@@ -1595,7 +1595,7 @@ def test_a_whole_room_fits_on_one_screen():
 
 
 def _wheel(scene, y):
-    key = pygame.K_EQUALS if y > 0 else pygame.K_MINUS
+    key = pygame.K_o if y > 0 else pygame.K_p
     for _ in range(abs(y)):
         scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=key))
     # A notch asks; the camera takes a fifth of a second to get there. Every

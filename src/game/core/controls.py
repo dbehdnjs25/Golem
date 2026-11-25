@@ -88,8 +88,11 @@ DEFAULTS: dict[str, tuple[int, ...]] = {
     SLOT_3: (pygame.K_3,),
     SLOT_4: (pygame.K_4,),
     SLOT_5: (pygame.K_5,),
-    ZOOM_IN: (pygame.K_EQUALS,),
-    ZOOM_OUT: (pygame.K_MINUS,),
+    # Side by side under the right hand, so a view can be nudged without
+    # leaving the keys that move. The old +/- sat at the far corner of the
+    # board, which is a reach for something used while walking.
+    ZOOM_IN: (pygame.K_o,),
+    ZOOM_OUT: (pygame.K_p,),
 }
 
 # Never rebindable: the way out of a screen and the way into this one. A
