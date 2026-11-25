@@ -305,6 +305,30 @@ GUARD_RING: Final[float] = 190.0
 # times, so no two can collide.
 TEMPLE_SEED_STRIDE: Final[int] = 10_000
 
+# --- The inside of a temple ------------------------------------------------
+# A building rather than a room: a tree of rectangles, branches and no way
+# round. Thirteen is the floor the design asks for; growing stops at the first
+# room past it, so the number varies without ever being small.
+DUNGEON_ROOMS: Final[int] = 13
+# How many rooms deep the boss sits, at least. Far enough that finding it is
+# an expedition and not a turn.
+DUNGEON_BOSS_DEPTH: Final[int] = 5
+DUNGEON_GUARDS_MIN: Final[int] = 1
+DUNGEON_GUARDS_MAX: Final[int] = 4
+# A chest is the reason to walk down a dead end, so it costs more than the
+# room before it did.
+DUNGEON_CHEST_GUARDS: Final[int] = 3
+DUNGEON_BRANCH_EXTRA: Final[int] = 2  # how much further a branch may run
+# One room, one screen. The player sees the whole room they are fighting in,
+# which is what lets the doors and the golems be read at a glance.
+ROOM_WIDTH: Final[float] = 1600.0
+ROOM_HEIGHT: Final[float] = 900.0
+DOOR_WIDTH: Final[float] = 150.0
+# A tenth of the chests hold a drawing; the rest hold what the biome is made
+# of. Rare enough that finding one is an event, common enough that opening
+# chests is never pointless.
+CHEST_GLYPH_CHANCE: Final[float] = 0.10
+
 # --- Arenas ---------------------------------------------------------------
 # What the floor becomes when a boss is called. Each biome lays its own, so
 # the boss's tricks and the ground it fights on are the same thing -- except
