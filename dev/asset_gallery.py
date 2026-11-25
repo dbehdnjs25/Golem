@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import contextlib
 import ctypes
+import functools
 import hashlib
 import os
 import queue
@@ -41,7 +42,7 @@ from pathlib import Path
 from tkinter import font as tkfont
 from tkinter import messagebox
 
-from PIL import Image, ImageDraw, ImageFilter, ImageTk
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageTk
 
 PROJECT = Path(__file__).resolve().parents[1]
 ROOT = PROJECT / "assets"
@@ -50,6 +51,10 @@ ASEPRITE = Path(os.environ.get("ASEPRITE", r"C:\Users\ykb62\Desktop\aseprite.exe
 IMAGE_EXTS = (".png", ".webp", ".gif", ".jpg", ".bmp")
 ALL_EXTS = (".aseprite", *IMAGE_EXTS)
 REFRESH_MS = 3000
+# Scrolling glides instead of jumping: every frame covers this share of the
+# distance still to go, so a wheel notch eases out over roughly 0.2 s.
+GLIDE_MS = 10
+GLIDE_EASE = 0.25
 ALL = "*"  # the tree row for every folder
 
 SORTS = {
@@ -295,6 +300,7 @@ class FolderWatch:
     def __init__(self, root: Path) -> None:
         self.root = root
         self.last_change = 0.0  # monotonic time of the latest notice; 0 = none
+        self.alive = False  # while True, the slow 3-second scan is not needed
         if os.name == "nt":
             threading.Thread(target=self._work, daemon=True).start()
 
@@ -304,12 +310,14 @@ class FolderWatch:
         handle = kernel.FindFirstChangeNotificationW(str(self.root), True, self.FLAGS)
         if handle in (None, wintypes.HANDLE(-1).value):
             return  # the 3-second check still covers it
+        self.alive = True
         try:
             while kernel.WaitForSingleObject(handle, 0xFFFFFFFF) == 0:
                 self.last_change = time.monotonic()
                 if not kernel.FindNextChangeNotification(handle):
                     return
         finally:
+            self.alive = False
             kernel.FindCloseChangeNotification(handle)
 
     def settled(self, quiet: float = 0.25) -> bool:
@@ -320,6 +328,17 @@ class FolderWatch:
             self.last_change = 0.0 if self.last_change == changed else self.last_change
             return True
         return False
+
+
+def glide_step(now: float, goal: float) -> int:
+    """One frame of easing from ``now`` toward ``goal``, in whole pixels so the
+    cards never land between pixels. Always moves at least one pixel."""
+    target = round(goal)
+    gap = target - now
+    if abs(gap) <= 1:
+        return target
+    step = gap * GLIDE_EASE
+    return round(now + (step if abs(step) >= 1 else (1 if gap > 0 else -1)))
 
 
 def recycle_file(path: Path) -> None:
@@ -464,6 +483,8 @@ INK = "#121214"  # dark text on the light, filled pills
 STAGE = "#0b0b0d"
 BASE = (11, 11, 13)
 FONT = "Malgun Gothic"
+# The same face as files, for text baked into card images.
+FONT_FILES = {"normal": "malgun.ttf", "bold": "malgunbd.ttf"}
 MENU = {
     "bg": "#1c1c1f",
     "fg": TEXT,
@@ -499,6 +520,13 @@ def rounded(
     return big.resize((max(1, w), max(1, h)), Image.Resampling.LANCZOS)
 
 
+# The same few shapes are drawn over and over (every card frame, badge and
+# thumbnail corner); each costs ~7 ms to supersample, so keep them. Callers
+# must not draw on what these return -- copy first.
+shape = functools.lru_cache(maxsize=512)(rounded)
+
+
+@functools.lru_cache(maxsize=64)
 def round_mask(w: int, h: int, r: int) -> Image.Image:
     return rounded(w, h, r, white(255)).getchannel("A")
 
@@ -582,7 +610,11 @@ class Gallery:
         self.assets: list[Asset] = []
         self.shown: list[Asset] = []
         self.images: dict[tuple[str, float], Image.Image | str] = {}
-        self.thumbs: dict[tuple[tuple[str, float], int], ImageTk.PhotoImage] = {}
+        self.thumbs: dict[tuple[tuple[str, float], int], Image.Image] = {}
+        # Whole cards, pre-rendered: one image per card is what lets the grid
+        # scroll smoothly (Tk repaints ~11 items per card far more slowly).
+        self.card_photos: dict[tuple[object, ...], ImageTk.PhotoImage] = {}
+        self.pil_fonts: dict[tuple[int, str], ImageFont.FreeTypeFont | ImageFont.ImageFont] = {}
         self.photos: dict[tuple[object, ...], ImageTk.PhotoImage] = {}
         self.fonts: dict[tuple[int, str], tkfont.Font] = {}
         self.differs: dict[tuple[str, float, str, float], bool] = {}
@@ -608,8 +640,15 @@ class Gallery:
         self.pan_from: tuple[int, int, float, float] | None = None
         self.backing = "체크"
         self.size = 128
+        # What is on screen (whole pixels) and where it is gliding to.
         self.scroll_y = 0.0
+        self.scroll_goal = 0.0
         self.side_y = 0.0
+        self.side_goal = 0.0
+        self.glide_pending: str | None = None
+        self.side_glide_pending: str | None = None
+        self.drawn_rows: set[int] = set()  # grid rows whose cards are on the canvas
+        self.card_items: dict[int, int] = {}  # shown index -> its canvas image
         self.drag_from: tuple[float, float] | None = None
         self.columns = 1
         self.cell = (1, 1)
@@ -660,6 +699,28 @@ class Gallery:
         if key not in self.fonts:
             self.fonts[key] = tkfont.Font(family=FONT, size=size, weight=weight)
         return self.fonts[key]
+
+    def pil_font(
+        self, size: int, weight: str = "normal"
+    ) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
+        """The PIL twin of ``font``: same face, same size in pixels."""
+        key = (size, weight)
+        if key not in self.pil_fonts:
+            px = max(1, round(size * self.ui * 96 / 72))
+            try:
+                self.pil_fonts[key] = ImageFont.truetype(FONT_FILES[weight], px)
+            except OSError:
+                self.pil_fonts[key] = ImageFont.load_default()
+        return self.pil_fonts[key]
+
+    @staticmethod
+    def fit_pil(text: str, width: int, font: ImageFont.FreeTypeFont | ImageFont.ImageFont) -> str:
+        """``fit_text`` for baked text: one line, cut from the front."""
+        if font.getlength(text) <= width:
+            return text
+        while text and font.getlength("…" + text) > width:
+            text = text[1:]
+        return "…" + text
 
     def photo(self, key: tuple[object, ...], build) -> ImageTk.PhotoImage:  # type: ignore[no-untyped-def]
         """A cached Tk image. The cache also keeps it alive -- Tk does not."""
@@ -830,10 +891,9 @@ class Gallery:
         pane = self.panes[name]
         h = pane.winfo_height()
         _, bottom = self.mask_h[name]
-        pane.create_image(0, 0, anchor="nw", image=self.bg[f"{name}-top"], tags="content")
-        pane.create_image(
-            0, h - bottom, anchor="nw", image=self.bg[f"{name}-bottom"], tags="content"
-        )
+        tags = ("content", "mask")
+        pane.create_image(0, 0, anchor="nw", image=self.bg[f"{name}-top"], tags=tags)
+        pane.create_image(0, h - bottom, anchor="nw", image=self.bg[f"{name}-bottom"], tags=tags)
 
     def draw_all(self) -> None:
         if not hasattr(self, "bg_images"):
@@ -988,6 +1048,7 @@ class Gallery:
     def _resize(self, step: int) -> None:
         self.size = max(72, min(240, self.size + step))
         self.thumbs.clear()
+        self.card_photos.clear()
         self.draw_top()
         self._refilter(keep_scroll=True)
 
@@ -1108,8 +1169,16 @@ class Gallery:
         top, row_h = self._side_geometry()
         h = self.panes["side"].winfo_height()
         most = max(0, top + len(self.rows) * row_h + self.px(16) - h)
-        self.side_y = max(0, min(most, self.side_y - event.delta / 120 * row_h * 2))
+        self.side_goal = max(0, min(most, self.side_goal - event.delta / 120 * row_h * 2))
+        if self.side_glide_pending is None:
+            self.side_glide_pending = self.window.after(GLIDE_MS, self._side_glide)
+
+    def _side_glide(self) -> None:
+        self.side_glide_pending = None
+        self.side_y = glide_step(self.side_y, self.side_goal)
         self.draw_side()
+        if self.side_y != round(self.side_goal):
+            self.side_glide_pending = self.window.after(GLIDE_MS, self._side_glide)
 
     # --- data -----------------------------------------------------------------
     def reload(self) -> None:
@@ -1191,7 +1260,7 @@ class Gallery:
         index = {a.key: i for i, a in enumerate(self.shown)}
         self.focus = index.get(focused.key) if focused is not None else None
         if not keep_scroll:
-            self.scroll_y = 0
+            self.scroll_y = self.scroll_goal = 0
             self.anchor = None
         self.draw_all()
 
@@ -1215,9 +1284,15 @@ class Gallery:
         rows = -(-len(self.shown) // self.columns)
         return max(0, rows * self.cell[1] - self.px(12))
 
-    def _clamp_scroll(self) -> None:
+    def _clamped(self, y: float) -> float:
         _, _, _, height = self._grid_metrics()
-        self.scroll_y = max(0.0, min(self.scroll_y, self._content_height() - height))
+        return max(0.0, min(y, self._content_height() - height))
+
+    def _clamp_scroll(self) -> None:
+        self.scroll_y = round(self._clamped(self.scroll_y))
+        self.scroll_goal = self._clamped(self.scroll_goal)
+        if self.glide_pending is None:
+            self.scroll_goal = self.scroll_y
 
     def _schedule_draw(self) -> None:
         if not self.draw_pending:
@@ -1244,15 +1319,59 @@ class Gallery:
                 text="보여 줄 에셋이 없어요. 검색어나 필터를 바꿔 보세요.",
                 tags="content",
             )
-        else:
-            first = max(0, int(self.scroll_y // self.cell[1]) * self.columns)
-            last = min(
-                len(self.shown), (int((self.scroll_y + height) // self.cell[1]) + 1) * self.columns
-            )
-            for i in range(first, last):
-                self._draw_card(pane, i)
+        self.drawn_rows = set()
+        self.card_items = {}
+        self._fill_rows(pane)
         self._lay_masks("grid")
         self._draw_scrollbar(pane)
+
+    def _visible_rows(self) -> range:
+        _, _, _, height = self._grid_metrics()
+        rows = -(-len(self.shown) // self.columns)
+        first = max(0, int(self.scroll_y // self.cell[1]))
+        return range(first, min(rows, int((self.scroll_y + height) // self.cell[1]) + 1))
+
+    def _fill_rows(self, pane: tk.Canvas) -> None:
+        """Drop the rows that left the view and draw the ones that entered it."""
+        wanted = set(self._visible_rows())
+        for row in self.drawn_rows - wanted:
+            pane.delete(f"row{row}")
+            for i in range(row * self.columns, (row + 1) * self.columns):
+                self.card_items.pop(i, None)
+        for row in sorted(wanted - self.drawn_rows):
+            mark = pane.create_line(0, 0, 0, 0)  # canvas ids only grow
+            for i in range(row * self.columns, min(len(self.shown), (row + 1) * self.columns)):
+                self._draw_card(pane, i)
+            for item in pane.find_all():
+                if item > mark:
+                    pane.addtag_withtag(f"row{row}", item)
+                    pane.addtag_withtag("cards", item)
+            pane.delete(mark)
+        self.drawn_rows = wanted
+
+    def _scroll_to(self, y: int) -> None:
+        """Show the grid at ``y`` by sliding the cards already drawn, which is
+        what keeps scrolling smooth: rebuilding every card costs ~50 ms."""
+        pane = self.panes["grid"]
+        if self.draw_pending is not None or not self.drawn_rows:
+            self.scroll_y = y
+            self.draw_grid()
+            return
+        dy = y - self.scroll_y
+        if not dy:
+            return
+        self.scroll_y = y
+        pane.move("cards", 0, -dy)
+        self._fill_rows(pane)
+        pane.tag_raise("mask")
+        pane.delete("bar")
+        self._draw_scrollbar(pane)
+
+    def _glide(self) -> None:
+        self.glide_pending = None
+        self._scroll_to(glide_step(self.scroll_y, self.scroll_goal))
+        if self.scroll_y != round(self.scroll_goal):
+            self.glide_pending = self.window.after(GLIDE_MS, self._glide)
 
     def _card_box(self, i: int) -> tuple[int, int, int, int]:
         left, top, _, _ = self._grid_metrics()
@@ -1262,79 +1381,111 @@ class Gallery:
         return x, y, x + self.card[0], y + self.card[1]
 
     def _draw_card(self, pane: tk.Canvas, i: int) -> None:
+        x0, y0, _, _ = self._card_box(i)
+        self.card_items[i] = pane.create_image(
+            x0, y0, anchor="nw", image=self._card_photo(i), tags="content"
+        )
+
+    def _card_photo(self, i: int) -> ImageTk.PhotoImage:
         asset = self.shown[i]
-        x0, y0, x1, y1 = self._card_box(i)
-        cw, ch = self.card
         chosen = asset.key in self.selected
         state = "on" if chosen else ("hover" if i == self.hover else "off")
-        look = {
+        art = self._thumb(asset, self.px(self.size))
+        badges = tuple(self._badges(asset))
+        key = (
+            asset.stamp,
+            asset.folder,
+            state,
+            self.card,
+            self.size,
+            badges,
+            art if isinstance(art, str) else "art",
+        )
+        photo = self.card_photos.get(key)
+        if photo is None:
+            if len(self.card_photos) > 800:
+                self.card_photos.clear()
+            photo = ImageTk.PhotoImage(self._card_image(asset, state, art, badges))
+            self.card_photos[key] = photo
+        return photo
+
+    def _card_image(
+        self,
+        asset: Asset,
+        state: str,
+        art: Image.Image | str,
+        badges: tuple[tuple[str, str], ...],
+    ) -> Image.Image:
+        """One card -- frame, thumbnail, name, folder, badges, tick -- as a
+        single image."""
+        cw, ch = self.card
+        fill, edge, width = {
             "off": (white(11), white(26), 1),
             "hover": (white(22), white(48), 1),
             "on": (white(30), white(215), 2),
         }[state]
-        back = self.photo(
-            ("card", cw, ch, state), lambda: rounded(cw, ch, self.px(16), look[0], look[1], look[2])
-        )
-        pane.create_image(x0, y0, anchor="nw", image=back, tags="content")
+        card = shape(cw, ch, self.px(16), fill, edge, width).copy()
+        draw = ImageDraw.Draw(card)
         thumb = self.px(self.size)
-        tx, ty = x0 + (cw - thumb) // 2, y0 + self.px(10)
-        art = self._thumb(asset, thumb)
-        if isinstance(art, ImageTk.PhotoImage):
-            pane.create_image(tx, ty, anchor="nw", image=art, tags="content")
+        tx, ty = (cw - thumb) // 2, self.px(10)
+        if isinstance(art, Image.Image):
+            card.alpha_composite(art, (tx, ty))
         else:
-            hole = self.photo(
-                ("hole", thumb), lambda: rounded(thumb, thumb, self.px(12), (0, 0, 0, 70))
-            )
-            pane.create_image(tx, ty, anchor="nw", image=hole, tags="content")
-            pane.create_text(
-                tx + thumb / 2,
-                ty + thumb / 2,
-                text=art,
-                width=thumb - 10,
+            card.alpha_composite(shape(thumb, thumb, self.px(12), (0, 0, 0, 70)), (tx, ty))
+            draw.multiline_text(
+                (tx + thumb / 2, ty + thumb / 2),
+                art,
                 fill=MUTED,
-                font=self.font(9),
-                tags="content",
+                font=self.pil_font(9),
+                anchor="mm",
+                align="center",
             )
         pad = self.px(12)
-        name_font, folder_font = self.font(10, "bold"), self.font(8)
-        pane.create_text(
-            x0 + pad,
-            ty + thumb + self.px(8),
-            anchor="nw",
-            text=self.fit_text(asset.name, cw - 2 * pad, name_font),
+        name_font, folder_font = self.pil_font(10, "bold"), self.pil_font(8)
+        draw.text(
+            (pad, ty + thumb + self.px(8)),
+            self.fit_pil(asset.name, cw - 2 * pad, name_font),
             fill=TEXT,
             font=name_font,
-            tags="content",
+            anchor="la",
         )
-        pane.create_text(
-            x0 + pad,
-            ty + thumb + self.px(31),
-            anchor="nw",
-            text=self.fit_text(asset.folder or "assets", cw - 2 * pad, folder_font),
+        draw.text(
+            (pad, ty + thumb + self.px(31)),
+            self.fit_pil(asset.folder or "assets", cw - 2 * pad, folder_font),
             fill=MUTED,
             font=folder_font,
-            tags="content",
+            anchor="la",
         )
-        bx = x0 + pad
-        by = y1 - self.px(29)
-        for label, style in self._badges(asset):
-            bx = self.badge(pane, bx, by, label, style)
-        if chosen:
+        bx, by = pad, ch - self.px(29)
+        badge_font = self.pil_font(7, "bold")
+        bh = self.px(19)
+        for label, style in badges:
+            back, ring, color = {
+                "plain": (white(24), white(40), "#d2d2d8"),
+                "solid": ((228, 228, 232, 235), None, INK),
+                "ring": (white(0), white(190), TEXT),
+            }[style]
+            bw = round(badge_font.getlength(label)) + self.px(14)
+            card.alpha_composite(shape(bw, bh, bh // 2, back, ring), (bx, by))
+            draw.text((bx + bw / 2, by + bh / 2), label, fill=color, font=badge_font, anchor="mm")
+            bx += bw + self.px(5)
+        if state == "on":
             dot = self.px(20)
-            ring = self.photo(
-                ("check", dot), lambda: rounded(dot, dot, dot // 2, (240, 240, 244, 245))
-            )
-            pane.create_image(
-                x1 - dot - self.px(8), y0 + self.px(8), anchor="nw", image=ring, tags="content"
-            )
-            pane.create_text(
-                x1 - dot / 2 - self.px(8),
-                y0 + self.px(8) + dot / 2,
-                text="✓",
+            dx, dy = cw - dot - self.px(8), self.px(8)
+            card.alpha_composite(shape(dot, dot, dot // 2, (240, 240, 244, 245)), (dx, dy))
+            # Drawn, not typed: the card font has no tick glyph.
+            u = dot / 20
+            draw.line(
+                [
+                    (dx + 6 * u, dy + 10.5 * u),
+                    (dx + 9 * u, dy + 13.5 * u),
+                    (dx + 14.5 * u, dy + 7 * u),
+                ],
                 fill=INK,
-                font=self.font(8, "bold"),
-                tags="content",
+                width=max(2, round(2 * u)),
+                joint="curve",
             )
+        return card
 
     def _badges(self, asset: Asset) -> list[tuple[str, str]]:
         names = {
@@ -1352,7 +1503,7 @@ class Gallery:
             out.append(("갱신 필요", "ring"))
         return out
 
-    def _thumb(self, asset: Asset, size: int) -> ImageTk.PhotoImage | str:
+    def _thumb(self, asset: Asset, size: int) -> Image.Image | str:
         stamp = asset.stamp
         got = self.images.get(stamp)
         if got is None:
@@ -1366,7 +1517,7 @@ class Gallery:
             art = fit(got, size - self.px(14), size - self.px(14))
             board.alpha_composite(art, ((size - art.width) // 2, (size - art.height) // 2))
             board.putalpha(round_mask(size, size, self.px(12)))
-            self.thumbs[key] = ImageTk.PhotoImage(board)
+            self.thumbs[key] = board
         return self.thumbs[key]
 
     def _draw_scrollbar(self, pane: tk.Canvas) -> None:
@@ -1379,7 +1530,7 @@ class Gallery:
         w = self.px(6)
         x = pane.winfo_width() - self.px(14)
         thumb = self.photo(("bar", w, bar_h), lambda: rounded(w, bar_h, w // 2, white(70)))
-        pane.create_image(x, y, anchor="nw", image=thumb, tags="content")
+        pane.create_image(x, y, anchor="nw", image=thumb, tags=("content", "bar"))
 
     # --- grid input -----------------------------------------------------------------
     def _index_at(self, x: float, y: float) -> int | None:
@@ -1426,21 +1577,26 @@ class Gallery:
         if total <= height:
             return
         start_y, start_scroll = self.drag_from
-        self.scroll_y = start_scroll + (event.y - start_y) * total / height
-        self._schedule_draw()
+        # The thumb follows the pointer exactly; only the wheel glides.
+        self.scroll_goal = self._clamped(start_scroll + (event.y - start_y) * total / height)
+        self._scroll_to(round(self.scroll_goal))
 
     def _grid_wheel(self, event: tk.Event) -> None:
-        self.scroll_y -= event.delta / 120 * self.px(90)
-        self._schedule_draw()
+        self.scroll_goal = self._clamped(self.scroll_goal - event.delta / 120 * self.px(110))
+        if self.glide_pending is None:
+            self.glide_pending = self.window.after(GLIDE_MS, self._glide)
 
     def _grid_motion(self, event: tk.Event) -> None:
         self._set_hover(self._index_at(event.x, event.y))
 
     def _set_hover(self, i: int | None) -> None:
         if i != self.hover:
-            self.hover = i
-            self.panes["grid"].configure(cursor="hand2" if i is not None else "")
-            self._schedule_draw()
+            before, self.hover = self.hover, i
+            pane = self.panes["grid"]
+            pane.configure(cursor="hand2" if i is not None else "")
+            for j in (before, i):
+                if j is not None and j in self.card_items and self.draw_pending is None:
+                    pane.itemconfigure(self.card_items[j], image=self._card_photo(j))
 
     def _double(self, event: tk.Event) -> None:
         i = self._index_at(event.x, event.y)
@@ -1453,9 +1609,9 @@ class Gallery:
         y0 = row * self.cell[1]
         y1 = y0 + self.card[1]
         if y0 < self.scroll_y:
-            self.scroll_y = y0
+            self.scroll_y = self.scroll_goal = y0
         elif y1 > self.scroll_y + height:
-            self.scroll_y = y1 - height
+            self.scroll_y = self.scroll_goal = y1 - height
 
     def _arrow(self, event: tk.Event, step: int) -> str | None:
         if self._typing(event) or not self.shown:
@@ -1888,16 +2044,30 @@ class Gallery:
         if self.folder_watch.settled() and signature() != self.last_signature:
             self.reload()
         if arrived or compared:
-            self._schedule_draw()
+            self._refresh_cards(arrived, all_cards=compared)
             focus = self._focused()
             if focus is not None and focus.stamp in arrived:
                 self.draw_detail()
         self.window.after(50, self._poll_images)
 
+    def _refresh_cards(self, stamps: set[tuple[str, float]], all_cards: bool) -> None:
+        """Swap in the new image of just the cards that changed -- a thumbnail
+        that finished loading, a badge that appeared -- instead of rebuilding
+        the grid, which would stall a scroll in progress."""
+        if self.draw_pending is not None:
+            return  # a full redraw is coming anyway
+        pane = self.panes["grid"]
+        for i, item in self.card_items.items():
+            if i < len(self.shown) and (all_cards or self.shown[i].stamp in stamps):
+                pane.itemconfigure(item, image=self._card_photo(i))
+
     def _watch(self) -> None:
-        """Pick up files changed by other tools (or other tabs) without F5."""
+        """Pick up files changed by other tools (or other tabs) without F5.
+
+        A fallback: walking every file takes ~75 ms on this thread, a visible
+        stall mid-scroll, so it only runs when the change watch is not."""
         try:
-            if signature() != self.last_signature:
+            if not self.folder_watch.alive and signature() != self.last_signature:
                 self.reload()
         finally:
             self.window.after(REFRESH_MS, self._watch)
