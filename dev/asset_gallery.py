@@ -37,9 +37,9 @@ from ctypes import wintypes
 from dataclasses import dataclass, field
 from pathlib import Path
 from tkinter import font as tkfont
-from tkinter import messagebox, ttk
+from tkinter import messagebox
 
-from PIL import Image, ImageDraw, ImageTk
+from PIL import Image, ImageDraw, ImageFilter, ImageTk
 
 PROJECT = Path(__file__).resolve().parents[1]
 ROOT = PROJECT / "assets"
@@ -49,20 +49,6 @@ IMAGE_EXTS = (".png", ".webp", ".gif", ".jpg", ".bmp")
 ALL_EXTS = (".aseprite", *IMAGE_EXTS)
 REFRESH_MS = 3000
 ALL = "*"  # the tree row for every folder
-
-# Colours
-BG = "#141922"
-PANEL = "#1b222d"
-CARD = "#222b38"
-CARD_HOVER = "#2a3545"
-LINE = "#2f3a4a"
-TEXT = "#e6edf6"
-MUTED = "#8d9bb0"
-ACCENT = "#5fd0a8"
-WARN = "#f0b35a"
-DANGER = "#ef7a7a"
-BADGE = {".aseprite": "#7c6cf0", ".png": "#3f8fd8", ".webp": "#2fa39a"}
-FONT = "Malgun Gothic"
 
 SORTS = {
     "이름순": lambda e: (e.name.casefold(), e.folder),
@@ -333,6 +319,113 @@ def fit(image: Image.Image, width: int, height: int, scale: float | None = None)
     return image.resize(size, method)
 
 
+# --- drawing helpers: rounded glass in greys ---------------------------------------
+
+TEXT = "#ededf0"
+MUTED = "#8e8e96"
+FAINT = "#5c5c64"
+INK = "#121214"  # dark text on the light, filled pills
+STAGE = "#0b0b0d"
+BASE = (11, 11, 13)
+FONT = "Malgun Gothic"
+MENU = {
+    "bg": "#1c1c1f",
+    "fg": TEXT,
+    "activebackground": "#3a3a40",
+    "activeforeground": TEXT,
+    "bd": 0,
+    "relief": "flat",
+}
+
+
+def white(alpha: int) -> tuple[int, int, int, int]:
+    return (255, 255, 255, alpha)
+
+
+def rounded(
+    w: int,
+    h: int,
+    r: int,
+    fill: tuple[int, int, int, int],
+    outline: tuple[int, int, int, int] | None = None,
+    width: int = 1,
+) -> Image.Image:
+    """An antialiased rounded rectangle: drawn at 3x, then shrunk."""
+    ss = 3
+    big = Image.new("RGBA", (max(1, w) * ss, max(1, h) * ss), (0, 0, 0, 0))
+    ImageDraw.Draw(big).rounded_rectangle(
+        (0, 0, max(1, w) * ss - 1, max(1, h) * ss - 1),
+        radius=r * ss,
+        fill=fill,
+        outline=outline,
+        width=width * ss if outline else 0,
+    )
+    return big.resize((max(1, w), max(1, h)), Image.Resampling.LANCZOS)
+
+
+def round_mask(w: int, h: int, r: int) -> Image.Image:
+    return rounded(w, h, r, white(255)).getchannel("A")
+
+
+def backdrop(w: int, h: int) -> Image.Image:
+    """The dark stage behind the glass: a few soft grey glows and a little grain."""
+    sw, sh = max(8, w // 6), max(8, h // 6)
+    small = Image.new("RGB", (sw, sh), BASE)
+    draw = ImageDraw.Draw(small)
+    side = max(sw, sh)
+    for fx, fy, fr, v in (
+        (0.10, 0.15, 0.30, 74),
+        (0.80, 0.10, 0.26, 58),
+        (0.62, 0.82, 0.36, 52),
+        (0.15, 0.90, 0.20, 40),
+        (0.45, 0.42, 0.16, 34),
+    ):
+        r = fr * side
+        draw.ellipse((fx * sw - r, fy * sh - r, fx * sw + r, fy * sh + r), fill=(v, v, v))
+    small = small.filter(ImageFilter.GaussianBlur(side * 0.09))
+    big = small.resize((w, h), Image.Resampling.BICUBIC)
+    grain = Image.effect_noise((w, h), 18).convert("RGB")
+    return Image.blend(big, grain, 0.025)
+
+
+def glass(back: Image.Image, box: tuple[int, int, int, int], r: int) -> Image.Image:
+    """Frosted glass over ``box`` of the backdrop: blurred, lifted, edged.
+
+    The corners outside the radius stay plain backdrop, so the panel reads as
+    rounded although Tk can only place rectangles.
+    """
+    x0, y0, x1, y1 = box
+    w, h = x1 - x0, y1 - y0
+    pad = 40
+    outer = (
+        max(0, x0 - pad),
+        max(0, y0 - pad),
+        min(back.width, x1 + pad),
+        min(back.height, y1 + pad),
+    )
+    blurred = back.crop(outer).filter(ImageFilter.GaussianBlur(22))
+    blurred = blurred.crop((x0 - outer[0], y0 - outer[1], x0 - outer[0] + w, y0 - outer[1] + h))
+    pane = Image.alpha_composite(blurred.convert("RGBA"), rounded(w, h, r, white(15), white(34)))
+    # A faint sheen down from the top edge, as light catching the glass.
+    sheen = Image.linear_gradient("L").resize((w, h)).point(lambda v: max(0, 14 - v // 9))
+    shine = Image.new("RGBA", (w, h), white(0))
+    shine.putalpha(sheen)
+    pane = Image.alpha_composite(pane, shine)
+    out = back.crop(box).convert("RGBA")
+    out.paste(pane, (0, 0), round_mask(w, h, r))
+    return out.convert("RGB")
+
+
+PILL = {
+    # name: (fill, outline, hover fill, text colour)
+    "glass": (white(16), white(38), white(32), TEXT),
+    "on": (white(56), white(110), white(70), TEXT),
+    "primary": ((236, 236, 240, 240), None, (255, 255, 255, 255), INK),
+    "danger": (white(26), white(150), white(44), TEXT),
+    "off": (white(7), white(18), white(7), FAINT),
+}
+
+
 # --- the window ----------------------------------------------------------------
 
 
@@ -345,300 +438,521 @@ class Gallery:
         self.shown: list[Asset] = []
         self.images: dict[tuple[str, float], Image.Image | str] = {}
         self.thumbs: dict[tuple[tuple[str, float], int], ImageTk.PhotoImage] = {}
+        self.photos: dict[tuple[object, ...], ImageTk.PhotoImage] = {}
+        self.fonts: dict[tuple[int, str], tkfont.Font] = {}
+        self.differs: dict[tuple[str, float, str, float], bool] = {}
         self.selected: set[Path] = set()
-        self.anchor: int | None = None  # where a Shift+click run starts
-        self.focus: int | None = None  # the one shown on the right
+        self.anchor: int | None = None
+        self.focus: int | None = None
         self.hover: int | None = None
-        self.layout_pending: str | None = None
-        self.draw_pending: str | None = None
+        self.side_hover: int | None = None
+        self.folder = ALL
+        self.expanded: set[str] = {ALL}
+        self.counts: dict[str, int] = {}
+        self.rows: list[tuple[str, int, bool]] = []  # folder path, depth, has children
+        self.filter = FILTERS[0]
+        self.sort = "폴더순"
+        self.zoom = "맞춤"
+        self.backing = "체크"
+        self.size = 128
+        self.scroll_y = 0.0
+        self.side_y = 0.0
+        self.drag_from: tuple[float, float] | None = None
         self.columns = 1
         self.cell = (1, 1)
         self.card = (1, 1)
+        self.flash = ""
+        self.flash_until = 0.0
         self.last_signature: tuple[tuple[str, float], ...] = ()
         self.detail_photo: ImageTk.PhotoImage | None = None
-        self.differs: dict[tuple[str, float, str, float], bool] = {}
+        self.bg: dict[str, ImageTk.PhotoImage] = {}
+        self.layout_pending: str | None = None
+        self.draw_pending: str | None = None
+        self.size_seen = (0, 0)
 
         window.title("에셋 라이브러리 · Pygame Project")
-        window.geometry(f"{int(1500 * self.ui)}x{int(940 * self.ui)}")
-        window.minsize(int(900 * self.ui), int(560 * self.ui))
-        window.configure(bg=BG)
-        self._style()
-        self._build()
-        self._bind_keys()
+        window.geometry(f"{self.px(1500)}x{self.px(940)}")
+        window.minsize(self.px(980), self.px(600))
+        window.configure(bg=STAGE)
+        self.stage = tk.Canvas(window, bg=STAGE, highlightthickness=0, bd=0)
+        self.stage.place(x=0, y=0, relwidth=1, relheight=1)
+        self.panes = {
+            name: tk.Canvas(window, bg=STAGE, highlightthickness=0, bd=0)
+            for name in ("top", "side", "grid", "detail", "bottom")
+        }
+        self.query = tk.StringVar()
+        self.entry = tk.Entry(
+            self.panes["top"],
+            textvariable=self.query,
+            relief="flat",
+            bd=0,
+            fg=TEXT,
+            insertbackground=TEXT,
+            font=(FONT, 10),
+            highlightthickness=0,
+        )
+        self._placeholder("이름 또는 경로 검색   Ctrl+F")
+        self.query.trace_add("write", lambda *_: self._refilter())
+        self._bind()
         self.reload()
         window.after(50, self._poll_images)
         window.after(REFRESH_MS, self._watch)
 
+    # --- small utilities -------------------------------------------------------
     def px(self, n: float) -> int:
-        return int(n * self.ui)
+        return int(round(n * self.ui))
 
-    # --- construction -----------------------------------------------------
-    def _style(self) -> None:
-        style = ttk.Style()
-        style.theme_use("clam")
-        base = (FONT, 10)
-        style.configure(".", background=BG, foreground=TEXT, font=base, borderwidth=0)
-        style.configure("TFrame", background=BG)
-        style.configure("Panel.TFrame", background=PANEL)
-        style.configure("TLabel", background=BG, foreground=TEXT)
-        style.configure("Panel.TLabel", background=PANEL, foreground=TEXT)
-        style.configure("Muted.TLabel", background=BG, foreground=MUTED, font=(FONT, 9))
-        style.configure("PanelMuted.TLabel", background=PANEL, foreground=MUTED, font=(FONT, 9))
-        style.configure("Title.TLabel", background=BG, foreground=TEXT, font=(FONT, 15, "bold"))
-        style.configure("Head.TLabel", background=PANEL, foreground=TEXT, font=(FONT, 12, "bold"))
-        style.configure(
-            "TEntry",
-            fieldbackground=CARD,
-            foreground=TEXT,
-            insertcolor=TEXT,
-            bordercolor=LINE,
-            lightcolor=LINE,
-            darkcolor=LINE,
-            padding=6,
-        )
-        style.configure(
-            "TCombobox",
-            fieldbackground=CARD,
-            background=CARD,
-            foreground=TEXT,
-            arrowcolor=TEXT,
-            bordercolor=LINE,
-            lightcolor=LINE,
-            darkcolor=LINE,
-            padding=4,
-        )
-        style.map(
-            "TCombobox",
-            fieldbackground=[("readonly", CARD)],
-            foreground=[("readonly", TEXT)],
-            selectbackground=[("readonly", CARD)],
-            selectforeground=[("readonly", TEXT)],
-        )
-        self.window.option_add("*TCombobox*Listbox.background", CARD)
-        self.window.option_add("*TCombobox*Listbox.foreground", TEXT)
-        self.window.option_add("*TCombobox*Listbox.selectBackground", ACCENT)
-        self.window.option_add("*TCombobox*Listbox.font", base)
-        style.configure(
-            "TButton",
-            background=CARD,
-            foreground=TEXT,
-            padding=(10, 5),
-            bordercolor=LINE,
-            lightcolor=CARD,
-            darkcolor=CARD,
-        )
-        style.map(
-            "TButton",
-            background=[("active", CARD_HOVER), ("disabled", PANEL)],
-            foreground=[("disabled", "#56627a")],
-        )
-        style.configure("Accent.TButton", background="#2f6f5c")
-        style.map("Accent.TButton", background=[("active", "#3a8a72"), ("disabled", CARD)])
-        style.configure("Danger.TButton", background="#6b2f37")
-        style.map("Danger.TButton", background=[("active", "#8a3a45"), ("disabled", PANEL)])
-        style.configure(
-            "Treeview",
-            background=PANEL,
-            fieldbackground=PANEL,
-            foreground=TEXT,
-            rowheight=self.px(26),
-            bordercolor=PANEL,
-            font=base,
-        )
-        style.map("Treeview", background=[("selected", "#2c4a44")], foreground=[("selected", TEXT)])
-        style.configure(
-            "Vertical.TScrollbar",
-            background=CARD,
-            troughcolor=BG,
-            bordercolor=BG,
-            arrowcolor=MUTED,
-            lightcolor=CARD,
-            darkcolor=CARD,
-        )
-        style.configure(
-            "Horizontal.TScale",
-            background=CARD,
-            troughcolor=CARD,
-            bordercolor=BG,
-            lightcolor=CARD,
-            darkcolor=CARD,
-        )
+    def font(self, size: int, weight: str = "normal") -> tkfont.Font:
+        key = (size, weight)
+        if key not in self.fonts:
+            self.fonts[key] = tkfont.Font(family=FONT, size=size, weight=weight)
+        return self.fonts[key]
 
-    def _build(self) -> None:
-        pad = self.px(14)
-        # top bar
-        top = ttk.Frame(self.window, padding=(pad, pad, pad, self.px(8)))
-        top.pack(fill="x")
-        ttk.Label(top, text="에셋 라이브러리", style="Title.TLabel").pack(side="left")
-        self.query = tk.StringVar()
-        search = ttk.Entry(top, textvariable=self.query, width=34)
-        search.pack(side="left", padx=(pad * 2, self.px(8)))
-        self.search = search
-        self._placeholder(search, "이름 또는 경로 검색  (Ctrl+F)")
-        self.filter = tk.StringVar(value=FILTERS[0])
-        ttk.Combobox(
-            top, textvariable=self.filter, values=FILTERS, state="readonly", width=18
-        ).pack(side="left", padx=self.px(4))
-        self.sort = tk.StringVar(value="폴더순")
-        ttk.Combobox(
-            top, textvariable=self.sort, values=list(SORTS), state="readonly", width=12
-        ).pack(side="left", padx=self.px(4))
-        ttk.Button(top, text="⟳ 새로고침", command=self.reload).pack(side="right")
-        self.size = tk.IntVar(value=128)
-        ttk.Scale(
-            top,
-            from_=72,
-            to=240,
-            variable=self.size,
-            length=self.px(150),
-            command=lambda _: self._relayout(),
-        ).pack(side="right", padx=self.px(8))
-        ttk.Label(top, text="크기", style="Muted.TLabel").pack(side="right")
+    def photo(self, key: tuple[object, ...], build) -> ImageTk.PhotoImage:  # type: ignore[no-untyped-def]
+        """A cached Tk image. The cache also keeps it alive -- Tk does not."""
+        if key not in self.photos:
+            self.photos[key] = ImageTk.PhotoImage(build())
+        return self.photos[key]
 
-        body = ttk.Frame(self.window)
-        body.pack(fill="both", expand=True)
+    def fit_text(self, text: str, width: int, font: tkfont.Font) -> str:
+        """One line, cut from the FRONT: the end of a path is the telling part."""
+        if font.measure(text) <= width:
+            return text
+        while text and font.measure("…" + text) > width:
+            text = text[1:]
+        return "…" + text
 
-        # left: folders
-        left = ttk.Frame(body, style="Panel.TFrame", width=self.px(230))
-        left.pack(side="left", fill="y", padx=(pad, 0), pady=(0, pad))
-        left.pack_propagate(False)
-        ttk.Label(left, text="폴더", style="Head.TLabel").pack(anchor="w", padx=12, pady=(12, 6))
-        self.tree = ttk.Treeview(left, show="tree", selectmode="browse")
-        self.tree.pack(fill="both", expand=True, padx=(6, 0), pady=(0, 8))
-        self.tree.bind("<<TreeviewSelect>>", lambda _: self._relayout(reset=True))
+    def _typing(self, event: tk.Event) -> bool:
+        return isinstance(event.widget, tk.Entry)
 
-        # right: details
-        right = ttk.Frame(body, style="Panel.TFrame", width=self.px(360))
-        right.pack(side="right", fill="y", padx=(0, pad), pady=(0, pad))
-        right.pack_propagate(False)
-        self._build_detail(right)
-
-        # middle: grid
-        middle = ttk.Frame(body)
-        middle.pack(side="left", fill="both", expand=True, padx=pad, pady=(0, pad))
-        self.canvas = tk.Canvas(middle, bg=BG, highlightthickness=0)
-        self.scroll = ttk.Scrollbar(middle, orient="vertical", command=self._yview)
-        self.scroll.pack(side="right", fill="y")
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.canvas.configure(yscrollcommand=self._on_scroll)
-        self.canvas.bind("<Configure>", lambda _: self._relayout())
-        self.canvas.bind("<MouseWheel>", self._wheel)
-        self.canvas.bind("<Button-1>", self._click)
-        self.canvas.bind("<Double-Button-1>", self._double)
-        self.canvas.bind("<Button-3>", self._context)
-        self.canvas.bind("<Motion>", self._motion)
-        self.canvas.bind("<Leave>", lambda _: self._set_hover(None))
-
-        # bottom: status + bulk actions
-        bottom = ttk.Frame(self.window, padding=(pad, 0, pad, self.px(10)))
-        bottom.pack(fill="x", side="bottom", before=body)
-        self.status = ttk.Label(bottom, style="Muted.TLabel")
-        self.status.pack(side="left")
-        self.delete_button = ttk.Button(
-            bottom, text="선택 삭제", style="Danger.TButton", command=self.confirm_delete
-        )
-        self.delete_button.pack(side="right")
-        ttk.Button(bottom, text="선택 해제", command=self.clear_selection).pack(
-            side="right", padx=self.px(6)
-        )
-        ttk.Button(bottom, text="보이는 것 모두 선택", command=self.select_shown).pack(side="right")
-
-        for var in (self.query, self.filter, self.sort):
-            var.trace_add("write", lambda *_: self._relayout(reset=True))
-
-    def _build_detail(self, right: ttk.Frame) -> None:
-        self.d_title = ttk.Label(
-            right, text="선택한 에셋 없음", style="Head.TLabel", wraplength=self.px(330)
-        )
-        self.d_title.pack(anchor="w", padx=14, pady=(12, 2))
-        self.d_path = ttk.Label(right, style="PanelMuted.TLabel", wraplength=self.px(330))
-        self.d_path.pack(anchor="w", padx=14)
-        self.d_canvas = tk.Canvas(
-            right, bg=PANEL, highlightthickness=0, width=self.px(332), height=self.px(300)
-        )
-        self.d_canvas.pack(padx=14, pady=10)
-        controls = ttk.Frame(right, style="Panel.TFrame")
-        controls.pack(fill="x", padx=14)
-        self.zoom = tk.StringVar(value="맞춤")
-        ttk.Combobox(
-            controls,
-            textvariable=self.zoom,
-            state="readonly",
-            width=7,
-            values=("맞춤", "1x", "2x", "4x", "8x"),
-        ).pack(side="left")
-        self.backdrop = tk.StringVar(value="체크")
-        ttk.Combobox(
-            controls,
-            textvariable=self.backdrop,
-            state="readonly",
-            width=7,
-            values=("체크", "어둡게", "밝게", "잔디"),
-        ).pack(side="left", padx=6)
-        self.zoom.trace_add("write", lambda *_: self.show_detail())
-        self.backdrop.trace_add("write", lambda *_: self.show_detail())
-        self.d_info = ttk.Label(
-            right, style="Panel.TLabel", justify="left", wraplength=self.px(330)
-        )
-        self.d_info.pack(anchor="w", padx=14, pady=(12, 6))
-        buttons = ttk.Frame(right, style="Panel.TFrame")
-        buttons.pack(fill="x", padx=14, pady=(4, 0))
-        self.d_buttons = [
-            ttk.Button(
-                buttons,
-                text="Aseprite에서 열기",
-                style="Accent.TButton",
-                command=lambda: self._with_focus(self.open_asset),
-            ),
-            ttk.Button(
-                buttons, text="탐색기에서 보기", command=lambda: self._with_focus(self.reveal)
-            ),
-            ttk.Button(buttons, text="경로 복사", command=lambda: self._with_focus(self.copy_path)),
-        ]
-        for button in self.d_buttons:
-            button.pack(fill="x", pady=3)
-        self._set_detail_buttons(False)
-
-    def _placeholder(self, entry: ttk.Entry, hint: str) -> None:
-        """Grey hint text in an empty search box (Tk has none built in)."""
+    # --- the search box hint (Tk has none) ---------------------------------------
+    def _placeholder(self, hint: str) -> None:
+        self._hint = hint
+        self._hint_on = False
 
         def show(_: object = None) -> None:
-            if not self.query.get() and self.window.focus_get() is not entry:
-                entry.configure(foreground=MUTED)
-                entry.delete(0, "end")
-                entry.insert(0, hint)
+            if not self.query.get() and self.window.focus_get() is not self.entry:
                 self._hint_on = True
+                self.entry.configure(fg=FAINT)
+                self.entry.delete(0, "end")
+                self.entry.insert(0, hint)
 
         def hide(_: object = None) -> None:
-            if getattr(self, "_hint_on", False):
+            if self._hint_on:
                 self._hint_on = False
-                entry.delete(0, "end")
-                entry.configure(foreground=TEXT)
+                self.entry.delete(0, "end")
+                self.entry.configure(fg=TEXT)
 
-        self._hint_on = False
-        self._hint = hint
-        entry.bind("<FocusIn>", hide)
-        entry.bind("<FocusOut>", show)
+        self.entry.bind("<FocusIn>", hide)
+        self.entry.bind("<FocusOut>", show)
         self.window.after(10, show)
 
     def _search_text(self) -> str:
         return "" if self._hint_on else self.query.get().strip().casefold()
 
-    def _bind_keys(self) -> None:
+    # --- input wiring ------------------------------------------------------------
+    def _bind(self) -> None:
         w = self.window
-        w.bind("<Control-f>", lambda _: (self.search.focus_set(), "break")[1])
+        w.bind("<Configure>", self._on_configure)
+        w.bind("<Control-f>", lambda _: (self.entry.focus_set(), "break")[1])
         w.bind("<F5>", lambda _: self.reload())
         w.bind("<Escape>", self._escape)
-        for key, step in (("<Left>", -1), ("<Right>", 1)):
-            w.bind(key, lambda e, s=step: self._arrow(e, s))
+        w.bind("<Left>", lambda e: self._arrow(e, -1))
+        w.bind("<Right>", lambda e: self._arrow(e, 1))
         w.bind("<Up>", lambda e: self._arrow(e, -self.columns))
         w.bind("<Down>", lambda e: self._arrow(e, self.columns))
         w.bind("<Control-a>", self._select_all_key)
         w.bind("<Delete>", self._delete_key)
         w.bind("<Return>", self._enter_key)
+        grid = self.panes["grid"]
+        grid.bind("<Button-1>", self._grid_press)
+        grid.bind("<B1-Motion>", self._grid_drag)
+        grid.bind("<ButtonRelease-1>", lambda _: setattr(self, "drag_from", None))
+        grid.bind("<Double-Button-1>", self._double)
+        grid.bind("<Button-3>", self._context)
+        grid.bind("<Motion>", self._grid_motion)
+        grid.bind("<Leave>", lambda _: self._set_hover(None))
+        grid.bind("<MouseWheel>", self._grid_wheel)
+        side = self.panes["side"]
+        side.bind("<Button-1>", self._side_click)
+        side.bind("<Motion>", self._side_motion)
+        side.bind("<Leave>", lambda _: self._side_hover(None))
+        side.bind("<MouseWheel>", self._side_wheel)
 
-    def _typing(self, event: tk.Event) -> bool:
-        return isinstance(event.widget, (tk.Entry, ttk.Entry, ttk.Combobox))
+    def _on_configure(self, event: tk.Event) -> None:
+        if event.widget is not self.window:
+            return
+        size = (self.window.winfo_width(), self.window.winfo_height())
+        if size == self.size_seen:
+            return
+        self.size_seen = size
+        if self.layout_pending:
+            self.window.after_cancel(self.layout_pending)
+        self.layout_pending = self.window.after(90, self._layout)
+
+    # --- layout: where the panes sit, and their glass ---------------------------------
+    def _boxes(self) -> dict[str, tuple[int, int, int, int]]:
+        W, H = self.size_seen
+        p = self.px(14)
+        top_h, bot_h = self.px(64), self.px(54)
+        side_w, det_w = self.px(240), self.px(364)
+        y0 = p + top_h + p
+        y1 = H - p - bot_h - p
+        return {
+            "top": (p, p, W - p, p + top_h),
+            "bottom": (p, H - p - bot_h, W - p, H - p),
+            "side": (p, y0, p + side_w, y1),
+            "detail": (W - p - det_w, y0, W - p, y1),
+            "grid": (p + side_w + p, y0, W - p - det_w - p, y1),
+        }
+
+    def _search_box(self) -> tuple[int, int, int, int]:
+        h = self.px(38)
+        x = self.px(20) + self.font(15, "bold").measure("에셋 라이브러리") + self.px(26)
+        y = (self.px(64) - h) // 2
+        return x, y, x + self.px(330), y + h
+
+    def _layout(self) -> None:
+        self.layout_pending = None
+        W, H = self.size_seen
+        if W < 50 or H < 50:
+            return
+        back = backdrop(W, H)
+        self.bg["stage"] = ImageTk.PhotoImage(back)
+        self.stage.delete("all")
+        self.stage.create_image(0, 0, anchor="nw", image=self.bg["stage"])
+        self.bg_images: dict[str, Image.Image] = {}
+        for name, box in self._boxes().items():
+            x0, y0, x1, y1 = box
+            pane = self.panes[name]
+            pane.place(x=x0, y=y0, width=x1 - x0, height=y1 - y0)
+            image = glass(back, box, self.px(20))
+            if name == "top":
+                image = self._inset_search(image)
+            self.bg_images[name] = image
+            self.bg[name] = ImageTk.PhotoImage(image)
+            pane.delete("bg")
+            pane.create_image(0, 0, anchor="nw", image=self.bg[name], tags="bg")
+            pane.tag_lower("bg")
+        self._masks()
+        self.draw_all()
+
+    def _inset_search(self, image: Image.Image) -> Image.Image:
+        """Sink the search field into the top bar, and colour the Entry to match."""
+        x0, y0, x1, y1 = self._search_box()
+        field = rounded(x1 - x0, y1 - y0, (y1 - y0) // 2, (0, 0, 0, 150), white(30))
+        out = image.convert("RGBA")
+        out.alpha_composite(field, (x0, y0))
+        r, g, b, _ = out.getpixel(((x0 + x1) // 2, (y0 + y1) // 2))
+        self.entry.configure(bg=f"#{r:02x}{g:02x}{b:02x}")
+        self.entry.place(
+            x=x0 + self.px(16),
+            y=y0 + self.px(8),
+            width=x1 - x0 - self.px(30),
+            height=y1 - y0 - self.px(16),
+        )
+        return out.convert("RGB")
+
+    def _masks(self) -> None:
+        """Strips of each scrolling pane's own glass, laid over what scrolls past.
+
+        A Tk canvas cannot clip, so cards scrolling off the top would cover
+        the rounded edge. These put the edge back on top of them.
+        """
+        self.mask_h = {"grid": (self.px(14), self.px(14)), "side": (self.px(50), self.px(12))}
+        for name, (top, bottom) in self.mask_h.items():
+            image = self.bg_images[name]
+            w, h = image.size
+            self.bg[f"{name}-top"] = ImageTk.PhotoImage(image.crop((0, 0, w, top)))
+            self.bg[f"{name}-bottom"] = ImageTk.PhotoImage(image.crop((0, h - bottom, w, h)))
+
+    def _lay_masks(self, name: str) -> None:
+        pane = self.panes[name]
+        h = pane.winfo_height()
+        _, bottom = self.mask_h[name]
+        pane.create_image(0, 0, anchor="nw", image=self.bg[f"{name}-top"], tags="content")
+        pane.create_image(
+            0, h - bottom, anchor="nw", image=self.bg[f"{name}-bottom"], tags="content"
+        )
+
+    def draw_all(self) -> None:
+        if not hasattr(self, "bg_images"):
+            return
+        self.draw_top()
+        self.draw_side()
+        self.draw_grid()
+        self.draw_detail()
+        self.draw_bottom()
+
+    # --- pills: every button, selector and badge ----------------------------------
+    def pill(
+        self,
+        pane: tk.Canvas,
+        x: int,
+        y: int,
+        text: str,
+        command,  # type: ignore[no-untyped-def]
+        *,
+        tag: str,
+        style: str = "glass",
+        h: int | None = None,
+        w: int | None = None,
+        size: int = 10,
+        right: bool = False,
+    ) -> int:
+        """Draw a rounded button; returns the x of its far edge."""
+        h = h or self.px(34)
+        f = self.font(size, "bold" if style == "primary" else "normal")
+        w = w or f.measure(text) + self.px(30)
+        if right:
+            x -= w
+        fill, outline, hover, ink = PILL[style]
+        normal = self.photo(("pill", w, h, style), lambda: rounded(w, h, h // 2, fill, outline))
+        lit = self.photo(("pill-hover", w, h, style), lambda: rounded(w, h, h // 2, hover, outline))
+        body = pane.create_image(x, y, anchor="nw", image=normal, tags=(tag, "content"))
+        pane.create_text(x + w / 2, y + h / 2, text=text, fill=ink, font=f, tags=(tag, "content"))
+        if style != "off" and command is not None:
+            pane.tag_bind(
+                tag,
+                "<Enter>",
+                lambda _: (pane.itemconfigure(body, image=lit), pane.configure(cursor="hand2")),
+            )
+            pane.tag_bind(
+                tag,
+                "<Leave>",
+                lambda _: (pane.itemconfigure(body, image=normal), pane.configure(cursor="")),
+            )
+            pane.tag_bind(tag, "<ButtonRelease-1>", lambda _: command())
+        else:
+            for sequence in ("<Enter>", "<Leave>", "<ButtonRelease-1>"):
+                pane.tag_bind(tag, sequence, lambda _: None)
+        return x if right else x + w
+
+    def badge(self, pane: tk.Canvas, x: int, y: int, text: str, style: str) -> int:
+        h = self.px(19)
+        f = self.font(7, "bold")
+        w = f.measure(text) + self.px(14)
+        look = {
+            "plain": (white(24), white(40), "#d2d2d8"),
+            "solid": ((228, 228, 232, 235), None, INK),
+            "ring": (white(0), white(190), TEXT),
+        }[style]
+        image = self.photo(("badge", w, h, style), lambda: rounded(w, h, h // 2, look[0], look[1]))
+        pane.create_image(x, y, anchor="nw", image=image, tags="content")
+        pane.create_text(x + w / 2, y + h / 2, text=text, fill=look[2], font=f, tags="content")
+        return x + w + self.px(5)
+
+    def menu(self, pane: tk.Canvas, tag: str, options, current: str, choose) -> None:  # type: ignore[no-untyped-def]
+        x0, _, _, y1 = pane.bbox(tag)
+        menu = tk.Menu(self.window, tearoff=0, font=(FONT, 10), **MENU)
+        for option in options:
+            mark = "✓  " if option == current else "     "
+            menu.add_command(label=mark + option, command=lambda o=option: choose(o))
+        menu.tk_popup(pane.winfo_rootx() + x0, pane.winfo_rooty() + y1 + self.px(6))
+
+    # --- the top bar ----------------------------------------------------------------
+    def draw_top(self) -> None:
+        pane = self.panes["top"]
+        pane.delete("content")
+        mid = self.px(64) // 2
+        pane.create_text(
+            self.px(22),
+            mid,
+            anchor="w",
+            text="에셋 라이브러리",
+            fill=TEXT,
+            font=self.font(15, "bold"),
+            tags="content",
+        )
+        _, y0, x1, _ = self._search_box()
+        y = mid - self.px(17)
+        x = x1 + self.px(12)
+        x = self.pill(pane, x, y, f"{self.filter}  ▾", self._pick_filter, tag="filter") + self.px(8)
+        self.pill(pane, x, y, f"{self.sort}  ▾", self._pick_sort, tag="sort")
+        right = pane.winfo_width() - self.px(16)
+        right = self.pill(pane, right, y, "⟳  새로고침", self.reload, tag="refresh", right=True)
+        right -= self.px(14)
+        right = self.pill(
+            pane,
+            right,
+            y,
+            "+",
+            lambda: self._resize(24),
+            tag="bigger",
+            w=self.px(34),
+            right=True,
+            size=12,
+        )
+        pane.create_text(
+            right - self.px(8),
+            mid,
+            anchor="e",
+            text=f"크기 {self.size}",
+            fill=MUTED,
+            font=self.font(9),
+            tags="content",
+        )
+        label_w = self.font(9).measure(f"크기 {self.size}") + self.px(16)
+        self.pill(
+            pane,
+            right - label_w,
+            y,
+            "−",
+            lambda: self._resize(-24),
+            tag="smaller",
+            w=self.px(34),
+            right=True,
+            size=12,
+        )
+
+    def _pick_filter(self) -> None:
+        self.menu(self.panes["top"], "filter", FILTERS, self.filter, self._set_filter)
+
+    def _pick_sort(self) -> None:
+        self.menu(self.panes["top"], "sort", list(SORTS), self.sort, self._set_sort)
+
+    def _set_filter(self, value: str) -> None:
+        self.filter = value
+        self.draw_top()
+        self._refilter()
+
+    def _set_sort(self, value: str) -> None:
+        self.sort = value
+        self.draw_top()
+        self._refilter()
+
+    def _resize(self, step: int) -> None:
+        self.size = max(72, min(240, self.size + step))
+        self.thumbs.clear()
+        self.draw_top()
+        self._refilter(keep_scroll=True)
+
+    # --- the folder list ------------------------------------------------------------
+    def _build_rows(self) -> None:
+        children: dict[str, list[str]] = {}
+        for path in self.counts:
+            if path == ALL:
+                continue
+            parent = path.rpartition("/")[0] or ALL
+            children.setdefault(parent, []).append(path)
+        rows: list[tuple[str, int, bool]] = []
+
+        def walk(path: str, depth: int) -> None:
+            kids = sorted(children.get(path, []))
+            rows.append((path, depth, bool(kids)))
+            if path in self.expanded:
+                for kid in kids:
+                    walk(kid, depth + 1)
+
+        walk(ALL, 0)
+        self.rows = rows
+
+    def _side_geometry(self) -> tuple[int, int]:
+        return self.px(54), self.px(32)  # first row's top, row height
+
+    def draw_side(self) -> None:
+        pane = self.panes["side"]
+        pane.delete("content")
+        w, h = pane.winfo_width(), pane.winfo_height()
+        top, row_h = self._side_geometry()
+        f = self.font(10)
+        count_font = self.font(9)
+        for index, (path, depth, kids) in enumerate(self.rows):
+            y = top + index * row_h - self.side_y
+            if y + row_h < 0 or y > h:
+                continue
+            chosen = path == self.folder
+            if chosen or index == self.side_hover:
+                style = ("side-on", w) if chosen else ("side-hover", w)
+                fill = white(40) if chosen else white(14)
+                edge = white(70) if chosen else None
+                image = self.photo(
+                    style + (row_h,),
+                    lambda f=fill, e=edge: rounded(
+                        w - self.px(20), row_h - self.px(4), self.px(10), f, e
+                    ),
+                )
+                pane.create_image(
+                    self.px(10), y + self.px(2), anchor="nw", image=image, tags="content"
+                )
+            x = self.px(20) + depth * self.px(16)
+            if kids:
+                arrow = "▾" if path in self.expanded else "▸"
+                pane.create_text(
+                    x,
+                    y + row_h / 2,
+                    anchor="w",
+                    text=arrow,
+                    fill=MUTED,
+                    font=self.font(9),
+                    tags="content",
+                )
+            name = "전체" if path == ALL else path.rpartition("/")[2]
+            pane.create_text(
+                x + self.px(16),
+                y + row_h / 2,
+                anchor="w",
+                text=name,
+                fill=TEXT if chosen else "#c8c8ce",
+                font=f,
+                tags="content",
+            )
+            pane.create_text(
+                w - self.px(22),
+                y + row_h / 2,
+                anchor="e",
+                text=str(self.counts.get(path, 0)),
+                fill=MUTED,
+                font=count_font,
+                tags="content",
+            )
+        self._lay_masks("side")
+        pane.create_text(
+            self.px(22),
+            self.px(28),
+            anchor="w",
+            text="폴더",
+            fill=TEXT,
+            font=self.font(12, "bold"),
+            tags="content",
+        )
+
+    def _side_index(self, event: tk.Event) -> int | None:
+        top, row_h = self._side_geometry()
+        if event.y < top - self.px(4):
+            return None
+        index = int((event.y + self.side_y - top) // row_h)
+        return index if 0 <= index < len(self.rows) else None
+
+    def _side_click(self, event: tk.Event) -> None:
+        index = self._side_index(event)
+        if index is None:
+            return
+        path, depth, kids = self.rows[index]
+        arrow_x = self.px(20) + depth * self.px(16)
+        if kids and (event.x < arrow_x + self.px(14) or path == self.folder):
+            self.expanded.symmetric_difference_update({path})
+            self._build_rows()
+        if path != self.folder:
+            self.folder = path
+            self._refilter()
+        self.draw_side()
+
+    def _side_motion(self, event: tk.Event) -> None:
+        self._side_hover(self._side_index(event))
+
+    def _side_hover(self, index: int | None) -> None:
+        if index != self.side_hover:
+            self.side_hover = index
+            self.panes["side"].configure(cursor="hand2" if index is not None else "")
+            self.draw_side()
+
+    def _side_wheel(self, event: tk.Event) -> None:
+        top, row_h = self._side_geometry()
+        h = self.panes["side"].winfo_height()
+        most = max(0, top + len(self.rows) * row_h + self.px(16) - h)
+        self.side_y = max(0, min(most, self.side_y - event.delta / 120 * row_h * 2))
+        self.draw_side()
 
     # --- data -----------------------------------------------------------------
     def reload(self) -> None:
@@ -648,8 +962,7 @@ class Gallery:
         self.images = {k: v for k, v in self.images.items() if k in stamps}
         self.thumbs = {k: v for k, v in self.thumbs.items() if k[0] in stamps}
         self.loader.asked &= stamps
-        live = {a.key for a in self.assets}
-        self.selected &= live
+        self.selected &= {a.key for a in self.assets}
         for asset in self.assets:
             pair = asset.pair
             if pair is None:
@@ -658,35 +971,24 @@ class Gallery:
                 asset.stale = self.differs[pair]
             else:
                 self.loader.compare(pair)
-        self._fill_tree()
-        self._relayout()
-
-    def _fill_tree(self) -> None:
-        chosen = self.tree.selection()
-        keep = chosen[0] if chosen else ""
-        self.tree.delete(*self.tree.get_children())
-        counts: dict[str, int] = {}
+        counts: dict[str, int] = {ALL: len(self.assets)}
         for asset in self.assets:
             parts = asset.folder.split("/") if asset.folder else []
-            for depth in range(len(parts) + 1):
+            for depth in range(1, len(parts) + 1):
                 path = "/".join(parts[:depth])
                 counts[path] = counts.get(path, 0) + 1
-        self.tree.insert("", "end", iid=ALL, text=f"  전체  ({counts.get('', 0)})", open=True)
-        for path in sorted(p for p in counts if p):
-            parent = path.rpartition("/")[0] or ALL
-            name = path.rpartition("/")[2]
-            self.tree.insert(
-                parent, "end", iid=path, text=f"  {name}  ({counts[path]})", open=parent == ALL
-            )
-        target = keep if keep and self.tree.exists(keep) else ALL
-        self.tree.selection_set(target)
-        self.tree.see(target)
+        self.counts = counts
+        if self.folder not in counts:
+            self.folder = ALL
+        if self.expanded == {ALL}:
+            self.expanded |= {p for p in counts if "/" not in p}  # top level open
+        self._build_rows()
+        self._refilter(keep_scroll=True)
 
     def _visible_assets(self) -> list[Asset]:
-        chosen = self.tree.selection()
-        folder = chosen[0] if chosen and chosen[0] != ALL else ""
+        folder = "" if self.folder == ALL else self.folder
         text = self._search_text()
-        mode = self.filter.get()
+        mode = self.filter
         out = []
         for asset in self.assets:
             if folder and not (asset.folder == folder or asset.folder.startswith(folder + "/")):
@@ -702,176 +1004,174 @@ class Gallery:
             if mode == "게임에서 사용" and not asset.used:
                 continue
             out.append(asset)
-        out.sort(key=SORTS.get(self.sort.get(), SORTS["폴더순"]))
+        out.sort(key=SORTS.get(self.sort, SORTS["폴더순"]))
         return out
 
-    # --- grid layout and drawing ----------------------------------------------
-    def _relayout(self, reset: bool = False) -> None:
-        if self.layout_pending:
-            self.window.after_cancel(self.layout_pending)
-        self.layout_pending = self.window.after(60, lambda: self._layout(reset))
-
-    def _layout(self, reset: bool) -> None:
-        self.layout_pending = None
-        focused = (
-            self.shown[self.focus].key
-            if self.focus is not None and self.focus < len(self.shown)
-            else None
-        )
+    def _refilter(self, keep_scroll: bool = False) -> None:
+        focused = self._focused()
         self.shown = self._visible_assets()
         index = {a.key: i for i, a in enumerate(self.shown)}
-        self.focus = index.get(focused) if focused is not None else None
-        self.anchor = None if reset else self.anchor
-        width = max(1, self.canvas.winfo_width())
-        thumb = self.px(int(self.size.get()))
-        self.thumbs = {k: v for k, v in self.thumbs.items() if k[1] == thumb}
+        self.focus = index.get(focused.key) if focused is not None else None
+        if not keep_scroll:
+            self.scroll_y = 0
+            self.anchor = None
+        self.draw_all()
+
+    # --- the grid ---------------------------------------------------------------
+    def _grid_metrics(self) -> tuple[int, int, int, int]:
+        """Left, top, usable width and height of the scrolling area."""
+        pane = self.panes["grid"]
+        pad = self.px(14)
+        return pad, pad, pane.winfo_width() - pad - self.px(18), pane.winfo_height() - 2 * pad
+
+    def _measure_grid(self) -> None:
+        _, _, width, _ = self._grid_metrics()
+        thumb = self.px(self.size)
         gap = self.px(12)
-        min_w = thumb + self.px(16)
-        self.columns = max(1, (width + gap) // (min_w + gap))
-        # spread the spare width across the cards so the grid fills the row
+        self.columns = max(1, (width + gap) // (thumb + self.px(20) + gap))
         card_w = (width - gap * (self.columns - 1)) // self.columns
-        card_h = thumb + self.px(88)
-        self.cell = (card_w + gap, card_h + gap)
-        self.card = (card_w, card_h)
+        self.card = (card_w, thumb + self.px(92))
+        self.cell = (card_w + gap, self.card[1] + gap)
+
+    def _content_height(self) -> int:
         rows = -(-len(self.shown) // self.columns)
-        self.canvas.configure(scrollregion=(0, 0, width, max(1, rows * self.cell[1])))
-        if reset:
-            self.canvas.yview_moveto(0)
-        self._update_status()
-        self.show_detail()
-        self._draw()
+        return max(0, rows * self.cell[1] - self.px(12))
+
+    def _clamp_scroll(self) -> None:
+        _, _, _, height = self._grid_metrics()
+        self.scroll_y = max(0.0, min(self.scroll_y, self._content_height() - height))
 
     def _schedule_draw(self) -> None:
         if not self.draw_pending:
-            self.draw_pending = self.window.after(16, self._draw)
+            self.draw_pending = self.window.after(16, self._draw_grid_now)
 
-    def _draw(self) -> None:
+    def _draw_grid_now(self) -> None:
         self.draw_pending = None
-        canvas = self.canvas
-        canvas.delete("all")
-        if not self.shown:
-            canvas.create_text(
-                canvas.winfo_width() // 2,
-                self.px(80),
-                fill=MUTED,
-                font=(FONT, 12),
-                text="보여 줄 에셋이 없어요. 검색어나 필터를 바꿔 보세요.",
-            )
+        self.draw_grid()
+
+    def draw_grid(self) -> None:
+        pane = self.panes["grid"]
+        pane.delete("content")
+        if pane.winfo_width() < 50:
             return
-        top = canvas.canvasy(0)
-        bottom = top + canvas.winfo_height()
-        first_row = max(0, int(top // self.cell[1]))
-        last_row = int(bottom // self.cell[1]) + 1
-        start = first_row * self.columns
-        stop = min(len(self.shown), (last_row + 1) * self.columns)
-        for i in range(start, stop):
-            self._draw_card(i)
+        self._measure_grid()
+        self._clamp_scroll()
+        left, top, width, height = self._grid_metrics()
+        if not self.shown:
+            pane.create_text(
+                left + width / 2,
+                top + self.px(60),
+                fill=MUTED,
+                font=self.font(11),
+                text="보여 줄 에셋이 없어요. 검색어나 필터를 바꿔 보세요.",
+                tags="content",
+            )
+        else:
+            first = max(0, int(self.scroll_y // self.cell[1]) * self.columns)
+            last = min(
+                len(self.shown), (int((self.scroll_y + height) // self.cell[1]) + 1) * self.columns
+            )
+            for i in range(first, last):
+                self._draw_card(pane, i)
+        self._lay_masks("grid")
+        self._draw_scrollbar(pane)
 
     def _card_box(self, i: int) -> tuple[int, int, int, int]:
+        left, top, _, _ = self._grid_metrics()
         row, col = divmod(i, self.columns)
-        x, y = col * self.cell[0], row * self.cell[1]
+        x = left + col * self.cell[0]
+        y = int(top + row * self.cell[1] - self.scroll_y)
         return x, y, x + self.card[0], y + self.card[1]
 
-    def _draw_card(self, i: int) -> None:
+    def _draw_card(self, pane: tk.Canvas, i: int) -> None:
         asset = self.shown[i]
-        c = self.canvas
         x0, y0, x1, y1 = self._card_box(i)
+        cw, ch = self.card
         chosen = asset.key in self.selected
-        fill = CARD_HOVER if i == self.hover else CARD
-        c.create_rectangle(
-            x0,
-            y0,
-            x1,
-            y1,
-            fill=fill,
-            outline=ACCENT if chosen else LINE,
-            width=self.px(3) if chosen else 1,
+        state = "on" if chosen else ("hover" if i == self.hover else "off")
+        look = {
+            "off": (white(11), white(26), 1),
+            "hover": (white(22), white(48), 1),
+            "on": (white(30), white(215), 2),
+        }[state]
+        back = self.photo(
+            ("card", cw, ch, state), lambda: rounded(cw, ch, self.px(16), look[0], look[1], look[2])
         )
-        thumb = self.px(int(self.size.get()))
-        tx = x0 + (self.card[0] - thumb) // 2
-        ty = y0 + self.px(8)
-        photo = self._thumb(asset, thumb)
-        if isinstance(photo, ImageTk.PhotoImage):
-            c.create_image(tx, ty, image=photo, anchor="nw")
+        pane.create_image(x0, y0, anchor="nw", image=back, tags="content")
+        thumb = self.px(self.size)
+        tx, ty = x0 + (cw - thumb) // 2, y0 + self.px(10)
+        art = self._thumb(asset, thumb)
+        if isinstance(art, ImageTk.PhotoImage):
+            pane.create_image(tx, ty, anchor="nw", image=art, tags="content")
         else:
-            c.create_rectangle(tx, ty, tx + thumb, ty + thumb, fill=PANEL, outline="")
-            c.create_text(
-                tx + thumb // 2,
-                ty + thumb // 2,
-                text=photo,
-                width=thumb - 8,
-                fill=DANGER if photo.startswith("오류") else MUTED,
-                font=(FONT, 9),
+            hole = self.photo(
+                ("hole", thumb), lambda: rounded(thumb, thumb, self.px(12), (0, 0, 0, 70))
             )
-        pad = self.px(8)
-        c.create_text(
+            pane.create_image(tx, ty, anchor="nw", image=hole, tags="content")
+            pane.create_text(
+                tx + thumb / 2,
+                ty + thumb / 2,
+                text=art,
+                width=thumb - 10,
+                fill=MUTED,
+                font=self.font(9),
+                tags="content",
+            )
+        pad = self.px(12)
+        name_font, folder_font = self.font(10, "bold"), self.font(8)
+        pane.create_text(
             x0 + pad,
-            ty + thumb + self.px(6),
+            ty + thumb + self.px(8),
             anchor="nw",
-            text=asset.name,
+            text=self.fit_text(asset.name, cw - 2 * pad, name_font),
             fill=TEXT,
-            font=(FONT, 10, "bold"),
-            width=self.card[0] - 2 * pad,
+            font=name_font,
+            tags="content",
         )
-        c.create_text(
+        pane.create_text(
             x0 + pad,
-            ty + thumb + self.px(30),
+            ty + thumb + self.px(31),
             anchor="nw",
-            text=self._fit_text(asset.folder or "assets", self.card[0] - 2 * pad),
+            text=self.fit_text(asset.folder or "assets", cw - 2 * pad, folder_font),
             fill=MUTED,
-            font=(FONT, 8),
+            font=folder_font,
+            tags="content",
         )
-        # badges along the bottom
         bx = x0 + pad
-        by = y1 - self.px(24)
-        for label, colour in self._badges(asset):
-            text_id = c.create_text(
-                bx + self.px(5),
-                by + self.px(1),
-                anchor="nw",
-                text=label,
-                fill="#ffffff",
-                font=(FONT, 7, "bold"),
-            )
-            bx0, by0, bx1, by1 = c.bbox(text_id)
-            rect = c.create_rectangle(
-                bx0 - self.px(4), by0 - 1, bx1 + self.px(4), by1 + 1, fill=colour, outline=""
-            )
-            c.tag_lower(rect, text_id)
-            bx = bx1 + self.px(8)
+        by = y1 - self.px(29)
+        for label, style in self._badges(asset):
+            bx = self.badge(pane, bx, by, label, style)
         if chosen:
-            c.create_oval(
-                x1 - self.px(22),
-                y0 + self.px(6),
-                x1 - self.px(6),
-                y0 + self.px(22),
-                fill=ACCENT,
-                outline="",
+            dot = self.px(20)
+            ring = self.photo(
+                ("check", dot), lambda: rounded(dot, dot, dot // 2, (240, 240, 244, 245))
             )
-            c.create_text(
-                x1 - self.px(14), y0 + self.px(14), text="✓", fill=BG, font=(FONT, 8, "bold")
+            pane.create_image(
+                x1 - dot - self.px(8), y0 + self.px(8), anchor="nw", image=ring, tags="content"
             )
-
-    def _fit_text(self, text: str, width: int) -> str:
-        """One line, cut from the FRONT: the end of a path is the telling part."""
-        if not hasattr(self, "_small"):
-            self._small = tkfont.Font(family=FONT, size=8)
-        if self._small.measure(text) <= width:
-            return text
-        while text and self._small.measure("…" + text) > width:
-            text = text[1:]
-        return "…" + text
+            pane.create_text(
+                x1 - dot / 2 - self.px(8),
+                y0 + self.px(8) + dot / 2,
+                text="✓",
+                fill=INK,
+                font=self.font(8, "bold"),
+                tags="content",
+            )
 
     def _badges(self, asset: Asset) -> list[tuple[str, str]]:
-        out = [
-            (ext[1:].upper()[:4].replace("ASEP", "ASE"), BADGE.get(ext, "#556"))
-            for ext in ALL_EXTS
-            if ext in asset.files
-        ]
-        if asset.stale:
-            out.append(("갱신 필요", "#a8701f"))
+        names = {
+            ".aseprite": "ASE",
+            ".png": "PNG",
+            ".webp": "WEBP",
+            ".gif": "GIF",
+            ".jpg": "JPG",
+            ".bmp": "BMP",
+        }
+        out = [(names[ext], "plain") for ext in ALL_EXTS if ext in asset.files]
         if asset.used:
-            out.append(("게임", "#3d6e3a"))
+            out.append(("게임", "solid"))
+        if asset.stale:
+            out.append(("갱신 필요", "ring"))
         return out
 
     def _thumb(self, asset: Asset, size: int) -> ImageTk.PhotoImage | str:
@@ -881,93 +1181,36 @@ class Gallery:
             self.loader.ask(stamp)
             return "불러오는 중…"
         if isinstance(got, str):
-            return f"오류: {got[:60]}"
+            return f"미리보기 오류\n{got[:50]}"
         key = (stamp, size)
-        photo = self.thumbs.get(key)
-        if photo is None:
-            board = self._board(size)
-            art = fit(got, size - 8, size - 8)
+        if key not in self.thumbs:
+            board = checker(size, size, max(6, size // 12), "#18181b", "#202024")
+            art = fit(got, size - self.px(14), size - self.px(14))
             board.alpha_composite(art, ((size - art.width) // 2, (size - art.height) // 2))
-            photo = self.thumbs[key] = ImageTk.PhotoImage(board)
-        return photo
+            board.putalpha(round_mask(size, size, self.px(12)))
+            self.thumbs[key] = ImageTk.PhotoImage(board)
+        return self.thumbs[key]
 
-    _boards: dict[int, Image.Image] = {}
+    def _draw_scrollbar(self, pane: tk.Canvas) -> None:
+        _, top, _, height = self._grid_metrics()
+        total = self._content_height()
+        if total <= height:
+            return
+        bar_h = max(self.px(40), int(height * height / total))
+        y = top + int((height - bar_h) * self.scroll_y / (total - height))
+        w = self.px(6)
+        x = pane.winfo_width() - self.px(14)
+        thumb = self.photo(("bar", w, bar_h), lambda: rounded(w, bar_h, w // 2, white(70)))
+        pane.create_image(x, y, anchor="nw", image=thumb, tags="content")
 
-    def _board(self, size: int) -> Image.Image:
-        if size not in self._boards:
-            self._boards[size] = checker(size, size, max(6, size // 12), "#252e3b", "#2e3948")
-        return self._boards[size].copy()
-
-    def _poll_images(self) -> None:
-        arrived = set()
-        try:
-            while True:
-                stamp, image = self.loader.results.get_nowait()
-                self.images[stamp] = image
-                arrived.add(stamp)
-        except queue.Empty:
-            pass
-        compared = False
-        try:
-            while True:
-                pair, differs = self.loader.compared.get_nowait()
-                self.differs[pair] = differs
-                compared = True
-        except queue.Empty:
-            pass
-        if compared:
-            for asset in self.assets:
-                pair = asset.pair
-                if pair in self.differs:
-                    asset.stale = self.differs[pair]
-            self._update_status()
-            if self.filter.get() == "갱신 필요":
-                self._relayout()
-            arrived.add(("", 0.0))  # redraw for the badges
-        if arrived:
-            self._schedule_draw()
-            focus = self._focused()
-            if focus is not None and focus.stamp in arrived:
-                self.show_detail()
-        self.window.after(50, self._poll_images)
-
-    def _watch(self) -> None:
-        """Pick up files changed by other tools (or other tabs) without F5."""
-        try:
-            if signature() != self.last_signature:
-                self.reload()
-        finally:
-            self.window.after(REFRESH_MS, self._watch)
-
-    # --- scrolling --------------------------------------------------------------
-    def _yview(self, *args: str) -> None:
-        self.canvas.yview(*args)
-        self._schedule_draw()
-
-    def _on_scroll(self, first: str, last: str) -> None:
-        self.scroll.set(first, last)
-        self._schedule_draw()
-
-    def _wheel(self, event: tk.Event) -> None:
-        self.canvas.yview_scroll(-int(event.delta / 120) * 2, "units")
-        self._schedule_draw()
-
-    def _ensure_visible(self, i: int) -> None:
-        _, y0, _, y1 = self._card_box(i)
-        total = max(1, -(-len(self.shown) // self.columns) * self.cell[1])
-        top = self.canvas.canvasy(0)
-        height = self.canvas.winfo_height()
-        if y0 < top:
-            self.canvas.yview_moveto(y0 / total)
-        elif y1 > top + height:
-            self.canvas.yview_moveto((y1 - height) / total)
-        self._schedule_draw()
-
-    # --- selection --------------------------------------------------------------
-    def _index_at(self, event: tk.Event) -> int | None:
-        x, y = self.canvas.canvasx(event.x), self.canvas.canvasy(event.y)
-        col, row = int(x // self.cell[0]), int(y // self.cell[1])
-        if col >= self.columns:
+    # --- grid input -----------------------------------------------------------------
+    def _index_at(self, x: float, y: float) -> int | None:
+        left, top, width, _ = self._grid_metrics()
+        if x < left or x > left + width:
+            return None
+        col = int((x - left) // self.cell[0])
+        row = int((y - top + self.scroll_y) // self.cell[1])
+        if col >= self.columns or row < 0:
             return None
         i = row * self.columns + col
         if i >= len(self.shown):
@@ -975,16 +1218,20 @@ class Gallery:
         x0, y0, x1, y1 = self._card_box(i)
         return i if x0 <= x <= x1 and y0 <= y <= y1 else None
 
-    def _click(self, event: tk.Event) -> None:
-        self.canvas.focus_set()
-        i = self._index_at(event)
+    def _grid_press(self, event: tk.Event) -> None:
+        pane = self.panes["grid"]
+        pane.focus_set()
+        if event.x > pane.winfo_width() - self.px(22):  # the scrollbar strip
+            self.drag_from = (event.y, self.scroll_y)
+            return
+        i = self._index_at(event.x, event.y)
         if i is None:
             return
         key = self.shown[i].key
-        if event.state & 0x1 and self.anchor is not None:  # Shift: a run
+        if event.state & 0x1 and self.anchor is not None:
             lo, hi = sorted((self.anchor, i))
             self.selected.update(a.key for a in self.shown[lo : hi + 1])
-        elif event.state & 0x4:  # Ctrl: toggle one
+        elif event.state & 0x4:
             self.selected.symmetric_difference_update({key})
             self.anchor = i
         else:
@@ -993,19 +1240,44 @@ class Gallery:
         self.focus = i
         self._after_selection()
 
-    def _double(self, event: tk.Event) -> None:
-        i = self._index_at(event)
-        if i is not None:
-            self.open_asset(self.shown[i])
+    def _grid_drag(self, event: tk.Event) -> None:
+        if self.drag_from is None:
+            return
+        _, _, _, height = self._grid_metrics()
+        total = self._content_height()
+        if total <= height:
+            return
+        start_y, start_scroll = self.drag_from
+        self.scroll_y = start_scroll + (event.y - start_y) * total / height
+        self._schedule_draw()
 
-    def _motion(self, event: tk.Event) -> None:
-        self._set_hover(self._index_at(event))
+    def _grid_wheel(self, event: tk.Event) -> None:
+        self.scroll_y -= event.delta / 120 * self.px(90)
+        self._schedule_draw()
+
+    def _grid_motion(self, event: tk.Event) -> None:
+        self._set_hover(self._index_at(event.x, event.y))
 
     def _set_hover(self, i: int | None) -> None:
         if i != self.hover:
             self.hover = i
-            self.canvas.configure(cursor="hand2" if i is not None else "")
+            self.panes["grid"].configure(cursor="hand2" if i is not None else "")
             self._schedule_draw()
+
+    def _double(self, event: tk.Event) -> None:
+        i = self._index_at(event.x, event.y)
+        if i is not None:
+            self.open_asset(self.shown[i])
+
+    def _ensure_visible(self, i: int) -> None:
+        _, top, _, height = self._grid_metrics()
+        row = i // self.columns
+        y0 = row * self.cell[1]
+        y1 = y0 + self.card[1]
+        if y0 < self.scroll_y:
+            self.scroll_y = y0
+        elif y1 > self.scroll_y + height:
+            self.scroll_y = y1 - height
 
     def _arrow(self, event: tk.Event, step: int) -> str | None:
         if self._typing(event) or not self.shown:
@@ -1035,7 +1307,7 @@ class Gallery:
 
     def _enter_key(self, event: tk.Event) -> str | None:
         if self._typing(event):
-            self.canvas.focus_set()
+            self.panes["grid"].focus_set()
             return "break"
         focus = self._focused()
         if focus is not None:
@@ -1050,7 +1322,7 @@ class Gallery:
             self.clear_selection()
         elif self._search_text():
             self.query.set("")
-        self.canvas.focus_set()
+        self.panes["grid"].focus_set()
 
     def select_shown(self) -> None:
         self.selected = {a.key for a in self.shown}
@@ -1061,121 +1333,278 @@ class Gallery:
         self._after_selection()
 
     def _after_selection(self) -> None:
-        self._update_status()
-        self.show_detail()
-        self._schedule_draw()
+        self.draw_grid()
+        self.draw_detail()
+        self.draw_bottom()
 
     def _focused(self) -> Asset | None:
         if self.focus is None or self.focus >= len(self.shown):
             return None
         return self.shown[self.focus]
 
-    def _update_status(self) -> None:
-        stale = sum(1 for a in self.shown if a.stale)
-        parts = [f"{len(self.shown)} / {len(self.assets)}개 표시"]
-        pending = sum(1 for a in self.assets if a.pair and a.pair not in self.differs)
-        if pending:
-            parts.append(f"원본과 비교 중 {pending}개")
-        if stale:
-            parts.append(f"갱신 필요 {stale}개")
-        parts.append(f"선택 {len(self.selected)}개")
-        parts.append("Ctrl+클릭 여러 개 · Shift+클릭 범위 · 더블클릭 Aseprite · 우클릭 메뉴")
-        self.status.configure(text="   ·   ".join(parts))
-        state = "normal" if self.selected else "disabled"
-        self.delete_button.configure(text=f"선택 삭제 ({len(self.selected)})", state=state)
-
-    # --- the detail panel ---------------------------------------------------------
-    def _set_detail_buttons(self, on: bool) -> None:
-        for button in self.d_buttons:
-            button.configure(state="normal" if on else "disabled")
-
-    def _with_focus(self, action) -> None:  # type: ignore[no-untyped-def]
-        focus = self._focused()
-        if focus is not None:
-            action(focus)
-
-    def show_detail(self) -> None:
-        asset = self._focused()
-        c = self.d_canvas
-        c.delete("all")
-        self.detail_photo = None
-        if asset is None:
-            self.d_title.configure(text="선택한 에셋 없음")
-            self.d_path.configure(text="에셋을 클릭하면 여기에 크게 보여요.")
-            self.d_info.configure(text="")
-            self._set_detail_buttons(False)
+    # --- the detail pane ----------------------------------------------------------
+    def draw_detail(self) -> None:
+        pane = self.panes["detail"]
+        pane.delete("content")
+        w = pane.winfo_width()
+        if w < 50:
             return
-        self._set_detail_buttons(True)
-        self.d_title.configure(text=asset.name)
-        self.d_path.configure(text=f"assets/{asset.rel}")
-        w, h = int(c["width"]), int(c["height"])
-        backdrop = self.backdrop.get()
-        if backdrop == "체크":
-            board = checker(w, h, self.px(10), "#252e3b", "#2e3948")
-        else:
-            colour = {"어둡게": "#0d1117", "밝게": "#e9edf2", "잔디": "#6f8f4e"}[backdrop]
-            board = Image.new("RGBA", (w, h), colour)
+        pad = self.px(20)
+        inner = w - 2 * pad
+        asset = self._focused()
+        title = asset.name if asset else "선택한 에셋 없음"
+        pane.create_text(
+            pad,
+            self.px(26),
+            anchor="w",
+            text=self.fit_text(title, inner, self.font(13, "bold")),
+            fill=TEXT,
+            font=self.font(13, "bold"),
+            tags="content",
+        )
+        sub = f"assets/{asset.rel}" if asset else "에셋을 클릭하면 여기에 크게 보여요."
+        pane.create_text(
+            pad,
+            self.px(50),
+            anchor="w",
+            text=self.fit_text(sub, inner, self.font(9)),
+            fill=MUTED,
+            font=self.font(9),
+            tags="content",
+        )
+        box_h = self.px(290)
+        box_y = self.px(70)
+        self._draw_preview(pane, asset, pad, box_y, inner, box_h)
+        y = box_y + box_h + self.px(12)
+        x = pad
+        for option in ("맞춤", "1x", "2x", "4x", "8x"):
+            x = self.pill(
+                pane,
+                x,
+                y,
+                option,
+                lambda o=option: self._set_zoom(o),
+                tag=f"zoom-{option}",
+                style="on" if option == self.zoom else "glass",
+                h=self.px(28),
+                size=9,
+            ) + self.px(5)
+        y += self.px(34)
+        x = pad
+        for option in ("체크", "어둡게", "밝게", "잔디"):
+            x = self.pill(
+                pane,
+                x,
+                y,
+                option,
+                lambda o=option: self._set_backing(o),
+                tag=f"back-{option}",
+                style="on" if option == self.backing else "glass",
+                h=self.px(28),
+                size=9,
+            ) + self.px(5)
+        y += self.px(44)
+        if asset is not None:
+            lines = self._detail_lines(asset)
+            text = pane.create_text(
+                pad,
+                y,
+                anchor="nw",
+                text="\n".join(lines),
+                fill="#cfcfd5",
+                font=self.font(9),
+                width=inner,
+                tags="content",
+            )
+            y = pane.bbox(text)[3] + self.px(16)
+        actions = (
+            ("Aseprite에서 열기", "primary", self.open_asset),
+            ("탐색기에서 보기", "glass", self.reveal),
+            ("경로 복사", "glass", self.copy_path),
+        )
+        for label, style, action in actions:
+            command = (lambda a=action: a(asset)) if asset else None
+            self.pill(
+                pane,
+                pad,
+                y,
+                label,
+                command,
+                tag=f"act-{label}",
+                style=style if asset else "off",
+                w=inner,
+                h=self.px(38),
+            )
+            y += self.px(46)
+
+    def _detail_lines(self, asset: Asset) -> list[str]:
         image = self.images.get(asset.stamp)
-        dims = "불러오는 중…"
         if image is None:
-            self.loader.ask(asset.stamp)
+            dims = "불러오는 중…"
         elif isinstance(image, str):
             dims = f"미리보기 오류: {image}"
         else:
-            zoom = self.zoom.get()
-            scale = None if zoom == "맞춤" else float(zoom[:-1])
-            art = fit(image, w - 16, h - 16, scale)
-            # too big for the box at a fixed zoom: show the middle of it
-            left = max(0, (art.width - w) // 2)
-            top = max(0, (art.height - h) // 2)
-            art = art.crop((left, top, left + min(art.width, w), top + min(art.height, h)))
-            board.alpha_composite(art, ((w - art.width) // 2, (h - art.height) // 2))
             dims = f"{image.width} × {image.height} px"
-        self.detail_photo = ImageTk.PhotoImage(board)
-        c.create_image(0, 0, image=self.detail_photo, anchor="nw")
         lines = [dims, ""]
         for ext in ALL_EXTS:
             if ext in asset.files:
                 path = asset.files[ext]
                 when = time.strftime("%m-%d %H:%M", time.localtime(asset.mtimes[ext]))
                 size = path.stat().st_size if path.exists() else 0
-                lines.append(f"{ext[1:].upper():<9} {size / 1024:6.1f} KB   {when}")
+                lines.append(f"{ext[1:].upper():<9}  {size / 1024:6.1f} KB    {when}")
         if asset.stale:
-            lines += [
-                "",
-                "⚠ Aseprite 원본과 이미지가 달라요.",
-                "  다시 내보내야 게임에 반영돼요.",
-            ]
+            lines += ["", "◌ Aseprite 원본과 이미지가 달라요. 다시 내보내야 게임에 반영돼요."]
         if asset.used:
-            lines += [
-                "",
-                "● 게임 코드나 타일셋에 이 이름이 나와요.",
-                "  지우면 게임이 실행되지 않을 수 있어요.",
-            ]
+            lines += ["", "● 게임이 읽는 파일이에요. 지우면 게임이 실행되지 않을 수 있어요."]
         if ".aseprite" not in asset.files:
             lines += ["", "Aseprite 원본이 없어요."]
-        self.d_info.configure(text="\n".join(lines))
+        return lines
+
+    def _draw_preview(
+        self, pane: tk.Canvas, asset: Asset | None, x: int, y: int, w: int, h: int
+    ) -> None:
+        if self.backing == "체크":
+            board = checker(w, h, self.px(10), "#17171a", "#1f1f23")
+        else:
+            colour = {"어둡게": "#0b0b0d", "밝게": "#e8e8ec", "잔디": "#6f8f4e"}[self.backing]
+            board = Image.new("RGBA", (w, h), colour)
+        if asset is not None:
+            image = self.images.get(asset.stamp)
+            if image is None:
+                self.loader.ask(asset.stamp)
+            elif not isinstance(image, str):
+                scale = None if self.zoom == "맞춤" else float(self.zoom[:-1])
+                art = fit(image, w - self.px(24), h - self.px(24), scale)
+                left = max(0, (art.width - w) // 2)
+                top = max(0, (art.height - h) // 2)
+                art = art.crop((left, top, left + min(art.width, w), top + min(art.height, h)))
+                board.alpha_composite(art, ((w - art.width) // 2, (h - art.height) // 2))
+        board.putalpha(round_mask(w, h, self.px(16)))
+        board.alpha_composite(rounded(w, h, self.px(16), white(0), white(40)))
+        self.detail_photo = ImageTk.PhotoImage(board)
+        pane.create_image(x, y, anchor="nw", image=self.detail_photo, tags="content")
+
+    def _set_zoom(self, value: str) -> None:
+        self.zoom = value
+        self.draw_detail()
+
+    def _set_backing(self, value: str) -> None:
+        self.backing = value
+        self.draw_detail()
+
+    # --- the bottom bar -------------------------------------------------------------
+    def draw_bottom(self) -> None:
+        pane = self.panes["bottom"]
+        pane.delete("content")
+        w, h = pane.winfo_width(), pane.winfo_height()
+        mid = h // 2
+        if self.flash and time.monotonic() < self.flash_until:
+            status = self.flash
+        else:
+            parts = [f"{len(self.shown)} / {len(self.assets)}개", f"선택 {len(self.selected)}개"]
+            pending = sum(1 for a in self.assets if a.pair and a.pair not in self.differs)
+            if pending:
+                parts.append(f"원본과 비교 중 {pending}개")
+            stale = sum(1 for a in self.shown if a.stale)
+            if stale:
+                parts.append(f"갱신 필요 {stale}개")
+            parts.append("Ctrl·Shift+클릭 여러 개  ·  더블클릭 Aseprite  ·  우클릭 메뉴")
+            status = "     ·     ".join(parts)
+        pane.create_text(
+            self.px(22), mid, anchor="w", text=status, fill=MUTED, font=self.font(9), tags="content"
+        )
+        y = mid - self.px(17)
+        right = w - self.px(12)
+        count = len(self.selected)
+        right = self.pill(
+            pane,
+            right,
+            y,
+            f"선택 삭제 ({count})",
+            self.confirm_delete if count else None,
+            tag="delete",
+            style="danger" if count else "off",
+            right=True,
+        ) - self.px(8)
+        right = self.pill(
+            pane,
+            right,
+            y,
+            "선택 해제",
+            self.clear_selection if count else None,
+            tag="clear",
+            style="glass" if count else "off",
+            right=True,
+        ) - self.px(8)
+        self.pill(pane, right, y, "보이는 것 모두 선택", self.select_shown, tag="all", right=True)
+
+    def _say(self, text: str) -> None:
+        self.flash = text
+        self.flash_until = time.monotonic() + 3
+        self.draw_bottom()
+        self.window.after(3100, self.draw_bottom)
+
+    # --- background work ------------------------------------------------------------
+    def _poll_images(self) -> None:
+        arrived = set()
+        try:
+            while True:
+                stamp, image = self.loader.results.get_nowait()
+                self.images[stamp] = image
+                arrived.add(stamp)
+        except queue.Empty:
+            pass
+        compared = False
+        try:
+            while True:
+                pair, differs = self.loader.compared.get_nowait()
+                self.differs[pair] = differs
+                compared = True
+        except queue.Empty:
+            pass
+        if compared:
+            for asset in self.assets:
+                if asset.pair in self.differs:
+                    asset.stale = self.differs[asset.pair]
+            if self.filter == "갱신 필요":
+                self._refilter(keep_scroll=True)
+            self.draw_bottom()
+        if arrived or compared:
+            self._schedule_draw()
+            focus = self._focused()
+            if focus is not None and focus.stamp in arrived:
+                self.draw_detail()
+        self.window.after(50, self._poll_images)
+
+    def _watch(self) -> None:
+        """Pick up files changed by other tools (or other tabs) without F5."""
+        try:
+            if signature() != self.last_signature:
+                self.reload()
+        finally:
+            self.window.after(REFRESH_MS, self._watch)
 
     # --- actions ------------------------------------------------------------------
+    def _path_of(self, asset: Asset) -> Path:
+        return asset.files.get(".aseprite") or next(iter(asset.files.values()))
+
     def open_asset(self, asset: Asset) -> None:
-        path = asset.files.get(".aseprite") or next(iter(asset.files.values()))
         try:
-            subprocess.Popen([str(ASEPRITE), str(path)])
+            subprocess.Popen([str(ASEPRITE), str(self._path_of(asset))])
         except OSError as error:
             messagebox.showerror("열기 실패", str(error), parent=self.window)
 
     def reveal(self, asset: Asset) -> None:
-        path = asset.files.get(".aseprite") or next(iter(asset.files.values()))
-        subprocess.Popen(["explorer", "/select,", str(path)])
+        subprocess.Popen(["explorer", "/select,", str(self._path_of(asset))])
 
     def copy_path(self, asset: Asset) -> None:
-        path = asset.files.get(".aseprite") or next(iter(asset.files.values()))
+        path = self._path_of(asset)
         self.window.clipboard_clear()
         self.window.clipboard_append(str(path))
-        self.status.configure(text=f"경로를 복사했어요: {path}")
+        self._say(f"경로를 복사했어요: {path}")
 
     def _context(self, event: tk.Event) -> None:
-        i = self._index_at(event)
+        i = self._index_at(event.x, event.y)
         if i is None:
             return
         asset = self.shown[i]
@@ -1184,16 +1613,7 @@ class Gallery:
             self.anchor = i
         self.focus = i
         self._after_selection()
-        menu = tk.Menu(
-            self.window,
-            tearoff=0,
-            bg=CARD,
-            fg=TEXT,
-            activebackground=ACCENT,
-            activeforeground=BG,
-            font=(FONT, 10),
-            bd=0,
-        )
+        menu = tk.Menu(self.window, tearoff=0, font=(FONT, 10), **MENU)
         menu.add_command(label="Aseprite에서 열기", command=lambda: self.open_asset(asset))
         menu.add_command(label="탐색기에서 보기", command=lambda: self.reveal(asset))
         menu.add_command(label="경로 복사", command=lambda: self.copy_path(asset))
@@ -1207,56 +1627,59 @@ class Gallery:
         if not targets:
             return
         used = [a for a in chosen if a.used]
-        dialog = tk.Toplevel(self.window, bg=BG)
+        dialog = tk.Toplevel(self.window, bg="#141416")
         dialog.title("휴지통으로 보내기")
         dialog.geometry(f"{self.px(720)}x{self.px(540)}")
         dialog.transient(self.window)
-        head = f"{len(chosen)}개 에셋 · 파일 {len(targets)}개를 휴지통으로 보냅니다."
-        ttk.Label(dialog, text=head, style="Title.TLabel").pack(anchor="w", padx=16, pady=(16, 4))
-        ttk.Label(
+        label = {"bg": "#141416", "anchor": "w", "justify": "left"}
+        tk.Label(
             dialog,
-            style="Muted.TLabel",
-            text=(
-                "같은 이름으로 묶인 Aseprite·PNG·WebP 파일이 함께 지워져요. "
-                "휴지통에서 되살릴 수 있어요."
-            ),
-        ).pack(anchor="w", padx=16)
+            text=f"{len(chosen)}개 에셋 · 파일 {len(targets)}개를 휴지통으로 보냅니다.",
+            fg=TEXT,
+            font=(FONT, 13, "bold"),
+            **label,
+        ).pack(fill="x", padx=18, pady=(18, 4))
+        tk.Label(
+            dialog,
+            fg=MUTED,
+            font=(FONT, 9),
+            **label,
+            text="같은 이름으로 묶인 Aseprite·PNG·WebP 파일이 함께 지워져요. "
+            "휴지통에서 되살릴 수 있어요.",
+        ).pack(fill="x", padx=18)
         if used:
             names = ", ".join(a.name for a in used[:8]) + (" …" if len(used) > 8 else "")
-            warn = tk.Label(
+            tk.Label(
                 dialog,
-                bg="#3a2a14",
-                fg=WARN,
+                bg="#2a2a2e",
+                fg=TEXT,
                 font=(FONT, 10, "bold"),
                 justify="left",
                 anchor="w",
                 wraplength=self.px(680),
-                padx=12,
-                pady=8,
-                text=f"⚠ 게임에서 쓰는 것으로 보이는 에셋 {len(used)}개: {names}\n"
+                padx=14,
+                pady=10,
+                text=f"● 게임이 읽는 에셋 {len(used)}개가 들어 있어요: {names}\n"
                 "지우면 게임이 실행되지 않을 수 있어요.",
-            )
-            warn.pack(fill="x", padx=16, pady=(10, 0))
-        body = ttk.Frame(dialog)
-        body.pack(fill="both", expand=True, padx=16, pady=10)
+            ).pack(fill="x", padx=18, pady=(12, 0))
+        body = tk.Frame(dialog, bg="#141416")
+        body.pack(fill="both", expand=True, padx=18, pady=12)
         listing = tk.Text(
             body,
             wrap="none",
-            bg=PANEL,
-            fg=TEXT,
+            bg="#1c1c1f",
+            fg="#d0d0d6",
             relief="flat",
             font=("Consolas", 10),
-            padx=8,
-            pady=6,
+            padx=10,
+            pady=8,
+            highlightthickness=0,
         )
-        bar = ttk.Scrollbar(body, command=listing.yview)
-        bar.pack(side="right", fill="y")
         listing.pack(fill="both", expand=True)
-        listing.configure(yscrollcommand=bar.set)
         listing.insert("1.0", "\n".join(p.relative_to(ROOT).as_posix() for p in targets))
         listing.configure(state="disabled")
-        buttons = ttk.Frame(dialog, padding=(16, 0, 16, 16))
-        buttons.pack(fill="x")
+        buttons = tk.Frame(dialog, bg="#141416")
+        buttons.pack(fill="x", padx=18, pady=(0, 18))
 
         def execute() -> None:
             dialog.destroy()
@@ -1271,10 +1694,33 @@ class Gallery:
             if errors:
                 messagebox.showerror("삭제하지 못한 파일", "\n".join(errors), parent=self.window)
 
-        ttk.Button(buttons, text="휴지통으로 이동", style="Danger.TButton", command=execute).pack(
-            side="right"
+        flat = {
+            "relief": "flat",
+            "bd": 0,
+            "padx": 18,
+            "pady": 8,
+            "font": (FONT, 10),
+            "cursor": "hand2",
+        }
+        tk.Button(
+            buttons,
+            text="휴지통으로 이동",
+            command=execute,
+            bg="#e8e8ec",
+            fg=INK,
+            activebackground="#ffffff",
+            **flat,
+        ).pack(side="right")
+        cancel = tk.Button(
+            buttons,
+            text="취소",
+            command=dialog.destroy,
+            bg="#2a2a2e",
+            fg=TEXT,
+            activebackground="#3a3a40",
+            activeforeground=TEXT,
+            **flat,
         )
-        cancel = ttk.Button(buttons, text="취소", command=dialog.destroy)
         cancel.pack(side="right", padx=10)
         cancel.focus_set()
         dialog.bind("<Escape>", lambda _: dialog.destroy())
