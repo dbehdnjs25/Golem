@@ -723,6 +723,10 @@ class Gallery:
         right: bool = False,
     ) -> int:
         """Draw a rounded button; returns the x of its far edge."""
+        # Prefixed so no button can ever be named "all" or "current": those are
+        # Tk's own canvas tags, and binding one binds every item on the pane.
+        # (A button tagged "all" once made every bottom-bar click select all.)
+        tag = f"pill:{tag}"
         h = h or self.px(34)
         f = self.font(size, "bold" if style == "primary" else "normal")
         w = w or f.measure(text) + self.px(30)
@@ -765,7 +769,7 @@ class Gallery:
         return x + w + self.px(5)
 
     def menu(self, pane: tk.Canvas, tag: str, options, current: str, choose) -> None:  # type: ignore[no-untyped-def]
-        x0, _, _, y1 = pane.bbox(tag)
+        x0, _, _, y1 = pane.bbox(f"pill:{tag}")
         menu = tk.Menu(self.window, tearoff=0, font=(FONT, 10), **MENU)
         for option in options:
             mark = "✓  " if option == current else "     "
@@ -1694,7 +1698,9 @@ class Gallery:
             style="glass" if count else "off",
             right=True,
         ) - self.px(8)
-        self.pill(pane, right, y, "보이는 것 모두 선택", self.select_shown, tag="all", right=True)
+        self.pill(
+            pane, right, y, "보이는 것 모두 선택", self.select_shown, tag="select-all", right=True
+        )
 
     def _say(self, text: str) -> None:
         self.flash = text
