@@ -426,6 +426,14 @@ PILL = {
 }
 
 
+# Zoom steps for the preview. Below 1x anything goes; from 1x up only whole
+# numbers, so every pixel of the art stays the same size on screen.
+LADDER = sorted(
+    {round(0.05 * 1.25**k, 4) for k in range(14) if 0.05 * 1.25**k < 1}
+    | {1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 48, 64}
+)
+
+
 # --- the window ----------------------------------------------------------------
 
 
@@ -452,7 +460,14 @@ class Gallery:
         self.rows: list[tuple[str, int, bool]] = []  # folder path, depth, has children
         self.filter = FILTERS[0]
         self.sort = "폴더순"
-        self.zoom = "맞춤"
+        # The preview's own view: a scale (None = fit the box) and the art
+        # pixel at the box's centre (None = the art's centre). Reset whenever
+        # a different asset is shown.
+        self.view_scale: float | None = None
+        self.view_center: tuple[float, float] | None = None
+        self.view_key: tuple[str, float] | None = None
+        self.preview_box = (0, 0, 0, 0)
+        self.pan_from: tuple[int, int, float, float] | None = None
         self.backing = "체크"
         self.size = 128
         self.scroll_y = 0.0
@@ -578,6 +593,13 @@ class Gallery:
         side.bind("<Motion>", self._side_motion)
         side.bind("<Leave>", lambda _: self._side_hover(None))
         side.bind("<MouseWheel>", self._side_wheel)
+        detail = self.panes["detail"]
+        detail.bind("<MouseWheel>", self._preview_wheel)
+        detail.bind("<ButtonPress-1>", self._preview_press)
+        detail.bind("<B1-Motion>", self._preview_drag)
+        detail.bind("<ButtonRelease-1>", lambda _: setattr(self, "pan_from", None))
+        detail.bind("<Double-Button-1>", self._preview_reset)
+        detail.bind("<Motion>", self._preview_cursor)
 
     def _on_configure(self, event: tk.Event) -> None:
         if event.widget is not self.window:
@@ -1352,6 +1374,10 @@ class Gallery:
         pad = self.px(20)
         inner = w - 2 * pad
         asset = self._focused()
+        if (asset.stamp if asset else None) != self.view_key:
+            self.view_key = asset.stamp if asset else None
+            self.view_scale = None
+            self.view_center = None
         title = asset.name if asset else "선택한 에셋 없음"
         pane.create_text(
             pad,
@@ -1385,7 +1411,7 @@ class Gallery:
                 option,
                 lambda o=option: self._set_zoom(o),
                 tag=f"zoom-{option}",
-                style="on" if option == self.zoom else "glass",
+                style="on" if self._zoom_label() == option else "glass",
                 h=self.px(28),
                 size=9,
             ) + self.px(5)
@@ -1463,29 +1489,161 @@ class Gallery:
     def _draw_preview(
         self, pane: tk.Canvas, asset: Asset | None, x: int, y: int, w: int, h: int
     ) -> None:
+        self.preview_box = (x, y, w, h)
         if self.backing == "체크":
             board = checker(w, h, self.px(10), "#17171a", "#1f1f23")
         else:
             colour = {"어둡게": "#0b0b0d", "밝게": "#e8e8ec", "잔디": "#6f8f4e"}[self.backing]
             board = Image.new("RGBA", (w, h), colour)
-        if asset is not None:
-            image = self.images.get(asset.stamp)
-            if image is None:
-                self.loader.ask(asset.stamp)
-            elif not isinstance(image, str):
-                scale = None if self.zoom == "맞춤" else float(self.zoom[:-1])
-                art = fit(image, w - self.px(24), h - self.px(24), scale)
-                left = max(0, (art.width - w) // 2)
-                top = max(0, (art.height - h) // 2)
-                art = art.crop((left, top, left + min(art.width, w), top + min(art.height, h)))
-                board.alpha_composite(art, ((w - art.width) // 2, (h - art.height) // 2))
+        image = self._preview_image(asset)
+        if image is not None:
+            self._paint_view(board, image)
         board.putalpha(round_mask(w, h, self.px(16)))
         board.alpha_composite(rounded(w, h, self.px(16), white(0), white(40)))
         self.detail_photo = ImageTk.PhotoImage(board)
         pane.create_image(x, y, anchor="nw", image=self.detail_photo, tags="content")
+        if image is not None:
+            scale, _, _ = self._view(image)
+            label = f"{scale * 100:.0f}%"
+            f = self.font(8, "bold")
+            lw, lh = f.measure(label) + self.px(16), self.px(20)
+            chip = self.photo(
+                ("zoom-chip", lw, lh), lambda: rounded(lw, lh, lh // 2, (0, 0, 0, 150))
+            )
+            cx, cy = x + w - lw - self.px(10), y + h - lh - self.px(10)
+            pane.create_image(cx, cy, anchor="nw", image=chip, tags="content")
+            pane.create_text(
+                cx + lw / 2, cy + lh / 2, text=label, fill=TEXT, font=f, tags="content"
+            )
+            hint = "휠 확대·축소  ·  드래그 이동  ·  더블클릭 맞춤"
+            hf = self.font(8)
+            hw = hf.measure(hint) + self.px(18)
+            back = self.photo(
+                ("hint-chip", hw, lh), lambda: rounded(hw, lh, lh // 2, (0, 0, 0, 150))
+            )
+            hx = x + self.px(10)
+            pane.create_image(hx, cy, anchor="nw", image=back, tags="content")
+            pane.create_text(
+                hx + hw / 2, cy + lh / 2, text=hint, fill="#c4c4ca", font=hf, tags="content"
+            )
+
+    def _preview_image(self, asset: Asset | None) -> Image.Image | None:
+        if asset is None:
+            return None
+        image = self.images.get(asset.stamp)
+        if image is None:
+            self.loader.ask(asset.stamp)
+            return None
+        return None if isinstance(image, str) else image
+
+    def _fit_scale(self, image: Image.Image) -> float:
+        _, _, w, h = self.preview_box
+        scale = min((w - self.px(24)) / image.width, (h - self.px(24)) / image.height)
+        return max(1, int(scale)) if scale >= 1 else scale
+
+    def _view(self, image: Image.Image) -> tuple[float, float, float]:
+        """Scale, and the art pixel that sits at the middle of the box."""
+        scale = self.view_scale or self._fit_scale(image)
+        cx, cy = self.view_center or (image.width / 2, image.height / 2)
+        return scale, cx, cy
+
+    def _paint_view(self, board: Image.Image, image: Image.Image) -> None:
+        """Draw only the part of the art that is in view, at the view's scale.
+
+        Cropping before scaling keeps an 8x zoom of a large sheet cheap: only
+        the visible corner is ever enlarged.
+        """
+        w, h = board.size
+        scale, cx, cy = self._view(image)
+        half_w, half_h = w / 2 / scale, h / 2 / scale
+        sx0, sy0 = max(0, int(cx - half_w)), max(0, int(cy - half_h))
+        sx1 = min(image.width, int(cx + half_w) + 2)
+        sy1 = min(image.height, int(cy + half_h) + 2)
+        if sx1 <= sx0 or sy1 <= sy0:
+            return
+        piece = image.crop((sx0, sy0, sx1, sy1))
+        size = (max(1, round((sx1 - sx0) * scale)), max(1, round((sy1 - sy0) * scale)))
+        method = Image.Resampling.NEAREST if scale >= 1 else Image.Resampling.LANCZOS
+        piece = piece.resize(size, method)
+        left = round((sx0 - cx) * scale + w / 2)
+        top = round((sy0 - cy) * scale + h / 2)
+        # Clip to the board by hand: alpha_composite wants it to fit.
+        src_x, src_y = max(0, -left), max(0, -top)
+        dst_x, dst_y = max(0, left), max(0, top)
+        piece = piece.crop(
+            (
+                src_x,
+                src_y,
+                min(piece.width, src_x + w - dst_x),
+                min(piece.height, src_y + h - dst_y),
+            )
+        )
+        if piece.width > 0 and piece.height > 0:
+            board.alpha_composite(piece, (dst_x, dst_y))
+
+    def _in_preview(self, event: tk.Event) -> bool:
+        x, y, w, h = self.preview_box
+        return x <= event.x <= x + w and y <= event.y <= y + h
+
+    def _preview_wheel(self, event: tk.Event) -> None:
+        image = self._preview_image(self._focused())
+        if image is None or not self._in_preview(event):
+            return
+        scale, cx, cy = self._view(image)
+        if event.delta > 0:
+            new = min((v for v in LADDER if v > scale * 1.001), default=LADDER[-1])
+        else:
+            new = max((v for v in LADDER if v < scale * 0.999), default=LADDER[0])
+        # Keep the art pixel under the cursor where it is.
+        bx, by, w, h = self.preview_box
+        mx, my = event.x - bx - w / 2, event.y - by - h / 2
+        px_, py_ = cx + mx / scale, cy + my / scale
+        self.view_scale = new
+        self._set_center(image, px_ - mx / new, py_ - my / new)
+        self.draw_detail()
+
+    def _set_center(self, image: Image.Image, cx: float, cy: float) -> None:
+        self.view_center = (max(0.0, min(image.width, cx)), max(0.0, min(image.height, cy)))
+
+    def _preview_press(self, event: tk.Event) -> None:
+        image = self._preview_image(self._focused())
+        if image is None or not self._in_preview(event):
+            self.pan_from = None
+            return
+        scale, cx, cy = self._view(image)
+        self.pan_from = (event.x, event.y, cx, cy)
+
+    def _preview_drag(self, event: tk.Event) -> None:
+        image = self._preview_image(self._focused())
+        if image is None or self.pan_from is None:
+            return
+        x0, y0, cx, cy = self.pan_from
+        scale, _, _ = self._view(image)
+        if self.view_scale is None:
+            self.view_scale = scale  # dragging out of fit keeps the size it had
+        self._set_center(image, cx - (event.x - x0) / scale, cy - (event.y - y0) / scale)
+        self.draw_detail()
+
+    def _preview_reset(self, event: tk.Event) -> None:
+        if self._in_preview(event):
+            self._set_zoom("맞춤")
+
+    def _preview_cursor(self, event: tk.Event) -> None:
+        """A move cursor over the art. Changed only on crossing its edge, so the
+        buttons below keep the hand cursor they set for themselves."""
+        inside = self._in_preview(event) and self._preview_image(self._focused()) is not None
+        if inside != getattr(self, "_over_art", False):
+            self._over_art = inside
+            self.panes["detail"].configure(cursor="fleur" if inside else "")
+
+    def _zoom_label(self) -> str:
+        if self.view_scale is None:
+            return "맞춤"
+        return f"{self.view_scale:g}x"
 
     def _set_zoom(self, value: str) -> None:
-        self.zoom = value
+        self.view_scale = None if value == "맞춤" else float(value[:-1])
+        self.view_center = None
         self.draw_detail()
 
     def _set_backing(self, value: str) -> None:
