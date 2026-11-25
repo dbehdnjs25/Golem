@@ -63,9 +63,9 @@ FILTERS = ("전체", "갱신 필요", "Aseprite 원본만", "이미지만 (원�
 # --- categories -----------------------------------------------------------------
 # The left-hand list is not the folders on disk but these fixed categories, in
 # this order. A row is the "/"-joined labels from the top, so "엔티티/골렘/늪지".
-# An asset that matches a category but none of its children (a snowfield tile,
-# a working file under trees/) sits on the parent row itself.
-BIOME_LABELS = ("초원", "사막", "불탄 숲", "바람 고원", "늪지")
+# An asset that matches a category but none of its children (a working file
+# under trees/, the biome-less temple tiles) sits on the parent row itself.
+BIOME_LABELS = ("초원", "사막", "불탄 숲", "바람 고원", "늪지", "설원")
 ITEM_LABELS = ("도구", "광석", "주괴", "기타")
 Node = tuple[str, tuple["Node", ...]]  # a label and the rows under it
 CATEGORY_TREE: tuple[Node, ...] = (
@@ -76,8 +76,7 @@ CATEGORY_TREE: tuple[Node, ...] = (
     ("UI", ()),
     ("기타", ()),
 )
-# Folder and file name words that name a biome. Snowfield has no row of its
-# own, so it is deliberately absent and its art lands on the parent row.
+# Folder and file name words that name a biome.
 BIOME_WORDS = {
     "grassland": "초원",
     "desert": "사막",
@@ -87,6 +86,7 @@ BIOME_WORDS = {
     "wind_plateau": "바람 고원",
     "wind": "바람 고원",
     "bog": "늪지",
+    "snowfield": "설원",
 }
 TILE_ROOTS = {"grassland", "desert", "burnt-forest", "wind_plateau", "bog", "snowfield", "temple"}
 
