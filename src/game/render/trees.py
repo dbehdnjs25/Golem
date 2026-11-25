@@ -9,7 +9,7 @@ from game.world.biomes import BIOMES
 
 _ASSETS = Path(__file__).resolve().parents[3] / "assets"
 _FILES = {biome.timber: _ASSETS / "trees" / f"{biome.key}.png" for biome in BIOMES}
-_FILES[WOOD] = _ASSETS / "grassland" / "objects" / "tree_base.png"
+_FILES[WOOD] = _ASSETS / "grassland" / "objects" / "grassland_tree.png"
 _images: dict[ItemKind, pygame.Surface] = {}
 WORLD_TREE_SIZE = (96, 128)
 _shadow: pygame.Surface | None = None
