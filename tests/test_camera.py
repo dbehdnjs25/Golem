@@ -181,11 +181,11 @@ def _wheeled(zoom: float = 1.0) -> Camera:
 
 
 def test_a_notch_does_not_move_the_view_on_its_own():
-    # It asks. A view that snaps between two sizes reads as the picture
-    # breaking rather than as the camera moving.
+    # It asks. A view that snaps between sizes reads as the picture breaking
+    # rather than as the camera moving.
     camera = _wheeled()
     camera.zoom_by(1)
-    assert camera.wanted == 2.0
+    assert camera.wanted == Camera.ZOOM_STEPS[1]
     assert camera.zoom == 1.0
 
 
@@ -193,7 +193,7 @@ def test_the_camera_travels_towards_what_was_asked_for():
     camera = _wheeled()
     camera.zoom_by(1)
     camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
-    assert 1.0 < camera.zoom < 2.0
+    assert 1.0 < camera.zoom < Camera.ZOOM_STEPS[1]
 
 
 def test_it_arrives_exactly():
@@ -203,7 +203,7 @@ def test_it_arrives_exactly():
     camera.zoom_by(1)
     for _ in range(int(1.0 / config.FIXED_DT)):
         camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
-    assert camera.zoom == 2.0
+    assert camera.zoom == Camera.ZOOM_STEPS[1]
 
 
 def test_it_arrives_quickly_enough_to_feel_like_a_wheel():
@@ -214,7 +214,7 @@ def test_it_arrives_quickly_enough_to_feel_like_a_wheel():
     camera.zoom_by(1)
     for _ in range(int(config.ZOOM_GLIDE / config.FIXED_DT) + 2):
         camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
-    assert camera.zoom == 2.0
+    assert camera.zoom == Camera.ZOOM_STEPS[1]
 
 
 def test_it_travels_back_down_as_well():
@@ -222,7 +222,7 @@ def test_it_travels_back_down_as_well():
     camera.zoom_by(-1)
     for _ in range(int(1.0 / config.FIXED_DT)):
         camera.update(config.FIXED_DT, pygame.Vector2(50_000, 50_000))
-    assert camera.zoom == 1.0
+    assert camera.zoom == Camera.ZOOM_STEPS[-2]
 
 
 def test_the_wheel_cannot_ask_past_the_ends():

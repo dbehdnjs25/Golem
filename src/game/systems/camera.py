@@ -47,14 +47,22 @@ class Camera:
 
     # The zoom only ever REDUCES how much world is on screen. 1.0 draws the
     # field at the window's own size and hands it over untouched; 2.0 draws
-    # half of that and doubles it, which is exact.
+    # half of that and doubles it. Those two are exact: every source pixel
+    # becomes exactly one, or exactly four.
+    #
+    # The quarters between them are not, and that is a choice rather than an
+    # oversight. At 1.25 a source pixel becomes one dot or two depending on
+    # where it falls, so edges thicken unevenly and a tiled wall shimmers
+    # slightly as the camera moves over it. What they buy is a view that can
+    # be set to what the moment wants instead of being thrown between two
+    # sizes, and the ends are still there for anyone who wants them crisp.
     #
     # There is deliberately nothing below 1.0. Showing more means drawing a
     # field bigger than the window and squeezing it down, and a squeeze throws
-    # pixels away -- different ones from frame to frame as the camera moves,
-    # which is what makes a wall of tiles crawl while you walk. Starting the
-    # window large is how you get a wide view instead.
-    ZOOM_STEPS = (1.0, 2.0)
+    # pixels away rather than doubling them -- different ones from frame to
+    # frame, which is a crawl rather than a shimmer. Starting the window large
+    # is how you get a wide view instead.
+    ZOOM_STEPS = (1.0, 1.25, 1.5, 1.75, 2.0)
 
     @property
     def field_size(self) -> tuple[int, int]:

@@ -1715,13 +1715,30 @@ def test_the_core_marker_still_points_the_right_way_when_zoomed_out():
     assert _has_ink(surface, left, config.CORE_COLOR)
 
 
-def test_every_zoom_step_maps_whole_pixels_onto_the_window():
-    # What has to divide evenly is the FIELD against the WINDOW, not the tile
-    # against the field. A 4:3 field smears every third pixel across two.
-    for step in Camera.ZOOM_STEPS:
+def test_the_ends_of_the_wheel_are_exact():
+    # The quarters between them are soft by choice -- see systems/camera --
+    # but the two the wheel stops at have to be perfect, because they are
+    # where anybody who cares about the pixels will leave it.
+    for step in (min(Camera.ZOOM_STEPS), max(Camera.ZOOM_STEPS)):
         ratio = config.SCREEN_WIDTH / round(config.SCREEN_WIDTH / step)
-        assert ratio >= 1 or round(1 / ratio) == 1 / ratio
-        assert ratio <= 1 or round(ratio) == ratio
+        assert round(ratio) == ratio
+
+
+def test_no_step_asks_for_half_a_pixel_of_field():
+    # The field is a real surface. Whatever the ratio works out to, the thing
+    # being drawn onto has to be a whole number of pixels across, and the two
+    # axes must not round apart far enough to squash the picture.
+    for step in Camera.ZOOM_STEPS:
+        wide = config.SCREEN_WIDTH / step
+        high = config.SCREEN_HEIGHT / step
+        across = config.SCREEN_WIDTH / round(wide)
+        down = config.SCREEN_HEIGHT / round(high)
+        assert abs(across - down) < 0.005
+
+
+def test_the_wheel_climbs_in_even_steps():
+    gaps = {round(b - a, 6) for a, b in zip(Camera.ZOOM_STEPS, Camera.ZOOM_STEPS[1:], strict=False)}
+    assert len(gaps) == 1
 
 
 # --- keyboard only -----------------------------------------------------------
