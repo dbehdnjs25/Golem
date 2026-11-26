@@ -16,7 +16,7 @@ from game.entities.temple import Temple
 from game.world.biomes import RING_BIOMES
 from game.world.map import WorldMap
 
-_SALT_SPAN = 1_000_000
+SALT_SPAN = 1_000_000  # temple seeds are drawn below this
 
 
 def place(world: WorldMap, sites: tuple[pygame.Vector2, ...], rng: random.Random) -> list[Temple]:
@@ -26,6 +26,6 @@ def place(world: WorldMap, sites: tuple[pygame.Vector2, ...], rng: random.Random
     temple rolls its own rooms and the shared generator is left alone.
     """
     return [
-        Temple(pos=pygame.Vector2(site), biome=biome, salt=rng.randrange(_SALT_SPAN))
+        Temple(pos=pygame.Vector2(site), biome=biome, salt=rng.randrange(SALT_SPAN))
         for site, biome in zip(sites, RING_BIOMES, strict=True)
     ]

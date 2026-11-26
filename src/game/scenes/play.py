@@ -467,7 +467,12 @@ def _draw_health_bar(surface: pygame.Surface, y: int, frac: float) -> None:
 
 
 class PlayScene(Scene):
-    def __init__(self, controls: Controls | None = None, controls_path: Path | None = None) -> None:
+    def __init__(
+        self,
+        controls: Controls | None = None,
+        controls_path: Path | None = None,
+        seed: int | None = None,
+    ) -> None:
         # Which key does what. Saved only when a path is given, so a test
         # that rebinds a key never writes the player's settings file.
         self.controls = controls if controls is not None else Controls()
@@ -476,6 +481,15 @@ class PlayScene(Scene):
         self.world = WorldMap.create(self.rng)
         self.temple_sites = self.world.temple_sites(self.rng)
         self.temples = temples.place(self.world, self.temple_sites, self.rng)
+        # ``seed`` is this run's: it rerolls what grows and what is built
+        # INSIDE the land -- the trees, each temple's rooms -- while the land
+        # (biomes, temple sites, lava) keeps the fixed 1234 above. A new game
+        # passes a fresh one; None is the fixed run every test is written for.
+        self.seed = seed
+        run = random.Random(seed) if seed is not None else None
+        if run is not None:
+            for temple in self.temples:
+                temple.salt = run.randrange(temples.SALT_SPAN)
         self.arena = arena.Ground()
         self.boss: Boss | None = None  # at most one, and only inside a temple
         self.boss_temple: Temple | None = None  # which room it is holding
@@ -543,7 +557,7 @@ class PlayScene(Scene):
         # Trees on their own clock and their own dice, so wooding the map does
         # not shift every other roll the run makes after it.
         self.tree_spawner = TreeSpawner()
-        self.tree_rng = random.Random(4321)
+        self.tree_rng = random.Random(run.randrange(2**32) if run is not None else 4321)
         self.tree_spawner.fill(
             self.fragments, self.core, self.tree_rng, self.world, self.player.pos
         )
