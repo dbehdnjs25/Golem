@@ -28,6 +28,7 @@ ACTION = "action"  # dig, swing, build, eat -- whatever the hand is holding
 SYNC = "sync"
 INVENTORY = "inventory"
 CRAFT = "craft"
+DROP = "drop"  # put the held thing down; with sprint held, the whole stack
 DRAW_UP = "draw_up"
 DRAW_DOWN = "draw_down"
 DRAW_LEFT = "draw_left"
@@ -54,6 +55,7 @@ LABELS: dict[str, str] = {
     SYNC: "코어에 넣기",
     INVENTORY: "가방",
     CRAFT: "제작",
+    DROP: "버리기 (Shift: 한 묶음 전부)",
     DRAW_UP: "마법 획 ↑",
     DRAW_DOWN: "마법 획 ↓",
     DRAW_LEFT: "마법 획 ←",
@@ -79,6 +81,7 @@ DEFAULTS: dict[str, tuple[int, ...]] = {
     SYNC: (pygame.K_e,),
     INVENTORY: (pygame.K_i,),
     CRAFT: (pygame.K_c,),
+    DROP: (pygame.K_q,),
     DRAW_UP: (pygame.K_UP,),
     DRAW_DOWN: (pygame.K_DOWN,),
     DRAW_LEFT: (pygame.K_LEFT,),

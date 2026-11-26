@@ -186,6 +186,10 @@ LOOT_PICKUP_RADIUS: Final[float] = 60.0  # walk onto it to take it back
 # A pile waits five minutes. Short of a full day, so the deadline bites inside
 # the day it happened; long enough to cross most of the grassland and back.
 LOOT_LIFETIME: Final[float] = 300.0
+# Something dropped on purpose: picked back up within this, once the player has
+# stepped out of it at least once. Drawn this big on the ground.
+DROP_PICKUP_RADIUS: Final[float] = 40.0
+DROP_ICON: Final[int] = 26
 
 # --- Belongings screen --------------------------------------------------------
 GRID_COLS: Final[int] = 5  # the hotbar's width, so the two grids line up

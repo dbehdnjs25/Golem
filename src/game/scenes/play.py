@@ -7,6 +7,7 @@ from __future__ import annotations
 import math
 import random
 from pathlib import Path
+from typing import Any
 
 import pygame
 
@@ -17,6 +18,7 @@ from game.core.scene import Scene
 from game.entities.beast import Beast
 from game.entities.boss import BOSS_KINDS, Boss
 from game.entities.core import Core
+from game.entities.dropped import Dropped
 from game.entities.enemy import Creature, Golem, golem_of
 from game.entities.enemy import swing as enemy_swing
 from game.entities.fragment import Fragment
@@ -535,6 +537,7 @@ class PlayScene(Scene):
         self.backpack: Container | None = None
         self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
         self.loot: list[LootPile] = []  # several may be outstanding at once
+        self.dropped: list[Dropped] = []  # put down on purpose; see _drop
         self.stations: list[Station] = []
         self.grid = Grid()
         self.grid_open = False
@@ -630,6 +633,73 @@ class PlayScene(Scene):
             self.backpack = Container.empty(packs.slots_of(kind))
             self.worn_pack = kind
 
+    # --- dropping on purpose ----------------------------------------------
+    def _drop(self, slots: list[Any], index: int) -> None:
+        """Put the thing in ``slots[index]`` on the ground at the player's feet.
+
+        One of a stack, or the whole stack with sprint held; a tool always
+        goes whole. Pressed again before walking off, it joins the same pile
+        rather than scattering a pile per press.
+        """
+        if not 0 <= index < len(slots) or slots[index] is None:
+            return
+        held = slots[index]
+        whole = self.controls.any_held(self._held_keys, ctl.SPRINT)
+        if isinstance(held, Stack) and not whole and held.count > 1:
+            held.count -= 1
+            item: object = Stack(held.kind, 1)
+        else:
+            slots[index] = None
+            item = held
+        for pile in self.dropped:
+            if (
+                not pile.armed
+                and isinstance(item, Stack)
+                and isinstance(pile.item, Stack)
+                and pile.item.kind is item.kind
+                and pile.item.room >= item.count
+                and pile.pos.distance_to(self.player.pos) < 1
+            ):
+                pile.item.count += item.count
+                return
+        self.dropped.append(Dropped(pos=pygame.Vector2(self.player.pos), item=item))
+
+    def _tick_dropped(self, dt: float) -> None:
+        """Age what was dropped, and pick up whatever the player walks back onto."""
+        for pile in self.dropped:
+            pile.update(dt, self.player.pos)
+            if pile.can_take(self.player.pos):
+                self._take_dropped(pile)
+        self.dropped = [
+            pile
+            for pile in self.dropped
+            if not pile.is_gone
+            and not (isinstance(pile.item, Stack) and pile.item.count == 0)
+            and pile.item is not None
+        ]
+
+    def _take_dropped(self, pile: Dropped) -> None:
+        """Back into the bag (or the hotbar); what will not fit stays put."""
+        item = pile.item
+        if isinstance(item, Stack):
+            item.count -= carrying.store(item.kind, item.count, self.backpack, self.hotbar)
+            return
+        for i, slot in enumerate(self.hotbar.slots):
+            if slot is None:
+                self.hotbar.slots[i] = item
+                pile.item = None
+                return
+
+    def _draw_dropped(self, surface: pygame.Surface) -> None:
+        size = config.DROP_ICON
+        for pile in self.dropped:
+            if pile.item is None:
+                continue
+            at = self.camera.world_to_screen(pile.pos)
+            box = pygame.Rect(0, 0, size, size)
+            box.center = (round(at.x), round(at.y))
+            self._draw_contents(surface, box, pile.item)
+
     def _tick_loot(self, dt: float) -> None:
         """Run every pile's clock down and clear the ones that ran out.
 
@@ -716,6 +786,8 @@ class PlayScene(Scene):
             self._toggle_grid()
         elif action == ctl.CRAFT:
             self._toggle_craft()
+        elif action == ctl.DROP:
+            self._drop(self.hotbar.slots, self.hotbar.selected)
         elif action == ctl.ZOOM_IN:
             self.camera.zoom_by(1)
         elif action == ctl.ZOOM_OUT:
@@ -729,6 +801,8 @@ class PlayScene(Scene):
     def _menu_key(self, key: int) -> None:
         """A key while the belongings or the recipe screen is up."""
         action = self.controls.action_of(key)
+        if action == ctl.SPRINT:
+            self._held_keys.add(key)  # so Shift+drop works with the bag open
         if key == ctl.BACK_KEY:
             self._close_menus()
         elif action == ctl.INVENTORY:
@@ -748,6 +822,12 @@ class PlayScene(Scene):
                 self._step_craft(dy)
         elif action in ctl.SLOTS:
             self.hotbar.select(ctl.SLOTS.index(action))
+        elif action == ctl.DROP and self.grid_open:
+            where, index = self.grid_cursor
+            if where == grid.HOTBAR:
+                self._drop(self.hotbar.slots, index)
+            elif self.backpack is not None:
+                self._drop(self.backpack.slots, index)
 
     def _close_menus(self) -> None:
         if self.grid_open:
@@ -919,6 +999,7 @@ class PlayScene(Scene):
         self.clock.update(dt)
         self.note_left = max(0.0, self.note_left - dt)
         self._tick_loot(dt)
+        self._tick_dropped(dt)
         for station in self.stations:
             station.update(dt)
 
@@ -1219,6 +1300,7 @@ class PlayScene(Scene):
         self._draw_patches(surface)  # ground, so under what stands on it
         self._draw_night(surface)
         self._draw_loot(surface)
+        self._draw_dropped(surface)
         on_field: tuple[Creature, ...] = (*self.enemies, *self.beasts)
         for creature in on_field:
             pygame.draw.circle(
