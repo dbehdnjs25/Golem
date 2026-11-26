@@ -11,6 +11,7 @@ _ASSETS = Path(__file__).resolve().parents[3] / "assets"
 _FILES = {biome.timber: _ASSETS / "trees" / f"{biome.key}.png" for biome in BIOMES}
 _FILES[WOOD] = _ASSETS / "grassland" / "objects" / "grassland_tree.png"
 _images: dict[ItemKind, pygame.Surface] = {}
+_missing: set[ItemKind] = set()  # art not on disk; drawn plain until a restart
 WORLD_TREE_SIZE = (96, 128)
 _shadow: pygame.Surface | None = None
 
@@ -27,9 +28,14 @@ def tree_shadow() -> pygame.Surface:
 def tree_image(kind: ItemKind) -> pygame.Surface | None:
     """Return a 96x128 standing tree, anchored at its bottom center in the world."""
     path = _FILES.get(kind)
-    if path is None:
+    if path is None or kind in _missing:
         return None
     if kind not in _images:
+        if not path.is_file():
+            # Art being redrawn can be briefly absent. A plain node is better
+            # than the whole game stopping when that biome comes into view.
+            _missing.add(kind)
+            return None
         image = pygame.image.load(str(path))
         if image.get_size() != WORLD_TREE_SIZE:
             # Preserve the user's 48x64 grassland source and scale only its display.

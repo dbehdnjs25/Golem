@@ -110,6 +110,18 @@ TREE_SHARE: Final[float] = 0.35
 # Litter -- twigs, pebbles, grass -- keeps turning up, so a run that loses its
 # tools can always start over from the ground.
 LITTER_SHARE: Final[float] = 0.15
+# Trees also grow on their own, apart from the node pool above: that pool is
+# shared with ore and litter and never forgets a node, so on its own it left
+# about one tree every two screens, and none at all once you walked away.
+TREE_SPAWN_MAX: Final[int] = 220  # grove trees kept within SPAWN_RADIUS
+TREE_SPAWN_INTERVAL: Final[float] = 0.1  # seconds between clumps
+TREE_CLUMP: Final[tuple[int, int]] = (3, 7)  # trees per clump -- woods, not a sprinkle
+TREE_CLUMP_SPREAD: Final[float] = 170.0  # how far a clump reaches from its middle
+TREE_GAP: Final[float] = 72.0  # nearest a tree stands to anything else on the ground
+# New trees grow at least this far off, past the edge of the window, so none
+# pops up in plain view; trees left this far behind are let go.
+TREE_HIDDEN_RADIUS: Final[float] = 800.0
+TREE_FORGET_RADIUS: Final[float] = 3_200.0
 
 # --- Core -------------------------------------------------------------------
 CORE_RADIUS: Final[float] = 40.0

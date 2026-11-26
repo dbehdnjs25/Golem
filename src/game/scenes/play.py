@@ -80,7 +80,7 @@ from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
 from game.systems.spawn_common import near_player
-from game.systems.spawner import Spawner
+from game.systems.spawner import Spawner, TreeSpawner
 from game.world import biomes, chasms, dungeon, ice, lava, mires, rooms, structures, temples
 from game.world.biomes import Biome
 from game.world.map import WorldMap
@@ -565,6 +565,13 @@ class PlayScene(Scene):
         )
         self.spawner = Spawner()
         self._scatter_starting_shards()
+        # Trees on their own clock and their own dice, so wooding the map does
+        # not shift every other roll the run makes after it.
+        self.tree_spawner = TreeSpawner()
+        self.tree_rng = random.Random(4321)
+        self.tree_spawner.fill(
+            self.fragments, self.core, self.tree_rng, self.world, self.player.pos
+        )
 
         self.enemies: list[Golem] = []
         self.projectiles: list[Projectile] = []
@@ -976,6 +983,9 @@ class PlayScene(Scene):
             dt, self.enemies, self.player, self.world, self.core, raid=self.is_raid
         )
         self.spawner.update(dt, self.fragments, self.core, self.rng, self.world, self.player.pos)
+        self.tree_spawner.update(
+            dt, self.fragments, self.core, self.tree_rng, self.world, self.player.pos
+        )
         self.enemy_spawner.update(
             dt,
             self.enemies,

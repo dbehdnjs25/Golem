@@ -19,6 +19,9 @@ class Fragment:
     # stone around a lava pool is placed by the world and never comes back once
     # it is gone, so the spawner must not count it against its own cap.
     fixed: bool = False
+    # Grown by the tree spawner. Counted against its own cap, not the node
+    # spawner's, and let go once the player is far enough away.
+    grove: bool = False
 
     @property
     def is_depleted(self) -> bool:
