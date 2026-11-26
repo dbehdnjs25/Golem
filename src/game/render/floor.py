@@ -22,7 +22,7 @@ import pygame
 
 from game import config
 from game.systems.camera import Camera
-from game.world import tiles
+from game.world import biomes, tiles
 from game.world.map import WorldMap
 
 CHUNK = 8  # cells per chunk side
@@ -51,7 +51,13 @@ class Floor:
     def _sheet_surface(self, key: str) -> pygame.Surface:
         """One biome's atlas, loaded on first use and kept."""
         if key not in self._atlas:
-            image = pygame.image.load(str(tiles.SHEETS[key].image))
+            sheet = tiles.SHEETS[key]
+            if not sheet.image.is_file():
+                # Deleted (from the asset library, say): that means "stop using
+                # it", so the biome is painted its flat colour, not a crash.
+                self._atlas[key] = self._plain_sheet(sheet)
+                return self._atlas[key]
+            image = pygame.image.load(str(sheet.image))
             # convert() needs a display MODE, not just an initialised display
             # subsystem -- pygame.init() gives the second without the first,
             # which is exactly the headless case. Unconverted still blits
@@ -60,6 +66,15 @@ class Floor:
                 image = image.convert()
             self._atlas[key] = image
         return self._atlas[key]
+
+    @staticmethod
+    def _plain_sheet(sheet: tiles.TileSheet) -> pygame.Surface:
+        """A stand-in atlas: every tile the sheet names, in its biome's colour."""
+        last = max(sheet.base, *sheet.decor) if sheet.decor else sheet.base
+        _, top, _, height = sheet.rect(last)
+        plain = pygame.Surface((sheet.columns * sheet.size, top + height))
+        plain.fill(biomes.BIOME_BY_KEY[sheet.key].color)
+        return plain
 
     # --- chunks ----------------------------------------------------------
     def _chunk(self, chunk_x: int, chunk_y: int) -> pygame.Surface:

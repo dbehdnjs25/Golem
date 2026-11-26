@@ -144,6 +144,18 @@ def categorize(rel: str) -> str:
     return "기타"
 
 
+def stand_in(category: str) -> str:
+    """What the game draws once this category's art is deleted. The game
+    treats a missing picture as "stop using it" (tests/test_floor.py holds it
+    to that), so deleting here never stops it from running."""
+    top = category.split("/")[0]
+    return {
+        "타일": "  · 타일 → 그 지역 색으로 칠한 바닥",
+        "나무": "  · 나무 → 나무 아이템 그림, 그것도 없으면 색 동그라미",
+        "아이템": "  · 아이템 → 색 네모(가방) · 색 동그라미(땅 위)",
+    }.get(top, f"  · {top} → 그림 없이 단순한 모양")
+
+
 def category_rows() -> list[tuple[str, int]]:
     """Every row of the fixed list, top to bottom: its path and its depth."""
     rows: list[tuple[str, int]] = []
@@ -2148,7 +2160,8 @@ class Gallery:
                 padx=14,
                 pady=10,
                 text=f"● 게임이 읽는 에셋 {len(used)}개가 들어 있어요: {names}\n"
-                "지우면 게임이 실행되지 않을 수 있어요.",
+                + "\n".join(sorted({stand_in(a.category) for a in used}))
+                + "\n게임은 그대로 실행돼요. 다음에 게임을 켤 때부터 적용돼요.",
             ).pack(fill="x", padx=18, pady=(12, 0))
         body = tk.Frame(dialog, bg="#141416")
         body.pack(fill="both", expand=True, padx=18, pady=12)
