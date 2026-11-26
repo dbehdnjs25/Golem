@@ -1767,11 +1767,19 @@ class Gallery:
                 tags="content",
             )
             y = pane.bbox(text)[3] + self.px(16)
+        # Deleting lives here too, beside what is being looked at: it was only
+        # in the bottom corner, where nobody looking at an asset finds it.
+        many = asset is not None and asset.key in self.selected and len(self.selected) > 1
+        bin_label = f"휴지통으로 보내기 ({len(self.selected)}개)" if many else "휴지통으로 보내기"
         actions = (
             ("Aseprite에서 열기", "primary", self.open_asset),
             ("탐색기에서 보기", "glass", self.reveal),
             ("경로 복사", "glass", self.copy_path),
+            (bin_label, "danger", self.delete_asset),
         )
+        # Keep all four on the pane however long the notes above them run.
+        button_h, step = self.px(36), self.px(43)
+        y = min(y, pane.winfo_height() - self.px(18) - step * (len(actions) - 1) - button_h)
         for label, style, action in actions:
             command = (lambda a=action: a(asset)) if asset else None
             self.pill(
@@ -1780,12 +1788,12 @@ class Gallery:
                 y,
                 label,
                 command,
-                tag=f"act-{label}",
+                tag=f"act-{label.split(' (')[0]}",
                 style=style if asset else "off",
                 w=inner,
-                h=self.px(38),
+                h=button_h,
             )
-            y += self.px(46)
+            y += step
 
     def _detail_lines(self, asset: Asset) -> list[str]:
         image = self.images.get(asset.stamp)
@@ -2120,6 +2128,13 @@ class Gallery:
         menu.add_separator()
         menu.add_command(label=f"삭제 ({len(self.selected)}개)…", command=self.confirm_delete)
         menu.tk_popup(event.x_root, event.y_root)
+
+    def delete_asset(self, asset: Asset) -> None:
+        """Bin what is selected, or just this one if it is not among them."""
+        if asset.key not in self.selected:
+            self.selected = {asset.key}
+            self._after_selection()
+        self.confirm_delete()
 
     def confirm_delete(self) -> None:
         chosen = [a for a in self.assets if a.key in self.selected]
