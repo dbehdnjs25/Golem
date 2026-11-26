@@ -51,7 +51,7 @@ from game.items.staff import STAFF_ITEMS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
 from game.render.floor import Floor
 from game.render.resources import resource_image, world_resource_image
-from game.render.trees import tree_image, tree_shadow
+from game.render.trees import has_own_shadow, tree_image, tree_shadow
 from game.systems import (
     aim,
     arena,
@@ -1762,8 +1762,9 @@ class PlayScene(Scene):
             art = tree if tree is not None else world_resource_image(node.kind)
             if tree is not None:
                 # The harvest target stays at the trunk, below the canopy.
-                shadow = tree_shadow()
-                surface.blit(shadow, shadow.get_rect(center=(round(at.x + 4), round(at.y + 5))))
+                if not has_own_shadow(node.kind):  # painted ones need no second
+                    shadow = tree_shadow()
+                    surface.blit(shadow, shadow.get_rect(center=(round(at.x + 4), round(at.y + 5))))
                 surface.blit(
                     tree,
                     tree.get_rect(midbottom=(round(at.x), round(at.y + config.FRAGMENT_RADIUS))),

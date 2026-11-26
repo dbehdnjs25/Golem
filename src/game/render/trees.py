@@ -12,6 +12,7 @@ _FILES = {biome.timber: _ASSETS / "trees" / f"{biome.key}.png" for biome in BIOM
 _FILES[WOOD] = _ASSETS / "grassland" / "objects" / "grassland_tree.png"
 _images: dict[ItemKind, pygame.Surface] = {}
 _missing: set[ItemKind] = set()  # art not on disk; drawn plain until a restart
+_own_shadow: dict[ItemKind, bool] = {}
 WORLD_TREE_SIZE = (96, 128)
 _shadow: pygame.Surface | None = None
 
@@ -44,3 +45,26 @@ def tree_image(kind: ItemKind) -> pygame.Surface | None:
             image = image.convert_alpha()
         _images[kind] = image
     return _images[kind]
+
+
+def has_own_shadow(kind: ItemKind) -> bool:
+    """Whether the tree's art already has a shadow painted under it.
+
+    Read off the picture rather than listed by hand: soft, half-see-through
+    pixels along the bottom are a painted shadow (the outline and the trunk
+    are solid). Such a tree gets no second shadow from the code -- the
+    grassland tree drew two, one painted and one laid under it.
+    """
+    if kind not in _own_shadow:
+        art = tree_image(kind)
+        if art is None:
+            return False
+        width, height = art.get_size()
+        soft = sum(
+            1
+            for y in range(height * 7 // 8, height)
+            for x in range(width)
+            if 0 < art.get_at((x, y)).a < 255
+        )
+        _own_shadow[kind] = soft >= width // 4
+    return _own_shadow[kind]

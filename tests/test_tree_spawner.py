@@ -119,3 +119,46 @@ def test_a_missing_tree_picture_is_drawn_plain_rather_than_crashing(monkeypatch,
     monkeypatch.setattr(trees, "_images", {})
     monkeypatch.setattr(trees, "_missing", set())
     assert trees.tree_image(WOOD) is None
+
+
+def _tree_png(path, shadow: bool):
+    art = pygame.Surface((48, 64), pygame.SRCALPHA)
+    pygame.draw.rect(art, (90, 60, 30, 255), (20, 30, 8, 30))  # trunk
+    if shadow:
+        pygame.draw.ellipse(art, (20, 30, 20, 90), (8, 56, 32, 8))  # soft, under the trunk
+    pygame.image.save(art, str(path))
+
+
+def test_a_tree_drawn_with_its_own_shadow_gets_no_second_one(monkeypatch, tmp_path):
+    from game.items.item_kinds import WOOD
+    from game.render import trees
+
+    monkeypatch.setattr(trees, "_images", {})
+    monkeypatch.setattr(trees, "_missing", set())
+    monkeypatch.setattr(trees, "_own_shadow", {})
+    _tree_png(tmp_path / "shaded.png", shadow=True)
+    monkeypatch.setitem(trees._FILES, WOOD, tmp_path / "shaded.png")
+    assert trees.has_own_shadow(WOOD)
+
+
+def test_a_tree_drawn_without_one_still_gets_the_codes_shadow(monkeypatch, tmp_path):
+    from game.items.item_kinds import WOOD
+    from game.render import trees
+
+    monkeypatch.setattr(trees, "_images", {})
+    monkeypatch.setattr(trees, "_missing", set())
+    monkeypatch.setattr(trees, "_own_shadow", {})
+    _tree_png(tmp_path / "bare.png", shadow=False)
+    monkeypatch.setitem(trees._FILES, WOOD, tmp_path / "bare.png")
+    assert not trees.has_own_shadow(WOOD)
+
+
+def test_the_grassland_tree_brings_its_own_shadow_and_the_others_do_not():
+    from game.items.item_kinds import WOOD
+    from game.render import trees
+    from game.world.biomes import RING_BIOMES
+
+    assert trees.has_own_shadow(WOOD)
+    for biome in RING_BIOMES:
+        if trees._FILES[biome.timber].is_file():
+            assert not trees.has_own_shadow(biome.timber), biome.key
