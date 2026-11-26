@@ -119,9 +119,13 @@ LITTER_SHARE: Final[float] = 0.15
 # shared with ore and litter and never forgets a node, so on its own it left
 # about one tree every two screens, and none at all once you walked away.
 TREE_SPAWN_MAX: Final[int] = 220  # grove trees kept within SPAWN_RADIUS
-TREE_SPAWN_INTERVAL: Final[float] = 0.1  # seconds between clumps
-TREE_CLUMP: Final[tuple[int, int]] = (3, 7)  # trees per clump -- woods, not a sprinkle
-TREE_CLUMP_SPREAD: Final[float] = 170.0  # how far a clump reaches from its middle
+TREE_SPAWN_INTERVAL: Final[float] = 0.1  # seconds between plantings
+TREE_PER_TICK: Final[int] = 3  # trees planted each time, so a sprint is kept up with
+# Spread evenly rather than in clumps: each tree goes in the best of a handful
+# of spots -- the one furthest from the trees already standing -- and never
+# nearer another tree than TREE_SPACING. Even, but not a grid.
+TREE_SPACING: Final[float] = 150.0
+TREE_CANDIDATES: Final[int] = 10
 TREE_GAP: Final[float] = 72.0  # nearest a tree stands to anything else on the ground
 # New trees grow at least this far off, past the edge of the window, so none
 # pops up in plain view; trees left this far behind are let go.

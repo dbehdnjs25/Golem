@@ -26,7 +26,7 @@ def _near(trees, player=PLAYER):
 
 def test_the_ground_starts_forested():
     trees = _filled()
-    # Not to the last tree -- a clump that will not fit is skipped -- but close.
+    # Not to the last tree -- a spot with no room is skipped -- but close.
     assert len(_near(trees)) >= config.TREE_SPAWN_MAX * 0.9
 
 
@@ -40,18 +40,37 @@ def test_trees_keep_their_distance_from_each_other():
     trees = _filled()
     for i, a in enumerate(trees):
         for b in trees[i + 1 :]:
-            assert a.pos.distance_to(b.pos) >= config.TREE_GAP - 1e-6
+            assert a.pos.distance_to(b.pos) >= config.TREE_SPACING - 1e-6
 
 
-def test_trees_grow_in_clumps():
-    # Most trees have another within a couple of gaps: woods, not a sprinkle.
-    trees = _filled()
-    close = sum(
-        1
-        for a in trees
-        if any(b is not a and a.pos.distance_to(b.pos) < config.TREE_GAP * 2.5 for b in trees)
-    )
-    assert close >= len(trees) * 0.7
+def _evenness(trees, player=PLAYER, inner=1_500.0):
+    """Clark-Evans R: mean nearest-neighbour distance against a random scatter's.
+
+    1.0 is a random scatter, below it is clumped, above it is evenly spread
+    (a perfect hexagonal grid is 2.15). Measured on the trees well inside the
+    circle, so the empty ground past its edge does not count against them.
+    """
+    import math
+
+    inside = [t for t in trees if t.pos.distance_to(player) <= inner]
+    nearest = [min(a.pos.distance_to(b.pos) for b in trees if b is not a) for a in inside]
+    density = len(inside) / (math.pi * inner**2)
+    return (sum(nearest) / len(nearest)) / (0.5 / math.sqrt(density))
+
+
+def test_trees_are_spread_evenly_not_clumped():
+    assert _evenness(_filled()) >= 1.5
+
+
+def test_trees_that_grow_later_are_spread_evenly_too():
+    spawner = TreeSpawner()
+    trees: list[Fragment] = []
+    rng = random.Random(8)
+    for _ in range(600):
+        spawner.update(config.TREE_SPAWN_INTERVAL, trees, CORE, rng, WORLD, PLAYER)
+    ring = [t for t in trees if t.pos.distance_to(PLAYER) >= config.TREE_HIDDEN_RADIUS]
+    assert len(ring) >= config.TREE_SPAWN_MAX * 0.7
+    assert _evenness(trees, inner=config.SPAWN_RADIUS * 0.8) >= 1.3
 
 
 def test_no_tree_grows_on_the_core():
