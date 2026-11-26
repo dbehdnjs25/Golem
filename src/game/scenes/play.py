@@ -79,7 +79,7 @@ from game.systems.camera import Camera, edge_marker
 from game.systems.daynight import DayNight
 from game.systems.enemy_spawner import EnemySpawner
 from game.systems.grimoire import Grimoire
-from game.systems.spawn_common import near_player
+from game.systems.spawn_common import SPAWN_ATTEMPTS, near_player
 from game.systems.spawner import Spawner, TreeSpawner
 from game.world import biomes, chasms, dungeon, ice, lava, mires, rooms, structures, temples
 from game.world.biomes import Biome
@@ -579,10 +579,21 @@ class PlayScene(Scene):
         short errand, not a search. Placing the core is what starts day one, and
         the player chooses when.
         """
-        for _ in range(config.CORE_SHARDS_TO_IGNITE + 2):  # two spare
+        # Exactly as many as the core asks for. There used to be two spare,
+        # which meant the opening ended with the player holding junk: once
+        # lit, a shard is good for nothing, and the core has no store to drop
+        # the leftovers into any more.
+        #
+        # Counted rather than looped, so a spot the world refuses does not
+        # quietly leave the run one shard short of ever starting.
+        placed = 0
+        for _ in range(config.CORE_SHARDS_TO_IGNITE * SPAWN_ATTEMPTS):
+            if placed >= config.CORE_SHARDS_TO_IGNITE:
+                break
             spot = near_player(self.player.pos, self.rng, self.world)
             if spot is not None:
                 self.fragments.append(Fragment(pos=spot, kind=CORE_SHARD))
+                placed += 1
         # Litter first, then trees. A player holding nothing can only take the
         # litter, and the crude axe it makes is what opens the trees -- so the
         # first five minutes have an order to them rather than a wall.

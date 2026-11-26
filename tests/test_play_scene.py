@@ -334,8 +334,30 @@ def test_the_run_starts_with_an_unlit_core_and_no_ward():
 def test_shards_are_scattered_within_reach_of_the_spawn():
     scene = PlayScene()
     on_ground = [f for f in scene.fragments if f.kind is CORE_SHARD]
-    assert len(on_ground) >= config.CORE_SHARDS_TO_IGNITE
+    assert len(on_ground) == config.CORE_SHARDS_TO_IGNITE
     assert all(scene.player.pos.distance_to(f.pos) < config.SPAWN_RADIUS for f in on_ground)
+
+
+def test_exactly_enough_shards_and_no_more():
+    # A shard is good for one thing and the core has no store to drop the
+    # leftovers into, so a spare one is junk the player carries forever.
+    # Counted across several worlds, because the placement retries and a
+    # single lucky seed would not show a short one.
+    for _ in range(8):
+        scene = PlayScene()
+        assert sum(1 for f in scene.fragments if f.kind is CORE_SHARD) == (
+            config.CORE_SHARDS_TO_IGNITE
+        )
+
+
+def test_the_shards_on_the_ground_light_the_core_with_nothing_left_over():
+    scene = PlayScene()
+    scene.hotbar.add(CORE_SHARD, sum(1 for f in scene.fragments if f.kind is CORE_SHARD))
+    scene.player.pos = pygame.Vector2(scene.core.pos)
+    scene.handle_event(_key_event(pygame.K_e))
+    scene.update(config.FIXED_DT)
+    assert scene.core.ignited
+    assert scene.hotbar.count(CORE_SHARD) == 0
 
 
 def test_pressing_e_on_the_pedestal_with_enough_shards_ignites_the_core():
