@@ -129,78 +129,52 @@ _PAUSE_ROWS: tuple[tuple[str, str], ...] = (
 # machine without these still draws something rather than raising.
 _FONT_NAMES = ("malgungothic", "gulim", "arial")
 _fonts: dict[int, pygame.font.Font] = {}
-_UI_ASSET_DIR = Path(__file__).resolve().parents[3] / "assets" / "ui"
-_ui_images: dict[str, pygame.Surface] = {}
+# The UI is drawn in code, not from images: charcoal boxes with a sage edge,
+# the palette the old art used. Every framed thing -- slots, panels, bars,
+# tooltips -- goes through ``_draw_frame``, so restyling is one place.
+_UI_FILL = (32, 35, 34)
+_UI_EDGE = (76, 81, 78)
+_UI_EDGE_LIT = (205, 194, 156)  # the selected slot's edge
+_HEART_COLOR = (207, 76, 100)
+_STAMINA_ICON_COLOR = (147, 192, 136)
+_BAG_COLOR = (150, 125, 84)
+# Small icons as pixel masks, drawn by ``_draw_pixel_icon``.
+_HEART_ICON = ("0110110", "1111111", "1111111", "0111110", "0011100", "0001000")
+_STAMINA_ICON = ("0011", "0110", "1111", "0110", "1100")
+_BAG_ICON = (
+    "00111100",
+    "01000010",
+    "11111111",
+    "10000001",
+    "10011001",
+    "10000001",
+    "11111111",
+)
 
 
-def _ui_asset(name: str) -> pygame.Surface:
-    """Load a reusable UI image once, at UI_SCALE, keeping its alpha.
-
-    Scaled with the plain scale rather than smoothscale, and by a whole number,
-    so a 40-pixel slot becomes a sharp 80 rather than a soft one.
-    """
-    if name not in _ui_images:
-        art = pygame.image.load(str(_UI_ASSET_DIR / name))
-        if config.UI_SCALE != 1:
-            art = pygame.transform.scale(
-                art, (art.get_width() * config.UI_SCALE, art.get_height() * config.UI_SCALE)
-            )
-        _ui_images[name] = art
-    return _ui_images[name]
+def _draw_frame(surface: pygame.Surface, rect: pygame.Rect, *, selected: bool = False) -> None:
+    """A dark rounded box with a thin edge; a light edge when ``selected``."""
+    scale = config.UI_SCALE
+    radius = min(4 * scale, rect.height // 2)
+    pygame.draw.rect(surface, _UI_FILL, rect, border_radius=radius)
+    edge = _UI_EDGE_LIT if selected else _UI_EDGE
+    pygame.draw.rect(surface, edge, rect, scale, border_radius=radius)
 
 
-def _blit_nine_slice(
-    surface: pygame.Surface, image: pygame.Surface, rect: pygame.Rect, border: int
+def _draw_pixel_icon(
+    surface: pygame.Surface,
+    mask: tuple[str, ...],
+    center: tuple[int, int],
+    color: tuple[int, int, int],
+    px: int,
 ) -> None:
-    """Stretch a pixel frame while keeping its corners at their native size."""
-    sw, sh = image.get_size()
-    pieces = (
-        (pygame.Rect(0, 0, border, border), pygame.Rect(rect.left, rect.top, border, border)),
-        (
-            pygame.Rect(border, 0, sw - 2 * border, border),
-            pygame.Rect(rect.left + border, rect.top, rect.width - 2 * border, border),
-        ),
-        (
-            pygame.Rect(sw - border, 0, border, border),
-            pygame.Rect(rect.right - border, rect.top, border, border),
-        ),
-        (
-            pygame.Rect(0, border, border, sh - 2 * border),
-            pygame.Rect(rect.left, rect.top + border, border, rect.height - 2 * border),
-        ),
-        (
-            pygame.Rect(border, border, sw - 2 * border, sh - 2 * border),
-            pygame.Rect(
-                rect.left + border,
-                rect.top + border,
-                rect.width - 2 * border,
-                rect.height - 2 * border,
-            ),
-        ),
-        (
-            pygame.Rect(sw - border, border, border, sh - 2 * border),
-            pygame.Rect(rect.right - border, rect.top + border, border, rect.height - 2 * border),
-        ),
-        (
-            pygame.Rect(0, sh - border, border, border),
-            pygame.Rect(rect.left, rect.bottom - border, border, border),
-        ),
-        (
-            pygame.Rect(border, sh - border, sw - 2 * border, border),
-            pygame.Rect(rect.left + border, rect.bottom - border, rect.width - 2 * border, border),
-        ),
-        (
-            pygame.Rect(sw - border, sh - border, border, border),
-            pygame.Rect(rect.right - border, rect.bottom - border, border, border),
-        ),
-    )
-    for source, target in pieces:
-        if target.width <= 0 or target.height <= 0:
-            continue
-        patch = image.subsurface(source)
-        if patch.get_size() != target.size:
-            patch = pygame.transform.scale(patch, target.size)
-        surface.blit(patch, target.topleft)
+    """Draw a pixel mask ("1" = filled) centred on ``center``, ``px`` per cell."""
+    left = center[0] - len(mask[0]) * px // 2
+    top = center[1] - len(mask) * px // 2
+    for row, bits in enumerate(mask):
+        for column, bit in enumerate(bits):
+            if bit == "1":
+                pygame.draw.rect(surface, color, (left + column * px, top + row * px, px, px))
 
 
 def _has_final_consonant(word: str) -> bool:
@@ -309,20 +283,21 @@ def _draw_bar(
     pygame.draw.rect(surface, color, pygame.Rect(_BAR_X, y, int(_BAR_W * frac), height))
 
 
-def _draw_gauge_asset(
+def _draw_gauge(
     surface: pygame.Surface,
-    name: str,
     y: int,
+    height: int,
     frac: float,
     color: tuple[int, int, int],
     *,
-    icon: str | None = None,
+    icon: tuple[str, ...] | None = None,
+    icon_color: tuple[int, int, int] = _STAMINA_ICON_COLOR,
 ) -> None:
-    """Draw a framed resource gauge with its fill clipped inside the pixel frame."""
+    """A framed resource gauge, ``height`` UI units tall, with its fill inside
+    the frame and an optional pixel icon at its left end."""
     scale = config.UI_SCALE
-    art = _ui_asset(name)
-    rect = art.get_rect(topleft=(_BAR_X, y))
-    surface.blit(art, rect)
+    rect = pygame.Rect(_BAR_X, y, 136 * scale, height * scale)
+    _draw_frame(surface, rect)
     left = 13 * scale if icon else 3 * scale
     top = (2 if rect.height >= 16 else 1) * scale
     inner_height = max(scale, rect.height - 2 * top)
@@ -337,8 +312,8 @@ def _draw_gauge_asset(
             1,
         )
     if icon:
-        symbol = _ui_asset(icon)
-        surface.blit(symbol, (rect.left + 2 * scale, rect.top))
+        center = (rect.left + 7 * scale, rect.centery)
+        _draw_pixel_icon(surface, icon, center, icon_color, scale)
 
 
 def _draw_pixel_round_rect(
@@ -468,13 +443,12 @@ def _draw_health_bar(surface: pygame.Surface, y: int, frac: float) -> None:
         scale,
         1,
     )
-    heart = _ui_asset("health_heart.png")
-    surface.blit(
-        heart,
-        (
-            x + (icon_size - heart.get_width()) // 2,
-            cap_y + (icon_size - heart.get_height()) // 2,
-        ),
+    _draw_pixel_icon(
+        surface,
+        _HEART_ICON,
+        (x + icon_size // 2, cap_y + icon_size // 2),
+        _HEART_COLOR,
+        3 * scale // 2,
     )
 
     fill_x = body_x
@@ -1608,11 +1582,12 @@ class PlayScene(Scene):
         overlay = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 140))
         surface.blit(overlay, (0, 0))
-        _blit_nine_slice(surface, _ui_asset("inventory_panel.png"), panel, 8)
+        _draw_frame(surface, panel)
         header = pygame.Rect(panel.left + 8, panel.top + 8, panel.width - 16, 36)
-        _blit_nine_slice(surface, _ui_asset("inventory_header.png"), header, 6)
-        bag = _ui_asset("backpack_icon.png")
-        surface.blit(bag, (header.left + 8, header.centery - bag.get_height() // 2))
+        _draw_frame(surface, header)
+        _draw_pixel_icon(
+            surface, _BAG_ICON, (header.left + 24, header.centery), _BAG_COLOR, config.UI_SCALE * 2
+        )
         title = _font(14 * config.UI_SCALE).render("인벤토리", True, config.WHITE)
         surface.blit(title, (header.left + 48, header.centery - title.get_height() // 2))
         hovered: object | None = None
@@ -1652,22 +1627,23 @@ class PlayScene(Scene):
         name = slot.kind.name if isinstance(slot, Stack) else getattr(slot, "name", "")
         if not name:
             return
-        image = _ui_asset("item_tooltip.png")
-        left = min(cell.centerx + 18, surface.get_width() - image.get_width() - 8)
-        top = min(cell.bottom + 6, surface.get_height() - image.get_height() - 8)
-        left, top = max(8, left), max(8, top)
-        surface.blit(image, (left, top))
         label = name if not isinstance(slot, Stack) else f"{name}  x{slot.count}"
         text = _font(11 * config.UI_SCALE).render(label, True, config.WHITE)
-        surface.blit(
-            text, (left + 12 * config.UI_SCALE, top + (image.get_height() - text.get_height()) // 2)
-        )
+        pad = 12 * config.UI_SCALE
+        # As wide as its words (never narrower than the old fixed box), so a
+        # long name is not cut off.
+        width = max(160 * config.UI_SCALE, text.get_width() + 2 * pad)
+        height = 24 * config.UI_SCALE
+        left = min(cell.centerx + 18, surface.get_width() - width - 8)
+        top = min(cell.bottom + 6, surface.get_height() - height - 8)
+        box = pygame.Rect(max(8, left), max(8, top), width, height)
+        _draw_frame(surface, box)
+        surface.blit(text, (box.left + pad, box.top + (height - text.get_height()) // 2))
 
     def _draw_cell(
         self, surface: pygame.Surface, rect: pygame.Rect, slot: object, *, selected: bool = False
     ) -> None:
-        image = _ui_asset("inventory_slot_selected.png" if selected else "inventory_slot.png")
-        surface.blit(image, rect)
+        _draw_frame(surface, rect, selected=selected)
         if slot is not None:
             self._draw_contents(surface, rect.inflate(-10, -10), slot)
 
@@ -2482,7 +2458,7 @@ class PlayScene(Scene):
         left, top = margin, config.BOSS_BAR_Y
         height = config.BOSS_BAR_H
         bar_rect = pygame.Rect(left, top, width, height)
-        _blit_nine_slice(surface, _ui_asset("boss_bar.png"), bar_rect, 4)
+        _draw_frame(surface, bar_rect)
         left_over = min(1.0, max(0.0, boss.hp / boss.kind.hp))
         colour = config.BOSS_PHASE2_COLOR if boss.phase == 2 else config.BOSS_BAR_COLOR
         fill = pygame.Rect(left + 8, top + 6, int((width - 16) * left_over), height - 12)
@@ -2680,20 +2656,20 @@ class PlayScene(Scene):
         _draw_health_bar(surface, 10 * config.UI_SCALE, hp_frac)
         # stamina, directly under health: the two things a body runs out of
         wind = self.player.stamina / self.player.max_stamina
-        _draw_gauge_asset(
+        _draw_gauge(
             surface,
-            "stamina_bar.png",
             28 * config.UI_SCALE,
+            9,
             wind,
             self.wind_colour,
-            icon="stamina_icon.png",
+            icon=_STAMINA_ICON,
         )
         # dodge cooldown strip (full = ready)
         ready = 1 - self.player.dodge_cooldown_timer / config.DODGE_COOLDOWN
-        _draw_gauge_asset(
+        _draw_gauge(
             surface,
-            "dodge_bar.png",
             40 * config.UI_SCALE,
+            5,
             ready,
             (120, 160, 220),
         )
@@ -2732,8 +2708,6 @@ class PlayScene(Scene):
         # Centred along the bottom. In the corner it fought the gauges for the
         # same eye and left the middle of the screen empty; the belt is the one
         # thing the hand is always on, so it belongs under the thumb.
-        empty_slot = _ui_asset("hotbar_slot.png")
-        selected_slot = _ui_asset("hotbar_slot_selected.png")
         step = 44 * config.UI_SCALE
         slot_size = 40 * config.UI_SCALE
         group_width = (len(self.hotbar.slots) - 1) * step + slot_size
@@ -2741,13 +2715,14 @@ class PlayScene(Scene):
         for i, slot in enumerate(self.hotbar.slots):
             x, y = start_x + i * step, surface.get_height() - 50 * config.UI_SCALE
             is_selected = i == self.hotbar.selected
-            surface.blit(selected_slot if is_selected else empty_slot, (x, y))
+            _draw_frame(surface, pygame.Rect(x, y, slot_size, slot_size), selected=is_selected)
             number_color = (143, 134, 106) if is_selected else (105, 111, 106)
             _draw_hotbar_digit(
                 surface,
                 i + 1,
                 x + 17 * config.UI_SCALE,
-                y - 3 * config.UI_SCALE,
+                # Just above the slot, clear of its edge.
+                y - 12 * config.UI_SCALE,
                 number_color,
             )
             if slot is not None:

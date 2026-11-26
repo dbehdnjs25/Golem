@@ -1,4 +1,5 @@
 import math
+from types import SimpleNamespace
 
 import pygame
 import pytest
@@ -12,7 +13,7 @@ from game.inventory.storage import Container
 from game.items import glyphs as glyph_table
 from game.items.item_kinds import CORE_SHARD, ITEM_KINDS, STONE, WORN_PACK
 from game.items.tools import WeaponTool
-from game.scenes.play import _BAR_W, _BAR_X, PlayScene, _ui_asset
+from game.scenes.play import _BAR_W, _BAR_X, PlayScene
 from game.systems import consume, raids
 from game.systems.camera import Camera
 from game.world import biomes, mires
@@ -22,12 +23,26 @@ def _key_event(key):
     return pygame.event.Event(pygame.KEYDOWN, key=key)
 
 
-def test_hotbar_ui_assets_load_at_gameplay_size():
-    # Cut at 40 and drawn at UI_SCALE. A whole multiple, so the slot's edges
-    # stay as sharp as they were authored.
-    side = 40 * config.UI_SCALE
-    assert _ui_asset("hotbar_slot.png").get_size() == (side, side)
-    assert _ui_asset("hotbar_slot_selected.png").get_size() == (side, side)
+def test_the_ui_is_drawn_in_code_without_ui_images(monkeypatch):
+    # Every frame, bar, slot and icon is drawn with shapes; nothing is read
+    # from assets/ui, so deleting that folder cannot break the screen.
+    loaded: list[str] = []
+    real_load = pygame.image.load
+
+    def spy(path, *args):
+        loaded.append(str(path).replace("\\", "/"))
+        return real_load(path, *args)
+
+    monkeypatch.setattr(pygame.image, "load", spy)
+    surface = pygame.Surface(config.SCREEN_SIZE, pygame.SRCALPHA)
+    scene = PlayScene()
+    scene.boss = SimpleNamespace(hp=5, phase=1, kind=SimpleNamespace(hp=10, name="보스"))
+    scene._draw_hud(surface)
+    scene._draw_boss_bar(surface)
+    scene.grid_open = True
+    scene._draw_grid(surface)
+    scene._draw_item_tooltip(surface, Stack(STONE, 3), pygame.Rect(100, 100, 44, 44))
+    assert not [path for path in loaded if "/assets/ui/" in path]
 
 
 def test_default_hud_draws_floating_hotbar_slots():
