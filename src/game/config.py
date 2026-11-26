@@ -118,13 +118,13 @@ LITTER_SHARE: Final[float] = 0.15
 # Trees also grow on their own, apart from the node pool above: that pool is
 # shared with ore and litter and never forgets a node, so on its own it left
 # about one tree every two screens, and none at all once you walked away.
-TREE_SPAWN_MAX: Final[int] = 220  # grove trees kept within SPAWN_RADIUS
+TREE_SPAWN_MAX: Final[int] = 100  # grove trees kept within SPAWN_RADIUS
 TREE_SPAWN_INTERVAL: Final[float] = 0.1  # seconds between plantings
 TREE_PER_TICK: Final[int] = 3  # trees planted each time, so a sprint is kept up with
 # Spread evenly rather than in clumps: each tree goes in the best of a handful
 # of spots -- the one furthest from the trees already standing -- and never
 # nearer another tree than TREE_SPACING. Even, but not a grid.
-TREE_SPACING: Final[float] = 150.0
+TREE_SPACING: Final[float] = 220.0
 TREE_CANDIDATES: Final[int] = 10
 TREE_GAP: Final[float] = 72.0  # nearest a tree stands to anything else on the ground
 # New trees grow at least this far off, past the edge of the window, so none
