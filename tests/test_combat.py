@@ -116,17 +116,26 @@ def test_expired_projectile_removed():
     assert projectiles == []
 
 
-def test_enemy_contact_damages_player():
+def _swing_through(enemies, player, core, seconds: float) -> None:
+    """Run the fixed step long enough for a swing to wind up and land."""
+    for _ in range(int(seconds / config.FIXED_DT)):
+        combat.update_enemies(config.FIXED_DT, enemies, player, WORLD, core)
+
+
+def test_a_golem_in_reach_swings_and_lands_it():
+    # It used to drain by the second for as long as two circles overlapped.
+    # One swing, worth a bit over a second of that, and it can be stepped out
+    # of -- see tests/test_golem_swing.
     player = Player(pos=pygame.Vector2(CENTRE))
     enemy = Golem(pos=pygame.Vector2(CENTRE))
-    combat.update_enemies(0.5, [enemy], player, WORLD, UNLIT)
-    assert player.hp == config.PLAYER_MAX_HP - config.GOLEM_CONTACT_DPS * 0.5
+    _swing_through([enemy], player, UNLIT, config.GOLEM_WIND + 0.1)
+    assert player.hp == config.PLAYER_MAX_HP - enemy.hit
 
 
 def test_invulnerable_player_takes_no_contact_damage():
-    player = Player(pos=pygame.Vector2(CENTRE), iframe_timer=1.0)
+    player = Player(pos=pygame.Vector2(CENTRE), iframe_timer=9.0)
     enemy = Golem(pos=pygame.Vector2(CENTRE))
-    combat.update_enemies(0.5, [enemy], player, WORLD, UNLIT)
+    _swing_through([enemy], player, UNLIT, config.GOLEM_WIND + 0.1)
     assert player.hp == config.PLAYER_MAX_HP
 
 
@@ -198,10 +207,10 @@ def test_contact_damage_comes_from_the_golem_s_kind():
         color=(1, 2, 3),
     )
     player = Player(pos=pygame.Vector2(CENTRE))
-    combat.update_enemies(
-        1.0, [Golem(pos=pygame.Vector2(CENTRE), kind=gentle)], player, WORLD, UNLIT
-    )
-    assert player.hp == config.PLAYER_MAX_HP - gentle.contact_dps
+    soft = Golem(pos=pygame.Vector2(CENTRE), kind=gentle)
+    _swing_through([soft], player, UNLIT, config.GOLEM_WIND + 0.1)
+    assert player.hp == config.PLAYER_MAX_HP - soft.hit
+    assert soft.hit < Golem(pos=pygame.Vector2(CENTRE)).hit
 
 
 def test_a_golem_walks_at_the_core_not_at_you():
@@ -261,9 +270,10 @@ def test_a_raid_lets_them_through_the_ward():
 
 def test_a_golem_on_the_core_eats_into_it():
     core = _lit_core()
-    player = Player(pos=pygame.Vector2(CENTRE))
+    player = Player(pos=core.pos + pygame.Vector2(9000, 0))  # nowhere near it
     on_it = Golem(pos=pygame.Vector2(core.pos))
-    combat.update_enemies(1.0, [on_it], player, WORLD, core, raid=True)
+    for _ in range(int((config.GOLEM_WIND + 0.1) / config.FIXED_DT)):
+        combat.update_enemies(config.FIXED_DT, [on_it], player, WORLD, core, raid=True)
     assert core.hp < core.max_hp
 
 

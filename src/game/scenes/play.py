@@ -18,6 +18,7 @@ from game.entities.beast import Beast
 from game.entities.boss import BOSS_KINDS, Boss
 from game.entities.core import Core
 from game.entities.enemy import Creature, Golem, golem_of
+from game.entities.enemy import swing as enemy_swing
 from game.entities.fragment import Fragment
 from game.entities.hazard import Pillar, Rod
 from game.entities.loot import LootPile
@@ -920,15 +921,19 @@ class PlayScene(Scene):
                 self.player.iframe_timer = config.RESPAWN_IFRAMES
                 down = False
 
+        if not down:
+            self._update_living(dt, dodge, sync)
+
         # The camera keeps following even while down, so the wait shows the
         # world carrying on rather than a frozen frame. Inside a temple it
         # follows nothing: one room fills the screen, and a view that drifted
         # with the player would push the far wall and its doors off the edge
         # of the very thing they are meant to be read from.
+        #
+        # AFTER the player moves. Before, the view sat one step behind, and
+        # the 3.33 px step left a fraction that cycled through thirds -- drawn
+        # without it, the player shivered a pixel side to side while walking.
         self.camera.update(dt, self.inside.pos if self.inside is not None else self.player.pos)
-
-        if not down:
-            self._update_living(dt, dodge, sync)
 
         # The world does not stop for a death: golems keep walking, shots keep
         # flying, and what was chasing the player is still out there on the way
@@ -1227,8 +1232,8 @@ class PlayScene(Scene):
         self._draw_charge_lane(surface)  # a promise, so under what is real
         self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
+        self._draw_hitboxes(surface)
         at = self.camera.world_to_screen(self.player.pos)
-        self._draw_swing(surface, at)
         pygame.draw.circle(surface, config.PLAYER_COLOR, at, self.player.radius)
         self._draw_facing(surface, at)
         if self.player.shocked:
@@ -1246,27 +1251,62 @@ class PlayScene(Scene):
         base = at + ahead * (self.player.radius + 1)
         pygame.draw.polygon(surface, config.WHITE, [tip, base + side * 5, base - side * 5])
 
-    def _draw_swing(self, surface: pygame.Surface, at: pygame.Vector2) -> None:
-        """The fan the last swing swept, for a blink after it went round.
+    def _draw_hitboxes(self, surface: pygame.Surface) -> None:
+        """Every box that is about to decide something, in red.
 
-        Without it a swing that hit nothing looks like the key did nothing,
-        and the player cannot learn how wide the fan is.
+        Two different questions, drawn the same way on purpose: what is about
+        to hit the player, and what the player is about to hit. Neither was
+        drawn before -- a golem simply drained you for standing near it, and
+        the reach of a pick was something you learned by failing to dig.
+
+        A golem's ring CLOSES as its wind-up runs out, so the shape says when
+        as well as where. A flat ring would be a warning light.
         """
-        if self._swing_left <= 0 or self.facing.length_squared() == 0:
-            return
+        layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
+        shade = (*config.HITBOX_COLOR, config.HITBOX_FILL)
+        edge = (*config.HITBOX_COLOR, 255)
+
+        for enemy in self.enemies:
+            if enemy.phase is enemy_swing.WALK and enemy.flash <= 0:
+                continue
+            at = self.camera.world_to_screen(enemy.pos)
+            span = int(enemy.reach + self.player.radius)
+            if enemy.flash > 0:
+                pygame.draw.circle(layer, shade, at, span)
+            pygame.draw.circle(layer, edge, at, span, config.HITBOX_EDGE)
+            if enemy.wound:
+                pygame.draw.circle(layer, edge, at, int(span * enemy.wound), 2)
+
+        self._draw_player_box(layer, shade, edge)
+        surface.blit(layer, (0, 0))
+
+    def _draw_player_box(
+        self,
+        layer: pygame.Surface,
+        shade: tuple[int, int, int, int],
+        edge: tuple[int, int, int, int],
+    ) -> None:
+        """The fan the held tool would land in, while it is being used.
+
+        Only while the key is down. A red wedge permanently stuck to the
+        player would be the first thing on screen at every moment and the
+        last thing anybody still reads after five minutes.
+        """
         tool = self.hotbar.active_tool
-        reach = tool.reach if isinstance(tool, WeaponTool) else config.WEAPON_REACH
+        if tool is None or not (self._action_held or self._swing_left > 0):
+            return
+        reach = getattr(tool, "reach", None) or getattr(tool, "range", None)
+        if not reach or self.facing.length_squared() == 0:
+            return
+        at = self.camera.world_to_screen(self.player.pos)
         heading = math.atan2(self.facing.y, self.facing.x)
         half = math.radians(config.AIM_HALF_ANGLE)
         points = [pygame.Vector2(at)]
-        for i in range(13):
-            angle = heading - half + 2 * half * i / 12
+        for n in range(13):
+            angle = heading - half + 2 * half * n / 12
             points.append(at + pygame.Vector2(math.cos(angle), math.sin(angle)) * reach)
-        fade = self._swing_left / config.SWING_FLASH
-        layer = pygame.Surface(surface.get_size(), pygame.SRCALPHA)
-        pygame.draw.polygon(layer, (255, 255, 255, int(70 * fade)), points)
-        pygame.draw.lines(layer, (255, 255, 255, int(160 * fade)), False, points[1:], 2)
-        surface.blit(layer, (0, 0))
+        pygame.draw.polygon(layer, shade, points)
+        pygame.draw.lines(layer, edge, True, points, 2)
 
     def _draw_pause(self, surface: pygame.Surface) -> None:
         """The Esc menu: a short list over the dimmed, waiting world."""

@@ -36,6 +36,11 @@ UI_SCALE: Final[int] = 2
 FPS: Final[int] = 60
 FIXED_DT: Final[float] = 1.0 / FPS  # seconds per logic step
 MAX_FRAME_TIME: Final[float] = 0.25  # clamp to avoid the "spiral of death"
+# A frame within this many seconds of a whole number of logic steps counts as
+# exactly that many. A 60 Hz display returns 14.5-18.7 ms frames rather than
+# 16.67 every time, and taken raw that wobble made a frame with no step (the
+# picture repeats) then one with two (it jumps) -- a hitch about twice a second.
+VSYNC_SNAP: Final[float] = 0.004
 
 # --- Day / night --------------------------------------------------------------
 # Six and six. Daylight is exactly two walks to the grassland's rim, so a trip
@@ -442,7 +447,17 @@ RESPAWN_IFRAMES: Final[float] = 1.5  # invulnerability granted on respawn
 GOLEM_HP: Final[float] = 30.0
 GOLEM_SPEED: Final[float] = 140.0  # px/s toward the player
 GOLEM_RADIUS: Final[float] = 11.0
-GOLEM_CONTACT_DPS: Final[float] = 20.0  # hp/s while touching the player
+GOLEM_CONTACT_DPS: Final[float] = 20.0  # the rate a swing is worked out from
+# A golem stops short and swings rather than grinding you down by standing
+# there. The wind-up is the whole of what makes it answerable: long enough to
+# see and to step out of, short enough that stepping out is a scramble.
+GOLEM_REACH: Final[float] = 42.0  # gap beyond the two bodies it closes to
+GOLEM_WIND: Final[float] = 0.55  # seconds it is visibly about to swing
+GOLEM_REST: Final[float] = 0.70  # and the pause before it can again
+# What one swing is worth, as seconds of the old contact rate. Wind and rest
+# together are about this long, so a player who never moves pays what they
+# always did and a player who moves pays nothing.
+GOLEM_HIT_SECONDS: Final[float] = 1.25
 GOLEM_SPAWN_INTERVAL: Final[float] = 3.0
 GOLEM_SPAWN_MAX: Final[int] = 15
 # Health scales with distance in full; speed only partly. A golem twice as
@@ -642,6 +657,12 @@ WEAPON_REACH: Final[float] = 120.0
 # ground between them, narrow enough that turning around still matters.
 AIM_HALF_ANGLE: Final[float] = 60.0
 SWING_FLASH: Final[float] = 0.12  # seconds the swept fan stays drawn
+# Hitboxes, drawn in red because red is the one colour nothing else on the
+# floor uses. What is about to hurt and what is about to be hit are the two
+# things a player has to read, and until now neither was drawn at all.
+HITBOX_COLOR: Final[tuple[int, int, int]] = (236, 64, 64)
+HITBOX_FILL: Final[int] = 70  # how solid the shaded part is
+HITBOX_EDGE: Final[int] = 3  # how thick the outline is
 PROJECTILE_SPEED: Final[float] = 520.0  # px/s
 PROJECTILE_TTL: Final[float] = 1.2  # seconds before a shot despawns
 PROJECTILE_RADIUS: Final[float] = 4.0

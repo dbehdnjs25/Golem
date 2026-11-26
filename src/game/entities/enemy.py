@@ -61,6 +61,16 @@ class EnemyKind:
     color: tuple[int, int, int]
     biome: Biome | None = None  # None is the plain golem, which belongs nowhere
 
+    @property
+    def hit(self) -> float:
+        """What one swing of this kind takes.
+
+        Worked out from the old contact rate rather than written down twice:
+        a kind that was twice as nasty to stand next to is twice as nasty to
+        be hit by, and there is no second number to keep in step.
+        """
+        return self.contact_dps * config.GOLEM_HIT_SECONDS
+
 
 PLAIN_GOLEM = EnemyKind(
     key="golem",
@@ -118,6 +128,19 @@ def raid_kinds(bosses_killed: int) -> tuple[EnemyKind, ...]:
     return (PLAIN_GOLEM, *BIOME_GOLEMS[: min(bosses_killed, len(BIOME_GOLEMS))])
 
 
+class swing:
+    """The three beats of a golem's swing. A namespace, not a class to build.
+
+    Walking, winding up, and the pause afterwards. Kept as names rather than
+    a bool because what the player is shown differs for each: nothing while
+    it walks, a closing red ring while it winds, and a flash when it lands.
+    """
+
+    WALK = "walk"
+    WIND = "wind"
+    REST = "rest"
+
+
 @dataclass
 class Golem:
     pos: pygame.Vector2
@@ -133,6 +156,11 @@ class Golem:
     # ticked down as it walks, so stepping out of sludge is a recovery rather
     # than a switch.
     mired: float = 0.0
+    # The swing. ``beat`` is what is left of the current one; ``flash`` is how
+    # long the landed blow stays drawn.
+    phase: str = "walk"
+    beat: float = 0.0
+    flash: float = 0.0
 
     def __post_init__(self) -> None:
         if not self.hp:
@@ -152,6 +180,28 @@ class Golem:
     @property
     def contact_dps(self) -> float:
         return self.kind.contact_dps
+
+    @property
+    def hit(self) -> float:
+        """What one swing takes, scaled like everything else by its size."""
+        return self.kind.hit * self.scale
+
+    @property
+    def reach(self) -> float:
+        """How close it comes before it stops and swings."""
+        return self.radius + config.GOLEM_REACH
+
+    @property
+    def wound(self) -> float:
+        """How far through the wind-up it is, 0 to 1. Drawing reads this.
+
+        The red ring on screen closes as this fills, so the player reads WHEN
+        as well as where -- which is the whole difference between a telegraph
+        and a warning light.
+        """
+        if self.phase is not swing.WIND or config.GOLEM_WIND <= 0:
+            return 0.0
+        return 1.0 - self.beat / config.GOLEM_WIND
 
     @property
     def color(self) -> tuple[int, int, int]:

@@ -14,6 +14,7 @@ from game import config
 from game.entities.beast import Beast
 from game.entities.core import Core
 from game.entities.enemy import TARGET_PLAYER, Creature, Golem
+from game.entities.enemy import swing as enemy_swing
 from game.entities.fragment import Fragment
 from game.entities.loot import LootPile
 from game.entities.patch import Patch
@@ -172,15 +173,66 @@ def update_enemies(
     not survived so much as endured.
     """
     for enemy in enemies:
-        enemy.update(dt, _what_it_is_after(enemy, player, core), world)
+        enemy.flash = max(0.0, enemy.flash - dt)
+        _swing_at(dt, enemy, world, player, core)
         if not raid:
             _hold_outside_ward(enemy, core)
-        elif core.ignited and enemy.pos.distance_to(core.pos) <= enemy.radius + core.radius:
-            core.damage(config.CORE_CONTACT_DPS * dt)
-        if player.invulnerable or player.hp <= 0:
-            continue  # i-frames, or already down -- a corpse takes no more
-        if enemy.pos.distance_to(player.pos) <= enemy.radius + player.radius:
-            player.hp -= enemy.contact_dps * dt  # from its kind, not a global
+
+
+def _in_reach(enemy: Golem, player: Player, core: Core) -> str | None:
+    """What this one could hit from where it stands, if anything.
+
+    The player first, wherever the golem was headed. One marching on the core
+    does not aim at anybody -- but it does not politely walk around them
+    either, and standing on the line it is marching down has always been a
+    way to get hit. Otherwise whatever it is actually after.
+    """
+    if player.hp > 0 and enemy.pos.distance_to(player.pos) - player.radius <= enemy.reach:
+        return TARGET_PLAYER
+    after = _what_it_is_after(enemy, player, core)
+    pad = player.radius if enemy.kind.target == TARGET_PLAYER else core.radius
+    if enemy.pos.distance_to(after) - pad <= enemy.reach:
+        return enemy.kind.target
+    return None
+
+
+def _swing_at(dt: float, enemy: Golem, world: WorldMap, player: Player, core: Core) -> None:
+    """Walk at what it is after until something is in reach, then stop and swing.
+
+    Contact damage was a tax: health drained for as long as two circles
+    overlapped, announced by nothing and dodgeable by nothing. The three
+    beats here cost about the same over a cycle and can be stepped out of,
+    which is the difference between a rule and a fight.
+    """
+    if enemy.phase is enemy_swing.WALK:
+        if _in_reach(enemy, player, core) is not None:
+            enemy.phase, enemy.beat = enemy_swing.WIND, config.GOLEM_WIND
+        else:
+            enemy.update(dt, _what_it_is_after(enemy, player, core), world)
+        return
+    # Rooted for the rest of it. Drifting forward through its own wind-up
+    # would move the telegraph out from under itself.
+    enemy.mired = max(0.0, enemy.mired - dt)
+    enemy.beat -= dt
+    if enemy.beat > 0:
+        return
+    if enemy.phase is enemy_swing.WIND:
+        enemy.phase, enemy.beat = enemy_swing.REST, config.GOLEM_REST
+        enemy.flash = config.SWING_FLASH
+        # Asked again at the moment it lands, not at the moment it started.
+        # That is the whole of what makes the wind-up worth watching.
+        _land(enemy, _in_reach(enemy, player, core), player, core)
+        return
+    enemy.phase, enemy.beat = enemy_swing.WALK, 0.0
+
+
+def _land(enemy: Golem, hit: str | None, player: Player, core: Core) -> None:
+    """Put one swing into whatever was still standing in it."""
+    if hit == TARGET_PLAYER:
+        if not player.invulnerable and player.hp > 0:
+            player.hp -= enemy.hit
+    elif hit is not None and core.ignited:
+        core.damage(enemy.hit)
 
 
 def _what_it_is_after(enemy: Golem, player: Player, core: Core) -> pygame.Vector2:

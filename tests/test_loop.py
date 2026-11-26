@@ -39,3 +39,36 @@ def test_alpha_is_normalised_fraction() -> None:
 def test_non_positive_dt_rejected() -> None:
     with pytest.raises(ValueError):
         FixedTimestep(dt=0.0)
+
+
+# --- vsync snapping --------------------------------------------------------------
+# A 60 Hz display hands back frames of 14.5 to 18.7 ms, not 16.67 every time.
+# Fed in raw, those wobbles add up to a frame with no step (the picture repeats)
+# and then one with two (it jumps): a hitch about twice a second. A frame within
+# a few milliseconds of a whole number of steps is that many steps exactly.
+
+DT = 1 / 60
+
+
+def test_a_wobbling_60hz_display_gets_exactly_one_step_a_frame() -> None:
+    ts = FixedTimestep(dt=DT, max_frame_time=0.25)
+    wobble = [0.0145, 0.0187, 0.0160, 0.0172, 0.0150, 0.0185, 0.0166, 0.0168] * 40
+    assert {ts.steps(frame) for frame in wobble} == {1}
+
+
+def test_a_frame_that_took_two_steps_long_gets_exactly_two() -> None:
+    ts = FixedTimestep(dt=DT, max_frame_time=0.25)
+    assert ts.steps(0.0345) == 2
+    assert ts.accumulator == pytest.approx(0.0)
+
+
+def test_a_frame_far_from_a_whole_step_still_banks_the_remainder() -> None:
+    ts = FixedTimestep(dt=DT, max_frame_time=0.25)
+    assert ts.steps(0.008) == 0  # half a step: nothing near to snap to
+    assert ts.accumulator == pytest.approx(0.008)
+
+
+def test_snapping_can_be_turned_off() -> None:
+    ts = FixedTimestep(dt=DT, max_frame_time=0.25, snap=0.0)
+    results = [ts.steps(frame) for frame in [0.0145, 0.0145, 0.0145, 0.0145, 0.0187] * 10]
+    assert 0 in results  # raw accumulation: a short run comes out a step short
