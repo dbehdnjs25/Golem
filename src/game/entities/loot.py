@@ -8,6 +8,12 @@ running out of time rather than of bad luck.
 The pile holds the pack as well as its contents, so recovering it restores the
 slots and not just the goods. Everything outside the hotbar is in here: with no
 base inventory there is nowhere else for it to have been.
+
+One exception to the clock: a pile holding a core shard waits forever. The
+world scatters exactly as many as the core asks for and makes no more, so a
+shard that rotted on the ground would leave a run that could never be started
+-- and the player would have no way of knowing why. A deadline is pressure;
+a deadline that can end the run quietly is a bug with a timer on it.
 """
 
 from __future__ import annotations
@@ -18,7 +24,7 @@ import pygame
 
 from game import config
 from game.inventory.storage import Container
-from game.items.item_kinds import ItemKind
+from game.items.item_kinds import CORE_SHARD, ItemKind
 
 
 @dataclass
@@ -29,8 +35,15 @@ class LootPile:
     ttl: float = config.LOOT_LIFETIME
 
     @property
+    def keeps(self) -> bool:
+        """Whether this pile holds something the run cannot go on without."""
+        return self.contents.count(CORE_SHARD) > 0
+
+    @property
     def is_gone(self) -> bool:
-        return self.ttl <= 0
+        return self.ttl <= 0 and not self.keeps
 
     def update(self, dt: float) -> None:
+        if self.keeps:
+            return
         self.ttl = max(0.0, self.ttl - dt)

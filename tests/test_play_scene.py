@@ -178,10 +178,12 @@ def test_death_never_touches_the_hotbar():
     assert scene._respawn_timer > 0
 
 
-def _packed(scene, count=5):
+def _packed(scene, count=5, kind=CORE_SHARD):
+    # kind matters for the clock: a pile holding a core shard never runs
+    # out, because the world makes exactly as many as the core asks for.
     scene.backpack = Container.empty(config.BACKPACK_SLOTS)
     scene.worn_pack = WORN_PACK
-    scene.backpack.add(CORE_SHARD, count)
+    scene.backpack.add(kind, count)
     scene.player.pos = scene.core.pos + pygame.Vector2(5_000, 0)
     return scene
 
@@ -243,7 +245,7 @@ def test_a_second_death_leaves_a_second_pile():
 
 
 def test_a_pile_left_too_long_is_gone():
-    scene = _packed(PlayScene())
+    scene = _packed(PlayScene(), kind=STONE)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
     scene._respawn_timer = 0.0
@@ -428,7 +430,7 @@ def test_night_darkens_the_screen():
 def test_a_pile_decays_while_the_player_waits_to_respawn():
     # The respawn wait returns early from update(). A deadline that stops while
     # the player is dead would not be a deadline at all.
-    scene = _packed(PlayScene())
+    scene = _packed(PlayScene(), kind=STONE)
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
     assert scene._respawn_timer > 0
