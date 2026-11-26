@@ -236,8 +236,6 @@ def apply_death_penalty(
     and kept the rest, which only made sense while a base inventory existed for
     the kept half to sit in. There is none now: what the player keeps is the
     hotbar, and what they lose is everything else until they walk back for it.
-
-    The store at the core is untouched -- it was never carried.
     """
     if backpack is None:
         return None  # nothing to take: the hotbar is not the penalty's business

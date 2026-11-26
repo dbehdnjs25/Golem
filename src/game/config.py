@@ -94,7 +94,6 @@ MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
 # without one has the hotbar and nothing else.
 STACK_MAX_DEFAULT: Final[int] = 64
 BACKPACK_SLOTS: Final[int] = 20  # the basic pack; better ones hold more
-CORE_STORE_SLOTS: Final[int] = 40  # the store at the core, never carried
 
 # --- Camera -----------------------------------------------------------------
 

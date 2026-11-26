@@ -1,6 +1,6 @@
 """Core-loop gameplay scene: mine shards, fill the inventory, return to the core
-and press E to move them into its store. Wires the entities and systems
-together; accumulates input from events (no polling) and owns all rendering."""
+and press E to deal with it. Wires the entities and systems together;
+accumulates input from events (no polling) and owns all rendering."""
 
 from __future__ import annotations
 
@@ -550,7 +550,6 @@ class PlayScene(Scene):
         self.grid = Grid()
         self.grid_open = False
         self.craft_open = False
-        self.store = Container.empty(config.CORE_STORE_SLOTS)
         self.hotbar = Hotbar.create()
         # Nothing but the weapon. Wood comes off a tree with bare hands, and the
         # first axe is crafted from it -- the opening is a thing the player does
@@ -1089,8 +1088,6 @@ class PlayScene(Scene):
                 # Mending first. The same key already means "deal with the
                 # core", and after a raid the urgent business is the cracks.
                 self._spend(STONE, self.core.repair(self._carried(STONE)))
-                moved = self.store.add(CORE_SHARD, self._carried(CORE_SHARD))
-                self._spend(CORE_SHARD, moved)
                 # A boss's sigil, if one is being carried. The cap opens HERE
                 # rather than where the boss died, which is what turns a win
                 # five biomes out into a walk home.

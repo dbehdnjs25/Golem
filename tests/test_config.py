@@ -8,8 +8,10 @@ def test_world_is_larger_than_screen():
 
 def test_slot_counts_are_sane():
     assert config.BACKPACK_SLOTS > 0
-    assert config.CORE_STORE_SLOTS > config.BACKPACK_SLOTS
     assert not hasattr(config, "INVENTORY_SLOTS")  # the backpack is the inventory
+    # The core had a store once, and it was write-only: shards went in and
+    # were never drawn, counted or handed back.
+    assert not hasattr(config, "CORE_STORE_SLOTS")
     assert config.STACK_MAX_DEFAULT > 0
 
 

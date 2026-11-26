@@ -62,18 +62,19 @@ def test_standing_on_core_does_not_sync_by_itself():
     scene.hotbar.add(CORE_SHARD, 3)
     scene.update(config.FIXED_DT)
     assert scene.hotbar.count(CORE_SHARD) == 3  # sync is manual now
-    assert scene.store.count(CORE_SHARD) == 0
 
 
-def test_sync_key_transfers_backpack_at_core():
+def test_the_core_does_not_swallow_what_is_carried():
+    # It used to take every spare shard off the player at a keypress, into a
+    # store that was never drawn and never gave anything back. What goes into
+    # the core now is only what the core is actually asked for.
     scene = PlayScene()
     scene.core.ignite()
     scene.player.pos = pygame.Vector2(scene.core.pos)
     scene.hotbar.add(CORE_SHARD, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    assert scene.hotbar.count(CORE_SHARD) == 0
-    assert scene.store.count(CORE_SHARD) == 3
+    assert scene.hotbar.count(CORE_SHARD) == 3
 
 
 def test_sync_key_does_nothing_out_of_range():
@@ -84,20 +85,22 @@ def test_sync_key_does_nothing_out_of_range():
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
     assert scene.hotbar.count(CORE_SHARD) == 3
-    assert scene.store.count(CORE_SHARD) == 0
 
 
 def test_sync_key_is_consumed_after_one_step():
+    # Still worth holding onto: the press is what mends the core and what
+    # hands over a sigil, and both have to cost exactly one press.
     scene = PlayScene()
     scene.core.ignite()
+    scene.core.damage(scene.core.max_hp / 2)
     scene.player.pos = pygame.Vector2(scene.core.pos)
-    scene.hotbar.add(CORE_SHARD, 3)
+    scene.hotbar.add(STONE, 3)
     scene.handle_event(_key_event(pygame.K_e))
     scene.update(config.FIXED_DT)
-    scene.hotbar.add(CORE_SHARD, 2)  # mined more without pressing again
+    mended = scene.core.hp
+    scene.hotbar.add(STONE, 3)  # gathered more without pressing again
     scene.update(config.FIXED_DT)
-    assert scene.hotbar.count(CORE_SHARD) == 2  # one press, one transfer
-    assert scene.store.count(CORE_SHARD) == 3
+    assert scene.core.hp == mended
 
 
 def test_draw_runs_without_error(surface):
