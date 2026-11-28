@@ -1,0 +1,229 @@
+{
+  "biome": "burnt_forest",
+  "tile_size": 32,
+  "columns": 4,
+  "rows": 5,
+  "atlas": "temple-atlas.png",
+  "tiles": [
+    {
+      "name": "floor_plain",
+      "rect": [
+        0,
+        0,
+        32,
+        32
+      ],
+      "png": "floor_plain.png",
+      "aseprite": "floor_plain.aseprite"
+    },
+    {
+      "name": "floor_worn",
+      "rect": [
+        32,
+        0,
+        32,
+        32
+      ],
+      "png": "floor_worn.png",
+      "aseprite": "floor_worn.aseprite"
+    },
+    {
+      "name": "floor_cracked",
+      "rect": [
+        64,
+        0,
+        32,
+        32
+      ],
+      "png": "floor_cracked.png",
+      "aseprite": "floor_cracked.aseprite"
+    },
+    {
+      "name": "floor_accent",
+      "rect": [
+        96,
+        0,
+        32,
+        32
+      ],
+      "png": "floor_accent.png",
+      "aseprite": "floor_accent.aseprite"
+    },
+    {
+      "name": "wall_north",
+      "rect": [
+        0,
+        32,
+        32,
+        32
+      ],
+      "png": "wall_north.png",
+      "aseprite": "wall_north.aseprite"
+    },
+    {
+      "name": "wall_south",
+      "rect": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "png": "wall_south.png",
+      "aseprite": "wall_south.aseprite"
+    },
+    {
+      "name": "wall_west",
+      "rect": [
+        64,
+        32,
+        32,
+        32
+      ],
+      "png": "wall_west.png",
+      "aseprite": "wall_west.aseprite"
+    },
+    {
+      "name": "wall_east",
+      "rect": [
+        96,
+        32,
+        32,
+        32
+      ],
+      "png": "wall_east.png",
+      "aseprite": "wall_east.aseprite"
+    },
+    {
+      "name": "corner_nw",
+      "rect": [
+        0,
+        64,
+        32,
+        32
+      ],
+      "png": "corner_nw.png",
+      "aseprite": "corner_nw.aseprite"
+    },
+    {
+      "name": "corner_ne",
+      "rect": [
+        32,
+        64,
+        32,
+        32
+      ],
+      "png": "corner_ne.png",
+      "aseprite": "corner_ne.aseprite"
+    },
+    {
+      "name": "corner_sw",
+      "rect": [
+        64,
+        64,
+        32,
+        32
+      ],
+      "png": "corner_sw.png",
+      "aseprite": "corner_sw.aseprite"
+    },
+    {
+      "name": "corner_se",
+      "rect": [
+        96,
+        64,
+        32,
+        32
+      ],
+      "png": "corner_se.png",
+      "aseprite": "corner_se.aseprite"
+    },
+    {
+      "name": "door_north_closed",
+      "rect": [
+        0,
+        96,
+        32,
+        32
+      ],
+      "png": "door_north_closed.png",
+      "aseprite": "door_north_closed.aseprite"
+    },
+    {
+      "name": "door_north_open",
+      "rect": [
+        32,
+        96,
+        32,
+        32
+      ],
+      "png": "door_north_open.png",
+      "aseprite": "door_north_open.aseprite"
+    },
+    {
+      "name": "stairs_down",
+      "rect": [
+        64,
+        96,
+        32,
+        32
+      ],
+      "png": "stairs_down.png",
+      "aseprite": "stairs_down.aseprite"
+    },
+    {
+      "name": "altar",
+      "rect": [
+        96,
+        96,
+        32,
+        32
+      ],
+      "png": "altar.png",
+      "aseprite": "altar.aseprite"
+    },
+    {
+      "name": "door_west_closed",
+      "rect": [
+        0,
+        128,
+        32,
+        32
+      ],
+      "png": "door_west_closed.png",
+      "aseprite": "door_west_closed.aseprite"
+    },
+    {
+      "name": "door_west_open",
+      "rect": [
+        32,
+        128,
+        32,
+        32
+      ],
+      "png": "door_west_open.png",
+      "aseprite": "door_west_open.aseprite"
+    },
+    {
+      "name": "door_east_closed",
+      "rect": [
+        64,
+        128,
+        32,
+        32
+      ],
+      "png": "door_east_closed.png",
+      "aseprite": "door_east_closed.aseprite"
+    },
+    {
+      "name": "door_east_open",
+      "rect": [
+        96,
+        128,
+        32,
+        32
+      ],
+      "png": "door_east_open.png",
+      "aseprite": "door_east_open.aseprite"
+    }
+  ]
+}
