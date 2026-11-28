@@ -81,3 +81,16 @@ def test_taking_the_shard_out_starts_the_clock():
     pack.remove(CORE_SHARD, 1)
     pile.update(config.LOOT_LIFETIME + 1)
     assert pile.is_gone
+
+
+def test_a_pile_holding_a_sigil_waits_too():
+    # One per boss and no way to make another. It matters more than it did:
+    # cargo cannot be parked on the hotbar any more, so there is no slot a
+    # careful player can keep it in.
+    from game.items.item_kinds import CORE_SIGIL
+
+    pack = Container.empty(4)
+    pack.add(CORE_SIGIL, 1)
+    pile = LootPile(pos=pygame.Vector2(0, 0), contents=pack)
+    pile.update(config.LOOT_LIFETIME * 10)
+    assert not pile.is_gone

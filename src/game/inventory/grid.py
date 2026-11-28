@@ -7,6 +7,10 @@ whole of "click here, then click there" is testable headlessly.
 Tools stay on the hotbar. Letting one into the pack would let a death take the
 pickaxe, and not being able to lose your tools is what the hotbar is for.
 
+It runs the other way too: only what the hand can USE goes on the hotbar. The
+selected slot is what the action key acts with, so a slot holding stone is a
+slot that does nothing -- see systems/usable.
+
 Closing with something in hand puts it back rather than dropping it on the
 floor. Losing goods to a keystroke is not a decision anyone made.
 """
@@ -18,6 +22,7 @@ from dataclasses import dataclass
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
+from game.systems import usable
 
 HOTBAR = "hotbar"
 PACK = "pack"
@@ -26,6 +31,9 @@ PACK = "pack"
 @dataclass
 class Grid:
     held: object | None = None
+    # Set when a drop was turned away, so the scene can say why. Cleared by
+    # whoever reads it: this holds state, not a message queue.
+    refused: bool = False
 
     def click(self, where: str, index: int, backpack: Container | None, hotbar: Hotbar) -> None:
         if where == HOTBAR:
@@ -34,7 +42,15 @@ class Grid:
             self._click_pack(index, backpack)
 
     def _click_hotbar(self, index: int, hotbar: Hotbar) -> None:
-        self.held = hotbar.take(index) if self.held is None else hotbar.put(index, self.held)
+        if self.held is None:
+            self.held = hotbar.take(index)
+            return
+        if not usable.is_usable(self.held):
+            # The hotbar is the hand. A slot holding stone is a slot the hand
+            # cannot use, and five of them is a hand with nothing in it.
+            self.refused = True
+            return
+        self.held = hotbar.put(index, self.held)
 
     def _click_pack(self, index: int, backpack: Container) -> None:
         held = self.held

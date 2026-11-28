@@ -3,7 +3,7 @@ from game.inventory.grid import Grid
 from game.inventory.hotbar import Hotbar
 from game.inventory.stack import Stack
 from game.inventory.storage import Container
-from game.items.item_kinds import CORE_SHARD, STONE
+from game.items.item_kinds import CORE_SHARD, CRUDE_AXE, STONE
 from game.items.tools import MiningTool
 
 
@@ -35,15 +35,31 @@ def test_clicking_an_empty_slot_while_holding_puts_it_down():
     assert pack.slots[2] == Stack(STONE, 3)
 
 
-def test_a_stack_can_be_moved_from_the_pack_onto_the_hotbar():
-    # This is the whole point of the screen: choosing what death will spare.
+def test_a_usable_thing_can_be_moved_from_the_pack_onto_the_hotbar():
+    hb, pack = _both()
+    pack.add(CRUDE_AXE, 1)
+    g = Grid()
+    g.click(grid.PACK, 0, pack, hb)
+    g.click(grid.HOTBAR, 1, pack, hb)
+    assert hb.slots[1] == Stack(CRUDE_AXE, 1)
+    assert g.held is None
+
+
+def test_cargo_cannot_be_parked_on_the_hotbar():
+    """The hotbar is the hand, and stone does nothing in it.
+
+    This used to be allowed, and it was a way of choosing what death would
+    spare -- the hotbar survives and the pack does not. What protects the
+    two things a run cannot replace is now the pile itself: see
+    ``entities/loot``, where one holding a shard or a sigil never rots.
+    """
     hb, pack = _both()
     pack.add(CORE_SHARD, 2)
     g = Grid()
     g.click(grid.PACK, 0, pack, hb)
     g.click(grid.HOTBAR, 1, pack, hb)
-    assert hb.slots[1] == Stack(CORE_SHARD, 2)
-    assert g.held is None
+    assert hb.slots[1] is None
+    assert g.held == Stack(CORE_SHARD, 2)
 
 
 def test_dropping_onto_the_same_kind_merges():

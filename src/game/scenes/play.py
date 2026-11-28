@@ -1737,9 +1737,16 @@ class PlayScene(Scene):
         return pygame.Rect(x + col * step, y + row * step, config.GRID_CELL, config.GRID_CELL)
 
     def _confirm_grid(self) -> None:
-        """Pick up or put down at the cursor -- the pure Grid does the rest."""
+        """Pick up or put down at the cursor -- the pure Grid does the rest.
+
+        A drop the hotbar turns away is told, not merely ignored. A cursor
+        that stops working with no word for it reads as the key being broken.
+        """
         where, index = self.grid_cursor
         self.grid.click(where, index, self.backpack, self.hotbar)
+        if self.grid.refused:
+            self.grid.refused = False
+            self._say("핫바에는 쓸 수 있는 것만")
 
     def _step_grid(self, dx: int, dy: int) -> None:
         """Move the cursor a cell, stepping between the pack and the hotbar.
