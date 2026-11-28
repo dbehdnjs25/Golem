@@ -1914,7 +1914,7 @@ class PlayScene(Scene):
         aimed = {id(node) for node in in_reach}
         for node in sorted(self.fragments, key=lambda fragment: fragment.pos.y):
             at = self.camera.world_to_screen(node.pos)
-            tree = tree_image(node.kind)
+            tree = tree_image(node.kind, node.pos)
             art = tree if tree is not None else world_resource_image(node.kind)
             if tree is not None:
                 # The harvest target stays at the trunk, below the canopy.

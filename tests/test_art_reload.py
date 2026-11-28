@@ -38,7 +38,7 @@ def _middle(surface: pygame.Surface) -> tuple[int, int, int]:
 def test_a_tree_saved_again_is_redrawn(monkeypatch, tmp_path):
     picture = tmp_path / "tree.png"
     _paint(picture, RED)
-    monkeypatch.setitem(trees._FILES, WOOD, picture)
+    monkeypatch.setitem(trees._FILES, WOOD, (picture,))
     art.refresh(force=True)
     assert _middle(trees.tree_image(WOOD)) == RED
 
@@ -50,7 +50,7 @@ def test_a_tree_saved_again_is_redrawn(monkeypatch, tmp_path):
 def test_nothing_changed_means_nothing_reloaded(monkeypatch, tmp_path):
     picture = tmp_path / "tree.png"
     _paint(picture, RED)
-    monkeypatch.setitem(trees._FILES, WOOD, picture)
+    monkeypatch.setitem(trees._FILES, WOOD, (picture,))
     art.refresh(force=True)
     first = trees.tree_image(WOOD)
     assert not art.refresh()
@@ -59,7 +59,7 @@ def test_nothing_changed_means_nothing_reloaded(monkeypatch, tmp_path):
 
 def test_a_picture_that_appears_is_picked_up(monkeypatch, tmp_path):
     picture = tmp_path / "tree.png"
-    monkeypatch.setitem(trees._FILES, WOOD, picture)
+    monkeypatch.setitem(trees._FILES, WOOD, (picture,))
     art.refresh(force=True)
     assert trees.tree_image(WOOD) is None
 
