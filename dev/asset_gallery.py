@@ -72,12 +72,20 @@ FILTERS = ("전체", "갱신 필요", "Aseprite 원본만", "이미지만 (원�
 # under trees/, the biome-less temple tiles) sits on the parent row itself.
 BIOME_LABELS = ("초원", "사막", "불탄 숲", "바람 고원", "늪지", "설원")
 ITEM_LABELS = ("도구", "광석", "주괴", "기타")
+# Animal folder (and file-name start) words, and the row each gets.
+ANIMAL_LABELS = {"wolf": "늑대", "rabbit": "토끼"}
 Node = tuple[str, tuple["Node", ...]]  # a label and the rows under it
 CATEGORY_TREE: tuple[Node, ...] = (
     ("타일", tuple((b, ()) for b in BIOME_LABELS)),
     ("나무", tuple((b, ()) for b in BIOME_LABELS)),
     ("아이템", tuple((i, ()) for i in ITEM_LABELS)),
-    ("엔티티", (("동물", ()), ("골렘", tuple((b, ()) for b in BIOME_LABELS)))),
+    (
+        "엔티티",
+        (
+            ("동물", tuple((label, ()) for label in ANIMAL_LABELS.values())),
+            ("골렘", tuple((b, ()) for b in BIOME_LABELS)),
+        ),
+    ),
     ("UI", ()),
     ("기타", ()),
 )
@@ -107,6 +115,17 @@ def _biome_of(parts: tuple[str, ...], name: str) -> str | None:
     return None
 
 
+def _animal_of(parts: tuple[str, ...], name: str) -> str | None:
+    """The animal named by a folder on the way, else by the start of the name."""
+    for part in parts:
+        if part in ANIMAL_LABELS:
+            return ANIMAL_LABELS[part]
+    for word, label in ANIMAL_LABELS.items():
+        if name == word or name.startswith(word + "_"):
+            return label
+    return None
+
+
 def _item_kind(name: str) -> str:
     if name.endswith(("_axe", "_pick", "_detector")) or name == "staff":
         return "도구"
@@ -121,18 +140,24 @@ def categorize(rel: str) -> str:
     """Which row of the category list an asset (path under assets/, no
     extension) belongs on. New art lands in the right place by where it is
     saved: ``<biome>/tiles32/``, ``trees/<biome>``, ``resources/items/``,
-    ``entities/animals/``, ``entities/golems/<biome>/`` (or ``<biome>_golem``),
+    ``animals/<animal>/`` (or ``entities/animals/``),
+    ``entities/golems/<biome>/`` (or ``<biome>_golem``),
     ``ui/``. Anything else is 기타."""
     parts = tuple(p.casefold() for p in rel.split("/"))
     folders, name = parts[:-1], parts[-1]
     top = folders[0] if folders else ""
     if top == "ui":
         return "UI"
+    if top == "animals" and "source" in folders:
+        return "기타"  # the generated sources and before/after comparisons
+    if top == "animals" or (
+        top == "entities" and "golem" not in name and not any("golem" in p for p in folders)
+    ):
+        animal = _animal_of(folders[1:], name)
+        return f"엔티티/동물/{animal}" if animal else "엔티티/동물"
     if top == "entities":
-        if "golem" in name or any("golem" in p for p in folders):
-            biome = _biome_of(folders[1:], name)
-            return f"엔티티/골렘/{biome}" if biome else "엔티티/골렘"
-        return "엔티티/동물"
+        biome = _biome_of(folders[1:], name)
+        return f"엔티티/골렘/{biome}" if biome else "엔티티/골렘"
     if top == "trees" or "tree" in name:
         biome = _biome_of(folders[1:], name) if top == "trees" else _biome_of(folders, name)
         return f"나무/{biome}" if biome else "나무"
@@ -669,6 +694,14 @@ class Gallery:
         self.flash_until = 0.0
         self.last_signature: tuple[tuple[str, float], ...] = ()
         self.detail_photo: ImageTk.PhotoImage | None = None
+        # An animated GIF on show plays in the preview: its frames (with how
+        # long each is held), which one is up, and the pending tick.
+        self.clips: dict[str, list[tuple[Image.Image, int]]] = {}
+        self.clip_frame = 0  # frames shown since the clip started, across loops
+        self.clip_started = time.monotonic()
+        self.clip_job: str | None = None
+        self.preview_item: int | None = None
+        self._preview_parts: dict[tuple[int, int, str], tuple[Image.Image, ...]] = {}
         self.bg: dict[str, ImageTk.PhotoImage] = {}
         self.layout_pending: str | None = None
         self.draw_pending: str | None = None
@@ -1702,6 +1735,8 @@ class Gallery:
             self.view_key = asset.stamp if asset else None
             self.view_scale = None
             self.view_center = None
+            self.clip_frame = 0  # a new clip starts from its first frame
+            self.clip_started = time.monotonic()
         title = asset.name if asset else "선택한 에셋 없음"
         pane.create_text(
             pad,
@@ -1822,18 +1857,12 @@ class Gallery:
         self, pane: tk.Canvas, asset: Asset | None, x: int, y: int, w: int, h: int
     ) -> None:
         self.preview_box = (x, y, w, h)
-        if self.backing == "체크":
-            board = checker(w, h, self.px(10), "#17171a", "#1f1f23")
-        else:
-            colour = {"어둡게": "#0b0b0d", "밝게": "#e8e8ec", "잔디": "#6f8f4e"}[self.backing]
-            board = Image.new("RGBA", (w, h), colour)
         image = self._preview_image(asset)
-        if image is not None:
-            self._paint_view(board, image)
-        board.putalpha(round_mask(w, h, self.px(16)))
-        board.alpha_composite(rounded(w, h, self.px(16), white(0), white(40)))
-        self.detail_photo = ImageTk.PhotoImage(board)
-        pane.create_image(x, y, anchor="nw", image=self.detail_photo, tags="content")
+        self.detail_photo = self._compose_preview(image, w, h)
+        self.preview_item = pane.create_image(
+            x, y, anchor="nw", image=self.detail_photo, tags="content"
+        )
+        self._schedule_clip(asset)
         if image is not None:
             scale, _, _ = self._view(image)
             label = f"{scale * 100:.0f}%"
@@ -1859,9 +1888,99 @@ class Gallery:
                 hx + hw / 2, cy + lh / 2, text=hint, fill="#c4c4ca", font=hf, tags="content"
             )
 
+    def _compose_preview(self, image: Image.Image | None, w: int, h: int) -> ImageTk.PhotoImage:
+        """The preview box: its backing, the art at the view's zoom, the frame.
+
+        The backing, the rounded mask and the frame are built once per size
+        and reused: an animation redraws this every frame, and rebuilding the
+        antialiased corners each time cost more than a frame lasts.
+        """
+        key = (w, h, self.backing)
+        parts = self._preview_parts.get(key)
+        if parts is None:
+            if self.backing == "체크":
+                backing = checker(w, h, self.px(10), "#17171a", "#1f1f23")
+            else:
+                colour = {"어둡게": "#0b0b0d", "밝게": "#e8e8ec", "잔디": "#6f8f4e"}[self.backing]
+                backing = Image.new("RGBA", (w, h), colour)
+            r = self.px(16)
+            parts = (backing, round_mask(w, h, r), rounded(w, h, r, white(0), white(40)))
+            self._preview_parts = {key: parts}  # only the current size is worth keeping
+        backing, mask, frame = parts
+        board = backing.copy()
+        if image is not None:
+            self._paint_view(board, image)
+        board.putalpha(mask)
+        board.alpha_composite(frame)
+        return ImageTk.PhotoImage(board)
+
+    def _clip(self, asset: Asset | None) -> list[tuple[Image.Image, int]] | None:
+        """The frames of an animated GIF on show, or None for anything still."""
+        if asset is None or asset.preview_source.suffix.lower() != ".gif":
+            return None
+        path = asset.preview_source
+        key = f"{path}|{asset.stamp[1]}"
+        if key not in self.clips:
+            frames: list[tuple[Image.Image, int]] = []
+            try:
+                with Image.open(path) as gif:
+                    for index in range(getattr(gif, "n_frames", 1)):
+                        gif.seek(index)
+                        held = int(gif.info.get("duration", 100)) or 100
+                        frames.append((gif.convert("RGBA"), held))
+            except OSError:
+                frames = []
+            self.clips[key] = frames
+        frames = self.clips[key]
+        return frames if len(frames) > 1 else None
+
+    def _clip_position(self, frames: list[tuple[Image.Image, int]]) -> tuple[int, int]:
+        """Which frame is up by the clock, and how many ms until the next.
+
+        Worked out from the time since the clip started rather than counted
+        tick by tick: Windows wakes a timer up to ~15 ms late, and counting
+        made every clip run at about 85% speed. By the clock a late tick shows
+        the right frame anyway.
+        """
+        total = sum(held for _, held in frames)
+        elapsed = (time.monotonic() - self.clip_started) * 1000
+        loops, into = divmod(elapsed, total)
+        for index, (_, held) in enumerate(frames):
+            if into < held:
+                self.clip_frame = int(loops) * len(frames) + index
+                return index, max(1, round(held - into))
+            into -= held
+        return len(frames) - 1, 1  # pragma: no cover - float edge
+
+    def _schedule_clip(self, asset: Asset | None) -> None:
+        """Keep an animated GIF moving; stop the moment something else is shown."""
+        if self.clip_job is not None:
+            self.window.after_cancel(self.clip_job)
+            self.clip_job = None
+        frames = self._clip(asset)
+        if frames is None:
+            return
+        _, wait = self._clip_position(frames)
+        self.clip_job = self.window.after(wait, lambda: self._next_clip_frame(asset))
+
+    def _next_clip_frame(self, asset: Asset | None) -> None:
+        self.clip_job = None
+        if asset is not self._focused() or self.preview_item is None:
+            return
+        _, _, w, h = self.preview_box
+        # Only the picture is redrawn, not the pane: the notes and buttons
+        # around it have not changed, and a whole redraw per frame flickers.
+        self.detail_photo = self._compose_preview(self._preview_image(asset), w, h)
+        self.panes["detail"].itemconfigure(self.preview_item, image=self.detail_photo)
+        self._schedule_clip(asset)
+
     def _preview_image(self, asset: Asset | None) -> Image.Image | None:
         if asset is None:
             return None
+        frames = self._clip(asset)
+        if frames is not None:
+            index, _ = self._clip_position(frames)
+            return frames[index][0]
         image = self.images.get(asset.stamp)
         if image is None:
             self.loader.ask(asset.stamp)
