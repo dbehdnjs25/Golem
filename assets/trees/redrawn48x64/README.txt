@@ -1,4 +1,8 @@
-지역별 나무 48x64 재제작
+지역별 나무 48x64 재제작 (이전 작업 기록)
+
+2026-11-25: 격자/팔레트 수정본은 상위 assets/trees/*.aseprite와 *.png에 적용됐습니다.
+이 폴더의 source/*.png는 고해상도 생성 참고 자료이며, 최종 편집 파일이 아닙니다.
+최종 미리보기: ../pixel_grid_fix/preview-grid.png
 
 기본 나무 grassland/objects/tree_base.aseprite와 같은 48x64 캔버스입니다.
 bog / burnt_forest / snowfield / wind_plateau / wasteland 각 PNG + Aseprite.

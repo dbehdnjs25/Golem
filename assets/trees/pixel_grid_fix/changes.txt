@@ -1,0 +1,5 @@
+bog: 32 shade pixels regrouped, 7 opaque palette colors, grid 16x16
+burnt_forest: 20 shade pixels regrouped, 7 opaque palette colors, grid 16x16
+snowfield: 27 shade pixels regrouped, 10 opaque palette colors, grid 16x16
+wind_plateau: 24 shade pixels regrouped, 7 opaque palette colors, grid 16x16
+wasteland: 12 shade pixels regrouped, 7 opaque palette colors, grid 16x16
