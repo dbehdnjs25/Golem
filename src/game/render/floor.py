@@ -121,7 +121,9 @@ class Floor:
 
         for chunk_y in range(first_y, last_y + 1):
             for chunk_x in range(first_x, last_x + 1):
-                at = pygame.Vector2(chunk_x * CHUNK_PX, chunk_y * CHUNK_PX) - camera.offset
+                # Through the camera, so the ground rounds by the same rule
+                # as everything standing on it and the two move together.
+                at = camera.world_to_screen(pygame.Vector2(chunk_x * CHUNK_PX, chunk_y * CHUNK_PX))
                 surface.blit(self._chunk(chunk_x, chunk_y), at)
         self._trim_rim(surface, camera)
 

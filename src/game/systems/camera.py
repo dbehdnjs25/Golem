@@ -70,8 +70,22 @@ class Camera:
         return (round(self.view_size[0] / self.zoom), round(self.view_size[1] / self.zoom))
 
     def world_to_screen(self, point: pygame.Vector2) -> pygame.Vector2:
-        """Where ``point`` falls on the FIELD -- what the world is drawn onto."""
-        return pygame.Vector2(point) - self.offset
+        """Where ``point`` falls on the FIELD -- what the world is drawn onto.
+
+        Snapped to whole pixels HERE, which is the only place it can be done
+        once for everything. Half a pixel does not exist on a screen, so
+        somebody rounds either way: pygame truncates whatever it is handed,
+        and it truncates each thing on its own. With the ground blitted from
+        one sum and a body drawn from another, the two rounded apart and
+        ground and body swam against each other a pixel at a time -- worst
+        going diagonally, where both axes did it at once.
+
+        Rounded from the SAME fractional offset, everything shifts together.
+        And because the camera is centred on the player, the player's own
+        fraction cancels out: they sit on exactly the same pixel every frame
+        however they walk.
+        """
+        return pygame.Vector2(round(point.x - self.offset.x), round(point.y - self.offset.y))
 
     def world_to_view(self, point: pygame.Vector2) -> pygame.Vector2:
         """Where ``point`` falls on the WINDOW, after the field is scaled.
@@ -152,13 +166,11 @@ class Camera:
         world_w, world_h = self.world_size
         self.offset.x = max(0.0, min(world_w - field_w, self.offset.x))
         self.offset.y = max(0.0, min(world_h - field_h, self.offset.y))
-        # Whole pixels. The floor is blitted at chunk - offset and a blit
-        # truncates, so a fractional offset snaps the ground a pixel at a time
-        # while everything standing on it moves smoothly -- the two then swim
-        # against each other. The player walks 3.33 pixels a step, so this is
-        # never not fractional otherwise.
-        self.offset.x = float(int(self.offset.x))
-        self.offset.y = float(int(self.offset.y))
+        # Left fractional on purpose. It used to be snapped to whole pixels
+        # here, which steadied the ground and left everything standing on it
+        # jittering against it; the snapping belongs at the point of drawing,
+        # where one rule can cover the ground and the bodies alike. See
+        # ``world_to_screen``.
 
     def center_on(self, point: pygame.Vector2) -> None:
         field_w, field_h = self.field_size

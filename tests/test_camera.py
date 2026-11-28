@@ -147,23 +147,51 @@ def test_a_zoomed_out_view_is_still_held_inside_the_world():
     assert cam.offset.y + cam.field_size[1] <= WORLD[1]
 
 
-def test_the_offset_lands_on_whole_pixels():
-    # The floor is blitted at chunk - offset, and a blit truncates. With a
-    # fractional offset the ground snaps a pixel at a time while everything
-    # standing on it moves smoothly, so the two swim against each other.
+def test_everything_drawn_lands_on_whole_pixels():
+    # Half a pixel does not exist on a screen, so somebody rounds either way.
+    # Doing it here is what makes it ONE rule: the ground and the bodies on
+    # it round from the same fractional offset and shift together.
     cam = _cam()
     cam.center_on(pygame.Vector2(1200.4, 800.7))
-    assert cam.offset.x == int(cam.offset.x)
-    assert cam.offset.y == int(cam.offset.y)
+    spot = cam.world_to_screen(pygame.Vector2(1234.56, 789.01))
+    assert spot.x == int(spot.x)
+    assert spot.y == int(spot.y)
 
 
-def test_it_still_follows_a_player_standing_between_pixels():
-    # Truncated rather than rounded, to match what a blit does with the same
-    # number -- the point is that the ground and the camera agree, not which
-    # of the two pixels they agree on.
+def test_the_offset_itself_keeps_its_fraction():
+    # It used to be snapped, which steadied the ground and left everything
+    # standing on it jittering against it -- worst going diagonally, where
+    # both axes did it at once.
     cam = _cam()
-    cam.update(1 / 60, pygame.Vector2(1200.4, 800.7))
-    assert cam.offset == pygame.Vector2(720, 530)
+    cam.center_on(pygame.Vector2(1200.4, 800.7))
+    assert cam.offset != pygame.Vector2(int(cam.offset.x), int(cam.offset.y))
+
+
+def test_the_player_sits_on_the_same_pixel_however_they_walk():
+    # The camera is centred on them, so their own fraction cancels out. This
+    # is the whole of the fix: a player who jitters against the ground is a
+    # player who looks like the game is stuttering.
+    cam = _cam()
+    seen = set()
+    where = pygame.Vector2(1200.0, 800.0)
+    for _ in range(40):
+        where += pygame.Vector2(2.357, 2.357)  # a diagonal step, as it really is
+        cam.update(1 / 60, where)
+        seen.add(tuple(cam.world_to_screen(where)))
+    assert len(seen) == 1
+
+
+def test_the_ground_and_a_body_shift_together():
+    # A chunk corner and a thing standing on it keep the same gap between
+    # them, whatever fraction the camera is sitting on.
+    cam = _cam()
+    corner = pygame.Vector2(1024.0, 512.0)
+    body = corner + pygame.Vector2(37.0, 19.0)
+    gaps = set()
+    for step in range(40):
+        cam.center_on(pygame.Vector2(1200 + step * 0.37, 800 + step * 0.37))
+        gaps.add(tuple(cam.world_to_screen(body) - cam.world_to_screen(corner)))
+    assert gaps == {(37.0, 19.0)}
 
 
 # --- the wheel asks; the camera travels -----------------------------------
