@@ -192,7 +192,9 @@ def test_death_leaves_the_whole_pack_in_a_pile():
     scene = _packed(PlayScene())
     scene.player.hp = 0
     scene.update(config.FIXED_DT)
-    assert scene.backpack is None  # every slot is gone, not half the goods
+    # every slot is gone, not half the goods: back to an empty base inventory
+    assert scene.backpack is not None and scene.backpack.used == 0
+    assert scene.backpack.size == config.BASE_INVENTORY_SLOTS
     assert scene.worn_pack is None
     assert len(scene.loot) == 1
     assert scene.loot[0].contents.count(CORE_SHARD) == 5
@@ -223,7 +225,7 @@ def test_a_pile_out_of_reach_is_left_where_it_is():
     scene.player.pos = scene.core.pos  # respawned far away
     scene.update(config.FIXED_DT)
     assert len(scene.loot) == 1
-    assert scene.backpack is None
+    assert scene.backpack is not None and scene.backpack.used == 0
 
 
 def test_a_second_death_leaves_a_second_pile():
@@ -730,6 +732,7 @@ def test_litter_stays_on_the_ground_when_there_is_nowhere_to_put_it():
     scene = PlayScene()
     for i in range(len(scene.hotbar.slots)):
         scene.hotbar.slots[i] = MiningTool()
+    scene.backpack = Container.empty(0)  # no base inventory room either
     twig = next(f for f in scene.fragments if f.kind is TWIG)
     scene.player.pos = pygame.Vector2(twig.pos)
     scene.update(config.FIXED_DT)

@@ -543,7 +543,9 @@ class PlayScene(Scene):
         )
         self.camera.center_on(self.player.pos)
         # No base inventory: without a pack the hotbar is all there is.
-        self.backpack: Container | None = None
+        # The base inventory, grown by whatever pack is worn. Typed as maybe
+        # None only for saves from before it existed; update() fills one in.
+        self.backpack: Container | None = Container.empty(config.BASE_INVENTORY_SLOTS)
         self.worn_pack: ItemKind | None = None  # which pack, so a death can drop it
         self.loot: list[LootPile] = []  # several may be outstanding at once
         self.dropped: list[Dropped] = []  # put down on purpose; see _drop
@@ -632,16 +634,19 @@ class PlayScene(Scene):
                     self.fragments.append(Fragment(pos=spot, kind=kind))
 
     def _wear_if_pack(self, kind: ItemKind | None) -> None:
-        """A pack is worn the moment it is dug up -- it is what holds things.
+        """A pack is worn the moment it is dug up -- it adds its slots.
 
-        A bigger one replaces a smaller one. Swapping without losing what was
-        inside is the grid screen's job.
+        On top of the base inventory, keeping everything already carried. A
+        bigger one replaces a smaller one; a smaller one changes nothing.
         """
         if kind is None or not packs.is_pack(kind):
             return
-        if self.backpack is None or packs.slots_of(kind) > self.backpack.size:
-            self.backpack = Container.empty(packs.slots_of(kind))
-            self.worn_pack = kind
+        size = config.BASE_INVENTORY_SLOTS + packs.slots_of(kind)
+        carried = self.backpack if self.backpack is not None else Container.empty(0)
+        if size <= carried.size:
+            return
+        self.backpack = Container(slots=[*carried.slots, *([None] * (size - carried.size))])
+        self.worn_pack = kind
 
     # --- dropping on purpose ----------------------------------------------
     def _drop(self, slots: list[Any], index: int) -> None:
@@ -727,14 +732,15 @@ class PlayScene(Scene):
                 self._recover(pile)
 
     def _recover(self, pile: LootPile) -> None:
-        """Take back what a death left, if it will fit."""
-        if self.backpack is None:
-            self.backpack, self.worn_pack = pile.contents, pile.pack
-        else:
+        """Take back what a death left: put its pack on, then its goods in."""
+        if pile.pack is not None:
+            self._wear_if_pack(pile.pack)
+            pile.pack = None  # worn now, or a bigger one already is
+        if self.backpack is not None:
             for kind, n in pile.contents.rows():
                 pile.contents.remove(kind, self.backpack.add(kind, n))
-            if pile.contents.used:
-                return  # a smaller pack cannot hold it all -- leave the rest
+        if pile.contents.used:
+            return  # no room for all of it -- leave the rest where it lies
         self.loot.remove(pile)
 
     def _carried(self, kind: ItemKind) -> int:
@@ -1019,6 +1025,9 @@ class PlayScene(Scene):
 
     # --- logic -----------------------------------------------------------
     def update(self, dt: float) -> None:
+        if self.backpack is None:
+            # A save from before the base inventory existed loads without one.
+            self.backpack = Container.empty(config.BASE_INVENTORY_SLOTS)
         # consumed once per step whether or not we are dead, so a press during
         # the respawn wait cannot queue up an action for the frame we come back
         dodge = self._dodge_pressed
@@ -1148,7 +1157,8 @@ class PlayScene(Scene):
             dropped = combat.apply_death_penalty(self.player.pos, self.backpack, self.worn_pack)
             if dropped is not None:
                 self.loot.append(dropped)
-            self.backpack = None
+            # Back to the base inventory, empty: everything went in the pile.
+            self.backpack = Container.empty(config.BASE_INVENTORY_SLOTS)
             self.worn_pack = None
             self._respawn_timer = config.RESPAWN_DELAY
 

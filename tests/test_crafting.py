@@ -42,7 +42,8 @@ def test_crafting_takes_the_inputs_and_hands_back_the_output():
     pack.add(WOOD, 5)
     assert crafting.craft(PICK, pack, hb) is WOOD_PICK
     assert pack.count(WOOD) == 2
-    assert pack.count(WOOD_PICK) == 1
+    assert hb.count(WOOD_PICK) == 1  # a tool goes into the hand, not the bag
+    assert pack.count(WOOD_PICK) == 0
 
 
 def test_crafting_works_with_no_backpack_at_all():
@@ -82,8 +83,13 @@ def test_nowhere_to_put_the_output_means_nothing_is_made():
 
 
 def test_the_output_can_land_in_the_space_the_inputs_free_up():
-    # Spending a full slot of wood leaves room the pickaxe can use.
+    # Spending a full slot of wood leaves room the pickaxe can use. The hand
+    # is full, so the bag is the only place it can go.
+    from game.items.tools import WeaponTool
+
     hb, pack = Hotbar.create(), Container.empty(1)
+    for i in range(len(hb.slots)):
+        hb.slots[i] = WeaponTool()
     pack.add(WOOD, 3)
     assert crafting.craft(PICK, pack, hb) is WOOD_PICK
     assert pack.count(WOOD_PICK) == 1

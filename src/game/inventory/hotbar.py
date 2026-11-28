@@ -1,6 +1,6 @@
 """The five-slot hotbar. It holds tools AND materials, and it is the only thing
 death does not take -- so what sits in it is the player's decision, not the
-game's. Pickups never fill it while a backpack exists.
+game's. Pickups go to the inventory, never into it -- a crafted tool does.
 
 A slot holds a tool, a ``Stack``, or nothing. ``active_tool`` and
 ``active_stack`` each answer for one of those and None for the other, so callers

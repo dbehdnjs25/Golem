@@ -106,10 +106,11 @@ MINING_SWING: Final[float] = 0.45
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
 
 # --- Storage ----------------------------------------------------------------
-# Slots, not weight. One slot holds up to a kind's stack_max of that kind. The
-# backpack is the ONLY place items go: there is no base inventory, so a player
-# without one has the hotbar and nothing else.
+# Slots, not weight. One slot holds up to a kind's stack_max of that kind.
+# Everyone carries a small base inventory; a pack adds its own slots on top of
+# it. A death drops the lot -- base slots, pack and all.
 STACK_MAX_DEFAULT: Final[int] = 64
+BASE_INVENTORY_SLOTS: Final[int] = 5  # carried with no pack at all
 BACKPACK_SLOTS: Final[int] = 20  # the basic pack; better ones hold more
 
 # --- Camera -----------------------------------------------------------------

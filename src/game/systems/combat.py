@@ -282,16 +282,16 @@ def apply_death_penalty(
     backpack: Container | None,
     worn: ItemKind | None,
 ) -> LootPile | None:
-    """Drop the pack and everything in it. Return the pile, or None if bare.
+    """Drop everything carried, and the pack. Return the pile, or None if bare.
 
-    The whole pack, not half of it. An earlier rule dropped half of each stack
-    and kept the rest, which only made sense while a base inventory existed for
-    the kept half to sit in. There is none now: what the player keeps is the
-    hotbar, and what they lose is everything else until they walk back for it.
+    All of it, the base inventory's slots included -- not half of each stack,
+    which an earlier rule did. What the player keeps is the hotbar; what they
+    lose is everything else until they walk back for it.
     """
-    if backpack is None:
+    if worn is None and (backpack is None or not backpack.used):
         return None  # nothing to take: the hotbar is not the penalty's business
-    return LootPile(pos=pygame.Vector2(pos), contents=backpack, pack=worn)
+    contents = backpack if backpack is not None else Container.empty(0)
+    return LootPile(pos=pygame.Vector2(pos), contents=contents, pack=worn)
 
 
 def update_beasts(

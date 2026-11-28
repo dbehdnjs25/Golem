@@ -1,7 +1,8 @@
 """Where a picked-up thing goes.
 
-The backpack takes it. The hotbar only takes it when there is NO backpack at
-all -- not when the backpack is merely full.
+The inventory takes it -- the base slots, plus a pack's if one is worn. The
+hotbar takes it only when there is no inventory at all (code that passes None),
+never when the inventory is merely full.
 
 That asymmetry is the point. The five hotbar slots are the only thing death
 spares, so filling them behind the player's back would spend that protection for

@@ -207,6 +207,12 @@ def test_clearing_the_room_opens_the_chest():
     assert chest.chest_opened
 
 
+def _everything_carried(scene) -> int:
+    """Hand and base inventory together: a pickup goes into the inventory now."""
+    slots = [*scene.hotbar.slots, *(scene.backpack.slots if scene.backpack else [])]
+    return sum(getattr(s, "count", 0) for s in slots if s is not None)
+
+
 def test_a_chest_hands_over_something():
     scene, temple = _walk_in()
     place = temple.interior()
@@ -214,11 +220,11 @@ def test_a_chest_hands_over_something():
     _walk_to(scene, temple, chest.index)
     _clear_the_room(scene)
     learned = len(scene.grimoire.learned)
-    carried = sum(getattr(s, "count", 0) for s in scene.hotbar.slots if s is not None)
+    carried = _everything_carried(scene)
     scene.player.pos.update(temple.pos)
     scene.handle_event(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_e))
     scene.update(config.FIXED_DT)
-    after = sum(getattr(s, "count", 0) for s in scene.hotbar.slots if s is not None)
+    after = _everything_carried(scene)
     assert after > carried or len(scene.grimoire.learned) > learned
 
 

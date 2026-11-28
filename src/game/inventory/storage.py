@@ -1,8 +1,8 @@
 """A grid of slots. One slot holds one ``Stack``; an empty slot holds ``None``.
 
-The backpack is the only one of these the player carries -- there is no base
-inventory. The limit is how many different things fit, never how heavy they
-are; there is no weight system.
+The backpack is the only one of these the player carries: a small base
+inventory that a worn pack adds its slots to. The limit is how many different
+things fit, never how heavy they are; there is no weight system.
 
 Slots are addressable because the player drags things between them. An earlier
 version billed slots from a ``{kind: count}`` dict, which could say HOW MANY

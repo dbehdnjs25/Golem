@@ -4,9 +4,8 @@ Pure functions over injected state, like the rest of ``systems/``. The table of
 what turns into what is ``items/recipes``; this decides whether a player can
 afford a row and moves the goods when they do.
 
-Materials are counted across the pack AND the hotbar, because crafting has to
-work bare-handed -- a player with no backpack has only the hotbar, and the
-first recipes exist precisely for them.
+Materials are counted across the inventory AND the hotbar, so anything carried
+anywhere counts -- the first recipes are made from what a new player picks up.
 
 Spending is all-or-nothing. Taking the wood and then discovering there is no
 stone would evaporate the wood, so nothing moves until everything is known to
@@ -19,6 +18,8 @@ from game.inventory.hotbar import Hotbar
 from game.inventory.storage import Container
 from game.items.item_kinds import ItemKind
 from game.items.recipes import RECIPES, Recipe
+from game.items.staff import STAFF_ITEMS
+from game.items.tools import tool_for
 from game.systems import carrying
 
 
@@ -53,6 +54,22 @@ def available(
     return [(r, affordable(r, backpack, hotbar)) for r in RECIPES if r.station in stations]
 
 
+def _hand_over(kind: ItemKind, n: int, backpack: Container | None, hotbar: Hotbar) -> int:
+    """Put a craft's output away. Return how many went somewhere.
+
+    A tool goes straight into the hand -- the hotbar -- if there is room:
+    there is no using it from the inventory, and with a base inventory always
+    there, the ordinary pickup rule would put every new pickaxe in a bag. Only
+    a full hotbar sends one to the inventory. Everything else is a pickup.
+    """
+    placed = 0
+    if tool_for(kind) is not None or kind in STAFF_ITEMS:
+        placed = hotbar.add(kind, n)
+    if placed < n:
+        placed += carrying.store(kind, n - placed, backpack, hotbar)
+    return placed
+
+
 def craft(recipe: Recipe, backpack: Container | None, hotbar: Hotbar) -> ItemKind | None:
     """Spend the inputs and hand over the output. Return None if nothing happened.
 
@@ -64,7 +81,7 @@ def craft(recipe: Recipe, backpack: Container | None, hotbar: Hotbar) -> ItemKin
         return None
     for kind, n in recipe.inputs:
         spend(kind, n, backpack, hotbar)
-    if carrying.store(recipe.output, recipe.count, backpack, hotbar) == recipe.count:
+    if _hand_over(recipe.output, recipe.count, backpack, hotbar) == recipe.count:
         return recipe.output
     for kind, n in recipe.inputs:  # nowhere to put it -- undo
         carrying.store(kind, n, backpack, hotbar)

@@ -92,7 +92,7 @@ def test_walking_away_and_back_picks_it_up():
     _press(scene, pygame.K_q)
     _walk_away_and_back(scene, pygame.Vector2(scene.dropped[0].pos))
     assert scene.dropped == []
-    assert scene.hotbar.count(STONE) == 5
+    assert scene._carried(STONE) == 5  # back in the hand or the base inventory
 
 
 def test_a_dropped_tool_comes_back_to_an_empty_slot():
@@ -112,6 +112,7 @@ def test_what_does_not_fit_stays_on_the_ground():
     scene.handle_event(pygame.event.Event(pygame.KEYUP, key=pygame.K_LSHIFT))
     for i in range(len(scene.hotbar.slots)):
         scene.hotbar.slots[i] = WeaponTool()  # every slot full of something else
+    scene.backpack = Container.empty(0)  # and nowhere else to put it either
     _walk_away_and_back(scene, pygame.Vector2(scene.dropped[0].pos))
     assert scene.dropped[0].item == Stack(STONE, 5)
 
