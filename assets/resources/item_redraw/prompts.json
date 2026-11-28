@@ -1,7 +1,7 @@
 {
   "tool": "built-in image_gen",
-  "reference": "assets/grassland/objects/tree_base.png",
-  "common": "ONE isolated inventory icon for a handcrafted top-down pixel art survival RPG. The provided basic tree is STYLE REFERENCE only. Match its muted natural colors, 1-pixel dark brown-green outline, crisp pixel clusters and upper-left light. Detailed readable craftsmanship but designed to fit a 48x48 pixel native sprite, enlarged nearest-neighbor. Exactly three flat solid shades per material (base, highlight, shadow), plus dark outline; no gradient, blur, smooth antialias, noise or dithering. Top-down three-quarter view. One centered object or tightly grouped requested cluster, entirety visible with ample transparent margin. True transparent background, no ground, no cast shadow, no frame, no text, no labels, no watermark. Subject: ",
+  "reference": "assets/resources/item_redraw/reference.png",
+  "common": "ONE isolated inventory icon for a handcrafted top-down pixel art survival RPG. The provided basic tree is STYLE REFERENCE only. Match its muted natural colors, 1-pixel dark brown-green outline, crisp pixel clusters and upper-left light. Detailed readable craftsmanship but designed to fit a 32x32 pixel native sprite, enlarged nearest-neighbor. Exactly three flat solid shades per material (base, highlight, shadow), plus dark outline; no gradient, blur, smooth antialias, noise or dithering. Top-down three-quarter view. One centered object or tightly grouped requested cluster, entirety visible with ample transparent margin. True transparent background, no ground, no cast shadow, no frame, no text, no labels, no watermark. Subject: ",
   "items": [
     [
       "core_shard",
@@ -195,5 +195,10 @@
       "potion",
       "a rounded thick glass potion bottle filled with muted rose red liquid, cork stopper and twine neck, restrained solid glass highlight"
     ]
-  ]
+  ],
+  "final_canvas": [
+    32,
+    32
+  ],
+  "processing_note": "Final assets are 32x32 from the original generated renders, not enlarged 16px sprites."
 }

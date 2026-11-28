@@ -4,54 +4,54 @@ local root = app.params.root or "C:/Project/pygame_project/assets/resources/item
 local pc = app.pixelColor
 local outline = {48, 48, 36}
 local specs = {
-  {"core_shard",48,48,{teal={"6FAF9D","B9D8B1","42776F"},ice={"83B9C5","C8E4D9","527D94"}}},
-  {"twig",48,48,{wood={"987148","C2A16B","624D35"}}},
-  {"pebble",48,48,{stone={"898777","BCB89B","585D50"}}},
-  {"grass",48,48,{green={"78914F","B2BC79","4A613C"}}},
-  {"charcoal",48,48,{black={"55544E","827D6A","363C35"}}},
-  {"copper_ingot",48,48,{copper={"B77C50","E0AC72","79543B"}}},
-  {"iron_ingot",48,48,{iron={"9AABA6","D1D4BE","627672"}}},
-  {"gold_ingot",48,48,{gold={"C9A64E","EDD484","897038"}}},
-  {"brass_ingot",48,48,{brass={"AD9757","D6C486","756941"}}},
-  {"steel_ingot",48,48,{steel={"788B94","B4C2C1","4D606A"}}},
-  {"obsidian",48,48,{violet={"826887","B8A1BB","524359"},black={"55544E","827D6A","363C35"}}},
-  {"obsidian_stone",48,48,{stone={"898777","BCB89B","585D50"},violet={"826887","B8A1BB","524359"},black={"55544E","827D6A","363C35"}}},
-  {"frost_crystal",48,48,{ice={"83B9C5","C8E4D9","527D94"}}},
-  {"weathered_stone",48,48,{stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"bog_moss",48,48,{green={"78914F","B2BC79","4A613C"},wood={"987148","C2A16B","624D35"}}},
-  {"thunder_stone",48,48,{gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"crude_axe",48,48,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"wood_pick",48,48,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"stone_pick",48,48,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"copper_pick",48,48,{wood={"987148","C2A16B","624D35"},copper={"B77C50","E0AC72","79543B"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"iron_pick",48,48,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"gold_pick",48,48,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"brass_pick",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"steel_pick",48,48,{wood={"987148","C2A16B","624D35"},steel={"788B94","B4C2C1","4D606A"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"wood_axe",48,48,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"stone_axe",48,48,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"copper_axe",48,48,{wood={"987148","C2A16B","624D35"},copper={"B77C50","E0AC72","79543B"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"iron_axe",48,48,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"gold_axe",48,48,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"brass_axe",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"steel_axe",48,48,{wood={"987148","C2A16B","624D35"},steel={"788B94","B4C2C1","4D606A"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"bench",48,48,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"}}},
-  {"smelter",48,48,{stone={"898777","BCB89B","585D50"},black={"55544E","827D6A","363C35"},ember={"CC803B","EFBE69","895133"}}},
-  {"hearth",48,48,{stone={"898777","BCB89B","585D50"},black={"55544E","827D6A","363C35"},ember={"CC803B","EFBE69","895133"}}},
-  {"fine_bench",48,48,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},brass={"AD9757","D6C486","756941"}}},
-  {"blast_furnace",48,48,{steel={"788B94","B4C2C1","4D606A"},copper={"B77C50","E0AC72","79543B"},ember={"CC803B","EFBE69","895133"}}},
-  {"burnt_forest_detector",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},ember={"CC803B","EFBE69","895133"}}},
-  {"snowfield_detector",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},ice={"83B9C5","C8E4D9","527D94"}}},
-  {"wind_detector",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},teal={"6FAF9D","B9D8B1","42776F"}}},
-  {"bog_detector",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},green={"78914F","B2BC79","4A613C"}}},
-  {"wasteland_detector",48,48,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},ice={"83B9C5","C8E4D9","527D94"}}},
-  {"staff",48,48,{wood={"987148","C2A16B","624D35"},violet={"826887","B8A1BB","524359"},green={"78914F","B2BC79","4A613C"}}},
-  {"worn_pack",48,48,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"leather_pack",48,48,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"}}},
-  {"hide",48,48,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"raw_meat",48,48,{red={"B46A65","DEA18A","794A48"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"cooked_meat",48,48,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
-  {"potion",48,48,{rose={"B5687E","DFA2AA","7D465F"},ice={"83B9C5","C8E4D9","527D94"},wood={"987148","C2A16B","624D35"}}},
+  {"core_shard",32,32,{teal={"6FAF9D","B9D8B1","42776F"},ice={"83B9C5","C8E4D9","527D94"}}},
+  {"twig",32,32,{wood={"987148","C2A16B","624D35"}}},
+  {"pebble",32,32,{stone={"898777","BCB89B","585D50"}}},
+  {"grass",32,32,{green={"78914F","B2BC79","4A613C"}}},
+  {"charcoal",32,32,{black={"55544E","827D6A","363C35"}}},
+  {"copper_ingot",32,32,{copper={"B77C50","E0AC72","79543B"}}},
+  {"iron_ingot",32,32,{iron={"9AABA6","D1D4BE","627672"}}},
+  {"gold_ingot",32,32,{gold={"C9A64E","EDD484","897038"}}},
+  {"brass_ingot",32,32,{brass={"AD9757","D6C486","756941"}}},
+  {"steel_ingot",32,32,{steel={"788B94","B4C2C1","4D606A"}}},
+  {"obsidian",32,32,{violet={"826887","B8A1BB","524359"},black={"55544E","827D6A","363C35"}}},
+  {"obsidian_stone",32,32,{stone={"898777","BCB89B","585D50"},violet={"826887","B8A1BB","524359"},black={"55544E","827D6A","363C35"}}},
+  {"frost_crystal",32,32,{ice={"83B9C5","C8E4D9","527D94"}}},
+  {"weathered_stone",32,32,{stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"bog_moss",32,32,{green={"78914F","B2BC79","4A613C"},wood={"987148","C2A16B","624D35"}}},
+  {"thunder_stone",32,32,{gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"crude_axe",32,32,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"wood_pick",32,32,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"stone_pick",32,32,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"copper_pick",32,32,{wood={"987148","C2A16B","624D35"},copper={"B77C50","E0AC72","79543B"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"iron_pick",32,32,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"gold_pick",32,32,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"brass_pick",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"steel_pick",32,32,{wood={"987148","C2A16B","624D35"},steel={"788B94","B4C2C1","4D606A"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"wood_axe",32,32,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"stone_axe",32,32,{wood={"987148","C2A16B","624D35"},stone={"898777","BCB89B","585D50"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"copper_axe",32,32,{wood={"987148","C2A16B","624D35"},copper={"B77C50","E0AC72","79543B"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"iron_axe",32,32,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"gold_axe",32,32,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"brass_axe",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"steel_axe",32,32,{wood={"987148","C2A16B","624D35"},steel={"788B94","B4C2C1","4D606A"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"bench",32,32,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"}}},
+  {"smelter",32,32,{stone={"898777","BCB89B","585D50"},black={"55544E","827D6A","363C35"},ember={"CC803B","EFBE69","895133"}}},
+  {"hearth",32,32,{stone={"898777","BCB89B","585D50"},black={"55544E","827D6A","363C35"},ember={"CC803B","EFBE69","895133"}}},
+  {"fine_bench",32,32,{wood={"987148","C2A16B","624D35"},iron={"9AABA6","D1D4BE","627672"},brass={"AD9757","D6C486","756941"}}},
+  {"blast_furnace",32,32,{steel={"788B94","B4C2C1","4D606A"},copper={"B77C50","E0AC72","79543B"},ember={"CC803B","EFBE69","895133"}}},
+  {"burnt_forest_detector",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},ember={"CC803B","EFBE69","895133"}}},
+  {"snowfield_detector",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},ice={"83B9C5","C8E4D9","527D94"}}},
+  {"wind_detector",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},teal={"6FAF9D","B9D8B1","42776F"}}},
+  {"bog_detector",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"},green={"78914F","B2BC79","4A613C"}}},
+  {"wasteland_detector",32,32,{wood={"987148","C2A16B","624D35"},gold={"C9A64E","EDD484","897038"},ice={"83B9C5","C8E4D9","527D94"}}},
+  {"staff",32,32,{wood={"987148","C2A16B","624D35"},violet={"826887","B8A1BB","524359"},green={"78914F","B2BC79","4A613C"}}},
+  {"worn_pack",32,32,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"leather_pack",32,32,{wood={"987148","C2A16B","624D35"},brass={"AD9757","D6C486","756941"}}},
+  {"hide",32,32,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"raw_meat",32,32,{red={"B46A65","DEA18A","794A48"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"cooked_meat",32,32,{wood={"987148","C2A16B","624D35"},cream={"C1B38C","E7DBB5","8C8165"}}},
+  {"potion",32,32,{rose={"B5687E","DFA2AA","7D465F"},ice={"83B9C5","C8E4D9","527D94"},wood={"987148","C2A16B","624D35"}}},
 }
 if app.params.key then
   local chosen={}
@@ -69,8 +69,8 @@ end
 -- Preflight the entire batch before writing anything.
 for _,spec in ipairs(specs) do
   assert(exists(root.."/source/"..spec[1]..".png"),"Missing generated source: "..spec[1])
-  assert(not exists(root.."/final/"..spec[1]..".png"),"Refusing to overwrite PNG: "..spec[1])
-  assert(not exists(root.."/final/"..spec[1]..".aseprite"),"Refusing to overwrite Aseprite: "..spec[1])
+  assert(not exists(root.."/final32/"..spec[1]..".png"),"Refusing to overwrite PNG: "..spec[1])
+  assert(not exists(root.."/final32/"..spec[1]..".aseprite"),"Refusing to overwrite Aseprite: "..spec[1])
 end
 for _,spec in ipairs(specs) do
   local key,w,h,materials=table.unpack(spec)
@@ -125,8 +125,8 @@ for _,spec in ipairs(specs) do
     layer.name=c.name
     sprite:newCel(layer,1,images[i],Point(0,0))
   end
-  sprite:saveAs(root.."/final/"..key..".aseprite")
-  sprite:saveCopyAs(root.."/final/"..key..".png")
+  sprite:saveAs(root.."/final32/"..key..".aseprite")
+  sprite:saveCopyAs(root.."/final32/"..key..".png")
   print(key..": "..w.."x"..h..", "..#colors.." monochrome layers")
   sprite:close()
 end

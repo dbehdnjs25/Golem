@@ -1,0 +1,250 @@
+{
+  "canvas": [
+    32,
+    32
+  ],
+  "frame_count": 1,
+  "reference": "reference.png",
+  "files": [
+    {
+      "key": "core_shard",
+      "png": "../items/core_shard.png",
+      "aseprite": "../items/core_shard.aseprite"
+    },
+    {
+      "key": "twig",
+      "png": "../items/twig.png",
+      "aseprite": "../items/twig.aseprite"
+    },
+    {
+      "key": "pebble",
+      "png": "../items/pebble.png",
+      "aseprite": "../items/pebble.aseprite"
+    },
+    {
+      "key": "grass",
+      "png": "../items/grass.png",
+      "aseprite": "../items/grass.aseprite"
+    },
+    {
+      "key": "charcoal",
+      "png": "../items/charcoal.png",
+      "aseprite": "../items/charcoal.aseprite"
+    },
+    {
+      "key": "copper_ingot",
+      "png": "../items/copper_ingot.png",
+      "aseprite": "../items/copper_ingot.aseprite"
+    },
+    {
+      "key": "iron_ingot",
+      "png": "../items/iron_ingot.png",
+      "aseprite": "../items/iron_ingot.aseprite"
+    },
+    {
+      "key": "gold_ingot",
+      "png": "../items/gold_ingot.png",
+      "aseprite": "../items/gold_ingot.aseprite"
+    },
+    {
+      "key": "brass_ingot",
+      "png": "../items/brass_ingot.png",
+      "aseprite": "../items/brass_ingot.aseprite"
+    },
+    {
+      "key": "steel_ingot",
+      "png": "../items/steel_ingot.png",
+      "aseprite": "../items/steel_ingot.aseprite"
+    },
+    {
+      "key": "obsidian",
+      "png": "../items/obsidian.png",
+      "aseprite": "../items/obsidian.aseprite"
+    },
+    {
+      "key": "obsidian_stone",
+      "png": "../items/obsidian_stone.png",
+      "aseprite": "../items/obsidian_stone.aseprite"
+    },
+    {
+      "key": "frost_crystal",
+      "png": "../items/frost_crystal.png",
+      "aseprite": "../items/frost_crystal.aseprite"
+    },
+    {
+      "key": "weathered_stone",
+      "png": "../items/weathered_stone.png",
+      "aseprite": "../items/weathered_stone.aseprite"
+    },
+    {
+      "key": "bog_moss",
+      "png": "../items/bog_moss.png",
+      "aseprite": "../items/bog_moss.aseprite"
+    },
+    {
+      "key": "thunder_stone",
+      "png": "../items/thunder_stone.png",
+      "aseprite": "../items/thunder_stone.aseprite"
+    },
+    {
+      "key": "crude_axe",
+      "png": "../items/crude_axe.png",
+      "aseprite": "../items/crude_axe.aseprite"
+    },
+    {
+      "key": "wood_pick",
+      "png": "../items/wood_pick.png",
+      "aseprite": "../items/wood_pick.aseprite"
+    },
+    {
+      "key": "stone_pick",
+      "png": "../items/stone_pick.png",
+      "aseprite": "../items/stone_pick.aseprite"
+    },
+    {
+      "key": "copper_pick",
+      "png": "../items/copper_pick.png",
+      "aseprite": "../items/copper_pick.aseprite"
+    },
+    {
+      "key": "iron_pick",
+      "png": "../items/iron_pick.png",
+      "aseprite": "../items/iron_pick.aseprite"
+    },
+    {
+      "key": "gold_pick",
+      "png": "../items/gold_pick.png",
+      "aseprite": "../items/gold_pick.aseprite"
+    },
+    {
+      "key": "brass_pick",
+      "png": "../items/brass_pick.png",
+      "aseprite": "../items/brass_pick.aseprite"
+    },
+    {
+      "key": "steel_pick",
+      "png": "../items/steel_pick.png",
+      "aseprite": "../items/steel_pick.aseprite"
+    },
+    {
+      "key": "wood_axe",
+      "png": "../items/wood_axe.png",
+      "aseprite": "../items/wood_axe.aseprite"
+    },
+    {
+      "key": "stone_axe",
+      "png": "../items/stone_axe.png",
+      "aseprite": "../items/stone_axe.aseprite"
+    },
+    {
+      "key": "copper_axe",
+      "png": "../items/copper_axe.png",
+      "aseprite": "../items/copper_axe.aseprite"
+    },
+    {
+      "key": "iron_axe",
+      "png": "../items/iron_axe.png",
+      "aseprite": "../items/iron_axe.aseprite"
+    },
+    {
+      "key": "gold_axe",
+      "png": "../items/gold_axe.png",
+      "aseprite": "../items/gold_axe.aseprite"
+    },
+    {
+      "key": "brass_axe",
+      "png": "../items/brass_axe.png",
+      "aseprite": "../items/brass_axe.aseprite"
+    },
+    {
+      "key": "steel_axe",
+      "png": "../items/steel_axe.png",
+      "aseprite": "../items/steel_axe.aseprite"
+    },
+    {
+      "key": "bench",
+      "png": "../items/bench.png",
+      "aseprite": "../items/bench.aseprite"
+    },
+    {
+      "key": "smelter",
+      "png": "../items/smelter.png",
+      "aseprite": "../items/smelter.aseprite"
+    },
+    {
+      "key": "hearth",
+      "png": "../items/hearth.png",
+      "aseprite": "../items/hearth.aseprite"
+    },
+    {
+      "key": "fine_bench",
+      "png": "../items/fine_bench.png",
+      "aseprite": "../items/fine_bench.aseprite"
+    },
+    {
+      "key": "blast_furnace",
+      "png": "../items/blast_furnace.png",
+      "aseprite": "../items/blast_furnace.aseprite"
+    },
+    {
+      "key": "burnt_forest_detector",
+      "png": "../items/burnt_forest_detector.png",
+      "aseprite": "../items/burnt_forest_detector.aseprite"
+    },
+    {
+      "key": "snowfield_detector",
+      "png": "../items/snowfield_detector.png",
+      "aseprite": "../items/snowfield_detector.aseprite"
+    },
+    {
+      "key": "wind_detector",
+      "png": "../items/wind_detector.png",
+      "aseprite": "../items/wind_detector.aseprite"
+    },
+    {
+      "key": "bog_detector",
+      "png": "../items/bog_detector.png",
+      "aseprite": "../items/bog_detector.aseprite"
+    },
+    {
+      "key": "wasteland_detector",
+      "png": "../items/wasteland_detector.png",
+      "aseprite": "../items/wasteland_detector.aseprite"
+    },
+    {
+      "key": "staff",
+      "png": "../items/staff.png",
+      "aseprite": "../items/staff.aseprite"
+    },
+    {
+      "key": "worn_pack",
+      "png": "../items/worn_pack.png",
+      "aseprite": "../items/worn_pack.aseprite"
+    },
+    {
+      "key": "leather_pack",
+      "png": "../items/leather_pack.png",
+      "aseprite": "../items/leather_pack.aseprite"
+    },
+    {
+      "key": "hide",
+      "png": "../items/hide.png",
+      "aseprite": "../items/hide.aseprite"
+    },
+    {
+      "key": "raw_meat",
+      "png": "../items/raw_meat.png",
+      "aseprite": "../items/raw_meat.aseprite"
+    },
+    {
+      "key": "cooked_meat",
+      "png": "../items/cooked_meat.png",
+      "aseprite": "../items/cooked_meat.aseprite"
+    },
+    {
+      "key": "potion",
+      "png": "../items/potion.png",
+      "aseprite": "../items/potion.aseprite"
+    }
+  ]
+}

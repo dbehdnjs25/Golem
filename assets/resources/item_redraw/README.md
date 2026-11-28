@@ -3,14 +3,37 @@
 48 inventory icons generated with built-in image_gen, using the user-edited
 grassland tree as the visual reference. All prompts are recorded in prompts.json.
 Existing files were backed up in backup/ before replacement. Source renders live
-in source/; final 48x48 PNGs and monochrome-layer Aseprite files live in final/.
+in source/; final 32x32 PNGs and monochrome-layer Aseprite files live in final32/.
 The matching files in ../items/ are the runtime assets once installed.
 
 Each material has one Base, Highlight and Shadow color, plus a shared outline.
 prepare.py exports available sources through native Aseprite Lua. validate.py
 checks layer colors, exact PNG/native equality, transparency and silhouette edges.
-preview.lua produces a sheet: each cell shows 2x native size and actual 32px UI size.
+preview32.lua produces a sheet: each cell shows 3x native size and actual 32px native size.
 No src/ or tiles32/ changes are part of this task.
+
+Tools face upper-left with the handle ending lower-right. align_tools.lua
+mirrors the six originally opposite sprites from direction_backup/ and preserves
+their monochrome layers. Run it before preview32.lua if rebuilding those sources.
+
+All 15 axes/pickaxes share the entire identical wooden shaft, including its top
+protrusion, joint and lower end. unify_full_handles.lua is the current tool builder;
+it supersedes the partial-grip shared_handles.lua. It combines one shaft template
+with axe/pick head shapes and material palettes. Handle / Base, Highlight, Shadow
+layers are separate from Head layers. shared_handle.png is the common pixel template.
+Run unify_full_handles.lua before preview32.lua when rebuilding these tools.
+The shared shaft now follows the original crude axe's irregular wooden stick,
+including bark shading and a thicker rounded end, rather than a straight rod.
+The head/shaft joint has two shaded cord turns and a small knot, stored in
+separate monochrome Binding layers. This covers the abrupt seam at the socket.
+
+The requested final size is 32x32, superseding the earlier 48px and 16px drafts.
+final/ and final16/ contain intermediate versions, not the delivered icons.
+The final crude axe generation prompt is recorded in crude_axe_prompt.txt.
+The final hide, cooked_meat and potion prompts are recorded in final_prompts.txt.
+Run prepare.py, Aseprite -b --script preview32.lua, then install32.py to export,
+validate and install. The installer preserves replaced files in before_install32/.
+Do not run the older ../build_item_icons.py: it recreates the superseded procedural icons.
 
 Preview/atlas order, left to right then top to bottom:
 

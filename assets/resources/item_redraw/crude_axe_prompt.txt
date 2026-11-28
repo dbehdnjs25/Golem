@@ -1,0 +1,3 @@
+Built-in image_gen; reference: reference.png; transparent_background: true.
+
+Create one transparent 16x16 pixel-art inventory icon, shown enlarged with crisp square pixels: a basic stone woodworking hatchet for gathering timber in a cozy woodland crafting game. A small blunt irregular grey stone tool head tied with tan cord to a short brown wooden handle. Isolated object, no people, no action. Match the reference tree's muted natural greens/browns and dark outline. 3 solid colors per material, large clear pixel clusters, no gradients, no background, no text. Make a simple readable diagonal silhouette within a 16 by 16 logical pixel grid.

@@ -53,7 +53,7 @@ def materials(key):
     return special[key]
 
 def write_jobs():
-    (HERE / "final").mkdir(exist_ok=True)
+    (HERE / "final32").mkdir(exist_ok=True)
     source=(HERE / "conversion_template.lua").read_text(encoding="utf-8")
     start=source.index("local specs = {")
     end=source.index("if app.params.key then",start)
@@ -61,25 +61,25 @@ def write_jobs():
     for key,_ in ITEMS:
         names=list(dict.fromkeys(materials(key)))
         mats=",".join(n+'={'+",".join('"'+c+'"' for c in PALETTES[n])+'}' for n in names)
-        rows.append('  {"'+key+'",48,48,{'+mats+'}},')
+        rows.append('  {"'+key+'",32,32,{'+mats+'}},')
     source=source[:start]+"local specs = {\n"+"\n".join(rows)+"\n}\n"+source[end:]
     source=source.replace("C:/Project/pygame_project/assets/entities",HERE.as_posix())
     source=source.replace("/remaining/source/","/source/")
-    source=source.replace('root.."/"..spec[1]', 'root.."/final/"..spec[1]')
-    source=source.replace('root.."/"..key', 'root.."/final/"..key')
+    source=source.replace('root.."/"..spec[1]', 'root.."/final32/"..spec[1]')
+    source=source.replace('root.."/"..key', 'root.."/final32/"..key')
     source=source.replace("assets/entities/remaining/prepare.lua","assets/resources/item_redraw/prepare.lua")
     (HERE / "prepare.lua").write_text(source,encoding="utf-8")
 
 def export_available():
     for key,_ in ITEMS:
-        if (HERE/"source"/f"{key}.png").exists() and not (HERE/"final"/f"{key}.png").exists():
+        if (HERE/"source"/f"{key}.png").exists() and not (HERE/"final32"/f"{key}.png").exists():
             result=subprocess.run([str(ASEPRITE),"-b","--script-param",f"key={key}",
                                    "--script",str(HERE/"prepare.lua")],
                                   capture_output=True,text=True,creationflags=0x08000000)
-            if result.returncode or not (HERE/"final"/f"{key}.png").exists():
+            if result.returncode or not (HERE/"final32"/f"{key}.png").exists():
                 raise RuntimeError(f"{key}: {result.stdout} {result.stderr}")
             print("Exported",key,flush=True)
-    print("Ready",sum((HERE/"final"/f"{k}.png").exists() for k,_ in ITEMS),"/",len(ITEMS),flush=True)
+    print("Ready",sum((HERE/"final32"/f"{k}.png").exists() for k,_ in ITEMS),"/",len(ITEMS),flush=True)
 
 if __name__=="__main__":
     write_jobs()

@@ -5,8 +5,8 @@ import zlib
 
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parent / "final"
-SIZES = {'core_shard': (48, 48), 'twig': (48, 48), 'pebble': (48, 48), 'grass': (48, 48), 'charcoal': (48, 48), 'copper_ingot': (48, 48), 'iron_ingot': (48, 48), 'gold_ingot': (48, 48), 'brass_ingot': (48, 48), 'steel_ingot': (48, 48), 'obsidian': (48, 48), 'obsidian_stone': (48, 48), 'frost_crystal': (48, 48), 'weathered_stone': (48, 48), 'bog_moss': (48, 48), 'thunder_stone': (48, 48), 'crude_axe': (48, 48), 'wood_pick': (48, 48), 'stone_pick': (48, 48), 'copper_pick': (48, 48), 'iron_pick': (48, 48), 'gold_pick': (48, 48), 'brass_pick': (48, 48), 'steel_pick': (48, 48), 'wood_axe': (48, 48), 'stone_axe': (48, 48), 'copper_axe': (48, 48), 'iron_axe': (48, 48), 'gold_axe': (48, 48), 'brass_axe': (48, 48), 'steel_axe': (48, 48), 'bench': (48, 48), 'smelter': (48, 48), 'hearth': (48, 48), 'fine_bench': (48, 48), 'blast_furnace': (48, 48), 'burnt_forest_detector': (48, 48), 'snowfield_detector': (48, 48), 'wind_detector': (48, 48), 'bog_detector': (48, 48), 'wasteland_detector': (48, 48), 'staff': (48, 48), 'worn_pack': (48, 48), 'leather_pack': (48, 48), 'hide': (48, 48), 'raw_meat': (48, 48), 'cooked_meat': (48, 48), 'potion': (48, 48)}
+ROOT = Path(__file__).resolve().parent / "final32"
+SIZES = {'core_shard': (32, 32), 'twig': (32, 32), 'pebble': (32, 32), 'grass': (32, 32), 'charcoal': (32, 32), 'copper_ingot': (32, 32), 'iron_ingot': (32, 32), 'gold_ingot': (32, 32), 'brass_ingot': (32, 32), 'steel_ingot': (32, 32), 'obsidian': (32, 32), 'obsidian_stone': (32, 32), 'frost_crystal': (32, 32), 'weathered_stone': (32, 32), 'bog_moss': (32, 32), 'thunder_stone': (32, 32), 'crude_axe': (32, 32), 'wood_pick': (32, 32), 'stone_pick': (32, 32), 'copper_pick': (32, 32), 'iron_pick': (32, 32), 'gold_pick': (32, 32), 'brass_pick': (32, 32), 'steel_pick': (32, 32), 'wood_axe': (32, 32), 'stone_axe': (32, 32), 'copper_axe': (32, 32), 'iron_axe': (32, 32), 'gold_axe': (32, 32), 'brass_axe': (32, 32), 'steel_axe': (32, 32), 'bench': (32, 32), 'smelter': (32, 32), 'hearth': (32, 32), 'fine_bench': (32, 32), 'blast_furnace': (32, 32), 'burnt_forest_detector': (32, 32), 'snowfield_detector': (32, 32), 'wind_detector': (32, 32), 'bog_detector': (32, 32), 'wasteland_detector': (32, 32), 'staff': (32, 32), 'worn_pack': (32, 32), 'leather_pack': (32, 32), 'hide': (32, 32), 'raw_meat': (32, 32), 'cooked_meat': (32, 32), 'potion': (32, 32)}
 
 
 def validate(key, size):
@@ -57,8 +57,8 @@ def validate(key, size):
     bounds = alpha.getbbox()
     assert bounds and bounds[0] >= 2 and bounds[1] >= 2
     assert bounds[2] <= width - 2 and bounds[3] <= height - 2
-    for y in range(1, height - 1):
-        for x in range(1, width - 1):
+    for y in range(1, height - 2):
+        for x in range(1, width - 2):
             if alpha.getpixel((x, y)) and any(
                 not alpha.getpixel(p)
                 for p in ((x-1, y), (x+1, y), (x, y-1), (x, y+1))

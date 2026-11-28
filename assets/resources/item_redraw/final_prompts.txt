@@ -1,0 +1,5 @@
+Tool: built-in image_gen. Reference: reference.png. Transparent background: true.
+Common: One isolated 32x32 logical-pixel inventory icon enlarged nearest neighbor. Match reference tree style: muted natural palette, crisp dark brown outline, upper-left light, three flat solid shades per material, readable pixel clusters, no gradients or antialiasing. Subject: [subject]. Centered complete object, transparent background, no text or scene.
+hide: a folded tan leather hide crafting material, irregular curled edges, subtle fur fringe
+cooked_meat: a roasted brown food portion on a small bone, golden scored surface
+potion: a round glass healing potion bottle filled with muted rose-red liquid, cork stopper and twine neck
