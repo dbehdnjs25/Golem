@@ -59,40 +59,60 @@ def update_mining(
     backpack: Container | None,
     hotbar: Hotbar,
     player: Player | None = None,
-) -> tuple[str, list[ItemKind]]:
+    swing_timer: float = 0.0,
+) -> tuple[str, list[ItemKind], float]:
+    """One step of digging: a blow on its beat, not a continuous drain.
+
+    Holding the key used to be a hose -- the number went down for as long as
+    it was down, with nothing to see or hear. A tool lands on a beat now. The
+    bite each blow takes is the rate times the beat, so a run of digging
+    costs what it always did and only the shape of it changed.
+
+    The timer runs down whether or not the key is held and whether or not the
+    blow found anything, so letting go and pressing again buys nothing. The
+    first blow of a press lands at once: a tool that waited before its first
+    swing would feel broken rather than weighty.
+    """
+    swing_timer = max(0.0, swing_timer - dt)
     if not held:
-        return IDLE, []
+        return IDLE, [], swing_timer
     if active_tool is None:
         active_tool = BARE_HAND  # nothing in hand is still a pair of hands
     if not isinstance(active_tool, MiningTool):
-        return IDLE, []
+        return IDLE, [], swing_timer
     in_reach = targets(facing, player_pos, fragments, active_tool.range)
     if not in_reach:
-        return OUT_OF_RANGE, []
-    rate = active_tool.dps
-    if player is not None and player.winded:
-        # Running out slows digging rather than stopping it. Blocked outright,
-        # someone who came out for one bagful would be left standing still.
-        rate *= config.WINDED_MINING_RATE
+        return OUT_OF_RANGE, [], swing_timer
     refused: str | None = None
-    dug = False
-    collected: list[ItemKind] = []
+    reachable = False
     for target in in_reach:
         why = _refusal(active_tool, target.kind, backpack, hotbar)
         if why is not None:
             refused = refused or why  # the nearest one's reason is the one shown
+        else:
+            reachable = True
+    if not reachable:
+        return refused or OUT_OF_RANGE, [], swing_timer
+    if swing_timer > 0:
+        return MINING, [], swing_timer  # mid-beat: the arm is still coming round
+
+    bite = active_tool.dps * config.MINING_SWING
+    if player is not None and player.winded:
+        # Running out slows digging rather than stopping it. Blocked outright,
+        # someone who came out for one bagful would be left standing still.
+        bite *= config.WINDED_MINING_RATE
+    collected: list[ItemKind] = []
+    for target in in_reach:
+        if _refusal(active_tool, target.kind, backpack, hotbar) is not None:
             continue
-        dug = True
-        if target.damage(rate * dt):
+        if target.damage(bite):
             got = yield_of(target.kind)
             carrying.store(got, 1, backpack, hotbar)
             fragments.remove(target)
             collected.append(got)
-    if not dug:
-        return refused or OUT_OF_RANGE, []
     if player is not None:
-        player.drain(config.MINING_DRAIN * dt)
-    return (COLLECTED if collected else MINING), collected
+        player.drain(config.MINING_DRAIN * config.MINING_SWING)
+    return (COLLECTED if collected else MINING), collected, config.MINING_SWING
 
 
 def _refusal(

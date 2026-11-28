@@ -27,7 +27,7 @@ def _backpack() -> Container:
 
 def test_idle_when_not_held() -> None:
     frags = [Fragment(pos=pygame.Vector2(1010, 1000))]
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         1 / 60,
         active_tool=MiningTool(),
         held=False,
@@ -43,7 +43,7 @@ def test_idle_when_not_held() -> None:
 def test_channelling_reduces_hp() -> None:
     frag = Fragment(pos=pygame.Vector2(1010, 1000))
     frags = [frag]
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         1.0,
         active_tool=MiningTool(),
         held=True,
@@ -54,14 +54,17 @@ def test_channelling_reduces_hp() -> None:
         hotbar=Hotbar.create(),
     )
     assert status == mining.MINING
-    assert frag.hp == config.FRAGMENT_HP - config.MINING_DPS
+    # One blow, not a second's worth of drain: the bite is the rate times
+    # the beat, however long the step handed in was.
+    assert frag.hp == config.FRAGMENT_HP - config.MINING_DPS * config.MINING_SWING
 
 
 def test_depletion_collects_into_backpack() -> None:
-    frag = Fragment(pos=pygame.Vector2(1010, 1000), hp=config.MINING_DPS)  # one tick to deplete
+    # One blow to deplete: the bite is the rate times the beat.
+    frag = Fragment(pos=pygame.Vector2(1010, 1000), hp=config.MINING_DPS * config.MINING_SWING)
     frags = [frag]
     bp = _backpack()
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         1.0,
         active_tool=MiningTool(),
         held=True,
@@ -79,7 +82,7 @@ def test_depletion_collects_into_backpack() -> None:
 def test_out_of_range_does_no_damage() -> None:
     frag = Fragment(pos=pygame.Vector2(2000, 1000))  # far from player
     frags = [frag]
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         1.0,
         active_tool=MiningTool(),
         held=True,
@@ -98,7 +101,7 @@ def test_full_backpack_blocks_and_preserves_fragment() -> None:
     frags = [frag]
     bp = Container.empty(1)  # one slot
     bp.add(CORE_SHARD, CORE_SHARD.stack_max)  # now full
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         1.0,
         active_tool=MiningTool(),
         held=True,
@@ -115,7 +118,7 @@ def test_full_backpack_blocks_and_preserves_fragment() -> None:
 def _swing(tool, kind, dt=1.0):
     """One swing at a node of ``kind``. Returns (status, node)."""
     node = Fragment(pos=pygame.Vector2(PLAYER.x + 10, PLAYER.y), kind=kind)
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         dt,
         active_tool=tool,
         held=True,
@@ -268,7 +271,7 @@ def test_digging_still_works_with_nobody_holding_the_pick():
     # The player is optional: plenty of tests and tools swing without one, and
     # a stamina rule must not make the whole call need a body.
     node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE)
-    status, _ = mining.update_mining(
+    status, _, _timer = mining.update_mining(
         0.01,
         active_tool=tools.pickaxe(grades.STONE_G),
         held=True,
@@ -285,7 +288,7 @@ def test_digging_still_works_with_nobody_holding_the_pick():
 
 
 def _dig(nodes, facing=RIGHT, tool=None, dt=0.1):
-    return mining.update_mining(
+    status, got, _timer = mining.update_mining(
         dt,
         active_tool=tool or tools.pickaxe(grades.STONE_G),
         held=True,
@@ -295,6 +298,7 @@ def _dig(nodes, facing=RIGHT, tool=None, dt=0.1):
         backpack=_backpack(),
         hotbar=Hotbar.create(),
     )
+    return status, got
 
 
 def test_a_node_behind_the_player_is_left_alone():
@@ -434,3 +438,99 @@ def test_the_bar_is_drawn_over_everything_that_would_hide_it():
         for y in range(surface.get_height())
     )
     assert found
+
+
+# --- the beat -------------------------------------------------------------
+
+
+def _beat(nodes, dt, steps, tool=None):
+    """Dig for ``steps`` fixed frames, carrying the timer the way the scene does."""
+    timer = 0.0
+    blows = 0
+    for _ in range(steps):
+        before = nodes[0].hp if nodes else 0.0
+        _, _got, timer = mining.update_mining(
+            dt,
+            active_tool=tool or tools.pickaxe(grades.STONE_G),
+            held=True,
+            facing=RIGHT,
+            player_pos=pygame.Vector2(PLAYER),
+            fragments=nodes,
+            backpack=_backpack(),
+            hotbar=Hotbar.create(),
+            swing_timer=timer,
+        )
+        if nodes and nodes[0].hp < before:
+            blows += 1
+    return blows
+
+
+def test_the_first_blow_of_a_press_lands_at_once():
+    # A tool that waited before its first swing would feel broken, not weighty.
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    assert _beat([node], config.FIXED_DT, 1) == 1
+
+
+def test_holding_the_key_does_not_land_a_blow_every_frame():
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    frames = int(config.MINING_SWING / config.FIXED_DT)
+    assert _beat([node], config.FIXED_DT, frames) == 1
+
+
+def test_the_next_blow_comes_on_the_beat():
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    frames = int(config.MINING_SWING * 3 / config.FIXED_DT) + 1
+    assert _beat([node], config.FIXED_DT, frames) == 3
+
+
+def test_a_whole_bagful_costs_what_it_always_did():
+    # The shape changed, not the price: rate times beat, landed on the beat.
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    seconds = 3.0
+    _beat([node], config.FIXED_DT, int(seconds / config.FIXED_DT))
+    taken = 9999.0 - node.hp
+    expected = tools.pickaxe(grades.STONE_G).dps * seconds
+    assert abs(taken - expected) <= tools.pickaxe(grades.STONE_G).dps * config.MINING_SWING
+
+
+def test_letting_go_and_pressing_again_buys_nothing():
+    # The timer runs down whether or not the key is held, so tapping is not
+    # a faster pickaxe.
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    timer, blows = 0.0, 0
+    for n in range(int(config.MINING_SWING / config.FIXED_DT)):
+        before = node.hp
+        _, _got, timer = mining.update_mining(
+            config.FIXED_DT,
+            active_tool=tools.pickaxe(grades.STONE_G),
+            held=n % 2 == 0,  # tapping as fast as a hand can
+            facing=RIGHT,
+            player_pos=pygame.Vector2(PLAYER),
+            fragments=[node],
+            backpack=_backpack(),
+            hotbar=Hotbar.create(),
+            swing_timer=timer,
+        )
+        if node.hp < before:
+            blows += 1
+    assert blows == 1
+
+
+def test_a_missed_beat_is_not_stored_up():
+    # Standing away from everything for a while must not bank blows.
+    node = Fragment(pos=pygame.Vector2(PLAYER), kind=STONE, hp=9999.0)
+    timer = 0.0
+    for _ in range(60):
+        _, _got, timer = mining.update_mining(
+            config.FIXED_DT,
+            active_tool=tools.pickaxe(grades.STONE_G),
+            held=False,
+            facing=RIGHT,
+            player_pos=pygame.Vector2(PLAYER),
+            fragments=[node],
+            backpack=_backpack(),
+            hotbar=Hotbar.create(),
+            swing_timer=timer,
+        )
+    assert timer == 0.0
+    assert _beat([node], config.FIXED_DT, 2) == 1

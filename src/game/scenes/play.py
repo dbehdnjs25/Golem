@@ -589,6 +589,7 @@ class PlayScene(Scene):
         # towards the camera, so the first swing lands somewhere visible.
         self.facing = pygame.Vector2(0, 1)
         self._swing_left = 0.0  # how long the last sweep stays drawn
+        self._dig_timer = 0.0  # time until the tool can land its next blow
         # Menu cursors. The belongings screen starts on the hand that is
         # selected; the recipe list starts at the top.
         self.grid_cursor: tuple[str, int] = (grid.HOTBAR, 0)
@@ -1192,7 +1193,7 @@ class PlayScene(Scene):
         self.facing = aim.face(move, self.facing)
 
         tool = self.hotbar.active_tool
-        _, mined = mining.update_mining(
+        _, mined, self._dig_timer = mining.update_mining(
             dt,
             active_tool=tool,
             held=self._action_held,
@@ -1202,6 +1203,7 @@ class PlayScene(Scene):
             backpack=self.backpack,
             hotbar=self.hotbar,
             player=self.player,
+            swing_timer=self._dig_timer,
         )
         for kind in mined:
             self._wear_if_pack(kind)

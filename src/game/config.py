@@ -97,7 +97,12 @@ NODE_BAR_LIFT: Final[int] = 14  # how far above the node it floats
 NODE_BAR_COLOR: Final[tuple[int, int, int]] = (226, 214, 150)
 NODE_BAR_BACK: Final[tuple[int, int, int]] = (38, 34, 30)
 FRAGMENT_RADIUS: Final[float] = 10.0
-MINING_DPS: Final[float] = 40.0  # hp per second while channelling
+MINING_DPS: Final[float] = 40.0  # the rate a blow is worked out from
+# Seconds between blows. Digging used to be a continuous drain, which made a
+# pickaxe a hose: hold the key and the number went down. A tool that lands on
+# a beat is a tool you can hear, and the bite each blow takes is the rate
+# times this, so a run of digging costs what it always did.
+MINING_SWING: Final[float] = 0.45
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance
 
 # --- Storage ----------------------------------------------------------------
