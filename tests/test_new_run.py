@@ -5,9 +5,8 @@ keeps its fixed seed, so a player learns the land; what is IN it changes.
 A scene built with no seed is the fixed one the rest of the tests rely on.
 """
 
-import pygame
-
 import game.__main__ as entry
+from game.scenes.menu import MenuScene
 from game.scenes.play import PlayScene
 from game.world.biomes import BIOMES
 
@@ -48,16 +47,15 @@ def test_no_seed_is_the_fixed_world_the_tests_use():
     assert _insides(PlayScene()) == _insides(PlayScene())
 
 
-def test_starting_the_game_picks_a_fresh_seed(monkeypatch):
-    started: list[PlayScene] = []
+def test_starting_the_game_opens_the_main_menu(monkeypatch):
+    # The fresh seed is now picked when a new game is started from a slot;
+    # tests/test_menu.py holds that.
+    started: list[object] = []
 
     class FakeGame:
-        def run(self, scene: PlayScene) -> None:
+        def run(self, scene: object) -> None:
             started.append(scene)
 
     monkeypatch.setattr(entry, "Game", FakeGame)
     entry.main()
-    entry.main()
-    assert len(started) == 2
-    assert _trees(started[0]) != _trees(started[1])
-    assert isinstance(started[0].player.pos, pygame.Vector2)
+    assert isinstance(started[0], MenuScene)

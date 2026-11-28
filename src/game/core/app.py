@@ -57,6 +57,10 @@ class Game:
             for _ in range(self.timestep.steps(frame_time)):
                 self.scenes.update(self.timestep.dt)
             self._render()
+        # Leave every scene properly, top down, even when the window was
+        # closed: leaving is when a game saves itself.
+        while not self.scenes.is_empty:
+            self.scenes.pop()
         pygame.quit()
 
     def _process_events(self) -> None:

@@ -34,3 +34,6 @@ assets/grassland/preview.html
 
 # the player's own key bindings (written by the F1 screen)
 controls.json
+
+# Save games (python -m game writes these)
+saves/

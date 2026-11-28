@@ -11,7 +11,7 @@ from typing import Any
 
 import pygame
 
-from game import config
+from game import config, saves
 from game.core import controls as ctl
 from game.core.controls import Controls
 from game.core.scene import Scene
@@ -126,7 +126,7 @@ QUIT = "quit"
 _PAUSE_ROWS: tuple[tuple[str, str], ...] = (
     (RESUME, "계속하기"),
     (KEYS, "키 설정"),
-    (QUIT, "게임 종료"),
+    (QUIT, "저장하고 나가기"),
 )
 
 # Korean first, since every item name is Korean; the fallbacks are only so a
@@ -475,6 +475,8 @@ class PlayScene(Scene):
         controls: Controls | None = None,
         controls_path: Path | None = None,
         seed: int | None = None,
+        save_slot: int | None = None,
+        save_folder: Path = saves.SAVE_DIR,
     ) -> None:
         # Which key does what. Saved only when a path is given, so a test
         # that rebinds a key never writes the player's settings file.
@@ -489,6 +491,11 @@ class PlayScene(Scene):
         # (biomes, temple sites, lava) keeps the fixed 1234 above. A new game
         # passes a fresh one; None is the fixed run every test is written for.
         self.seed = seed
+        # Which save slot this game lives in. Saved into it when the scene is
+        # left -- quitting from the Esc menu or closing the window. None (every
+        # test) saves nothing.
+        self.save_slot = save_slot
+        self.save_folder = save_folder
         run = random.Random(seed) if seed is not None else None
         if run is not None:
             for temple in self.temples:
@@ -859,7 +866,39 @@ class PlayScene(Scene):
             elif choice == KEYS:
                 self._open_settings()
             elif choice == QUIT and self.manager is not None:
-                self.manager.pop()
+                self.manager.pop()  # on_exit saves
+
+    # --- saving ------------------------------------------------------------
+    def on_exit(self) -> None:
+        if self.save_slot is not None:
+            saves.save(self, self.save_slot, self.save_folder)
+
+    def use_controls(self, controls: Controls, path: Path | None) -> None:
+        """Hand a loaded game the player's current keys, not the saved ones."""
+        self.controls = controls
+        self.controls_path = path
+
+    # What a save leaves out: pictures (rebuilt from disk), the scene stack,
+    # the keyboard's state and the key settings (the player's, not the game's).
+    _NOT_SAVED = ("floor", "_field", "manager", "controls", "controls_path", "_held_keys")
+
+    def __getstate__(self) -> dict[str, object]:
+        state = dict(self.__dict__)
+        for name in self._NOT_SAVED:
+            state.pop(name, None)
+        return state
+
+    def __setstate__(self, state: dict[str, object]) -> None:
+        self.__dict__.update(state)
+        self.floor = Floor(self.world)
+        self._field = None
+        self.controls = Controls()
+        self.controls_path = None
+        self._held_keys = set()
+        # Left from the Esc menu, so it was open; arrive back in the game.
+        self.pause_open = False
+        self.settings_open = False
+        self.settings_waiting = False
 
     # --- the key settings screen -----------------------------------------
     def _open_settings(self) -> None:
