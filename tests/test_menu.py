@@ -142,3 +142,22 @@ def test_the_menu_draws(tmp_path):
     for screen in (TITLE, SLOTS, ERASE):
         menu.screen = screen
         menu.draw(surface)
+
+
+def test_a_new_day_saves_the_game_by_itself(tmp_path):
+    # So a crash or a pulled plug costs at most the day in progress.
+    game = PlayScene(seed=4, save_slot=0, save_folder=tmp_path)
+    game.clock.elapsed = config.DAY_TOTAL - config.FIXED_DT / 2
+    assert saves.info(0, tmp_path) is None
+    game.update(config.FIXED_DT)
+    assert game.clock.day == 2
+    assert saves.info(0, tmp_path).day == 2
+
+
+def test_a_game_with_no_slot_never_writes(tmp_path, monkeypatch):
+    writes: list[int] = []
+    monkeypatch.setattr(saves, "save", lambda *a, **k: writes.append(1))
+    game = PlayScene(seed=4)
+    game.clock.elapsed = config.DAY_TOTAL - config.FIXED_DT / 2
+    game.update(config.FIXED_DT)
+    assert writes == []

@@ -1037,7 +1037,13 @@ class PlayScene(Scene):
         if self.ending.over:
             return
 
+        day = self.clock.day
         self.clock.update(dt)
+        if self.clock.day != day and self.save_slot is not None:
+            # Autosave at dawn, so a crash costs at most the day in progress.
+            # The one place update writes to disk, and only for a game in a
+            # slot -- a test's scene has none.
+            saves.save(self, self.save_slot, self.save_folder)
         self.note_left = max(0.0, self.note_left - dt)
         self._tick_loot(dt)
         self._tick_dropped(dt)
