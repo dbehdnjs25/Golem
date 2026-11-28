@@ -52,6 +52,7 @@ from game.items.item_kinds import (
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_ITEMS, Staff
 from game.items.tools import BARE_HAND, MiningTool, WeaponTool
+from game.render import art
 from game.render.floor import Floor
 from game.render.resources import resource_image, world_resource_image
 from game.render.trees import has_own_shadow, tree_image, tree_shadow
@@ -519,6 +520,7 @@ class PlayScene(Scene):
         self.chasms = chasms.place(self.world, self.rng)
         self.ice = ice.place(self.world, self.rng)
         self.floor = Floor(self.world)  # the tiled ground, built in chunks
+        self._art_frames = 0  # draws since the last look for re-saved art
         # What the tricks leave behind. One pair of lists for the whole field:
         # a supreme glyph and a boss write to the same ground, because they
         # are the same trick thrown from different ends.
@@ -1199,6 +1201,13 @@ class PlayScene(Scene):
 
     # --- rendering -------------------------------------------------------
     def draw(self, surface: pygame.Surface) -> None:
+        # About once a second, look for art saved since it was read (the
+        # asset library exports a PNG the moment its Aseprite file is saved),
+        # so an edit shows up in the running game without a restart.
+        self._art_frames += 1
+        if self._art_frames >= config.FPS:
+            self._art_frames = 0
+            art.refresh()
         # The world is drawn onto a FIELD the size the zoom asks for, then
         # scaled down onto the window. Drawing it straight at screen size and
         # scaling each shape instead would mean a zoom factor at every radius,

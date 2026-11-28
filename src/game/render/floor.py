@@ -21,6 +21,7 @@ from __future__ import annotations
 import pygame
 
 from game import config
+from game.render import art
 from game.systems.camera import Camera
 from game.world import biomes, tiles
 from game.world.map import WorldMap
@@ -46,12 +47,14 @@ class Floor:
         self._atlas: dict[str, pygame.Surface] = {}
         self._chunks: dict[tuple[int, int], pygame.Surface] = {}
         self.builds = 0  # chunks built since the scene opened; for diagnostics
+        self._generation = art.generation  # see render/art: saved tiles are reread
 
     # --- atlases ---------------------------------------------------------
     def _sheet_surface(self, key: str) -> pygame.Surface:
         """One biome's atlas, loaded on first use and kept."""
         if key not in self._atlas:
             sheet = tiles.SHEETS[key]
+            art.note(sheet.image)
             if not sheet.image.is_file():
                 # Deleted (from the asset library, say): that means "stop using
                 # it", so the biome is painted its flat colour, not a crash.
@@ -78,6 +81,11 @@ class Floor:
 
     # --- chunks ----------------------------------------------------------
     def _chunk(self, chunk_x: int, chunk_y: int) -> pygame.Surface:
+        if self._generation != art.generation:
+            # A tile atlas was saved: every chunk was built from the old one.
+            self._atlas.clear()
+            self._chunks.clear()
+            self._generation = art.generation
         key = (chunk_x, chunk_y)
         if key in self._chunks:
             return self._chunks[key]

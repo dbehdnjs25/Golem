@@ -14,6 +14,7 @@ from game.items.item_kinds import (
     ZINC_ORE,
     ItemKind,
 )
+from game.render import art
 from game.render.trees import tree_image
 
 _ROOT = Path(__file__).resolve().parents[3] / "assets" / "resources"
@@ -31,15 +32,22 @@ _ICON_FILES = {
     for kind in CATALOGUE
 }
 _images: dict[tuple[ItemKind, int], pygame.Surface] = {}
+_generation = art.generation  # see render/art: a saved picture is read again
 
 
 def resource_image(kind: ItemKind, size: int = 32) -> pygame.Surface | None:
     """Return alpha art at the requested size, or None for unillustrated kinds."""
+    global _generation
+    if _generation != art.generation:
+        _images.clear()
+        _generation = art.generation
     filename = _FILES.get(kind)
     key = (kind, size)
     if key not in _images:
         # Hand-finished resource art takes precedence over catalogue placeholders.
         icon_path = _ROOT / filename if filename is not None else _ICON_FILES.get(kind)
+        if icon_path is not None:
+            art.note(icon_path)
         if icon_path is not None and icon_path.is_file():
             image = pygame.image.load(str(icon_path))
             if pygame.display.get_surface() is not None:

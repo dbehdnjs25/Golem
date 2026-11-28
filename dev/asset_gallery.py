@@ -9,6 +9,9 @@ asset's details on the right. Files that share a name (``tree.aseprite`` and
 - Click selects and shows details; Ctrl+click adds, Shift+click selects a run.
 - Double-click (or Enter) opens the Aseprite source.
 - Right-click for open / show in Explorer / copy path / delete.
+- Saving an Aseprite file exports its PNG again by itself, when that PNG is a
+  plain export of the first frame (at 1x or a whole-number scale); the game
+  then picks it up within a second. Hand-made PNGs are left alone.
 - Arrows move, Ctrl+A selects all shown, Delete sends to the Recycle Bin,
   Ctrl+F searches, Esc clears, F5 reloads. The list also reloads by itself
   the moment files change on disk, and a newly saved asset is selected.
@@ -28,6 +31,7 @@ import contextlib
 import ctypes
 import functools
 import hashlib
+import json
 import os
 import queue
 import re
@@ -422,11 +426,64 @@ class Loader:
         self.results: queue.Queue[tuple[tuple[str, float], Image.Image | str]] = queue.Queue()
         self.asked: set[tuple[str, float]] = set()
         self.compares: queue.Queue[tuple[str, float, str, float]] = queue.Queue()
-        self.compared: queue.Queue[tuple[tuple[str, float, str, float], bool]] = queue.Queue()
+        self.compared: queue.Queue[tuple[tuple[str, float, str, float], bool, int | None]] = (
+            queue.Queue()
+        )
         self.compare_asked: set[tuple[str, float, str, float]] = set()
+        # Which PNGs are a plain export of their Aseprite file's first frame,
+        # and at what whole-number scale -- learned by comparing pixels while
+        # the two still match, and kept across runs. Only these are exported
+        # again by themselves when the source is saved; a PNG that was cut,
+        # cropped or touched up by hand is never written over.
+        self.links_path = self.cache / "export-links.json"
+        self.links: dict[str, int] = {}
+        with contextlib.suppress(OSError, ValueError):
+            self.links = {
+                str(k): int(v) for k, v in json.loads(self.links_path.read_text()).items()
+            }
+        self.exports: queue.Queue[tuple[str, str, int]] = queue.Queue()
+        self.exported: queue.Queue[tuple[str, str | None]] = queue.Queue()
+        self.export_asked: set[tuple[str, float]] = set()
         for _ in range(3):
             threading.Thread(target=self._work, daemon=True).start()
         threading.Thread(target=self._compare_work, daemon=True).start()
+        threading.Thread(target=self._export_work, daemon=True).start()
+
+    def remember(self, source: str, image: str, scale: int) -> None:
+        key = f"{source}|{image}"
+        if self.links.get(key) != scale:
+            self.links[key] = scale
+            with contextlib.suppress(OSError):
+                self.links_path.write_text(json.dumps(self.links, ensure_ascii=False))
+
+    def export_again(self, source: str, source_time: float, image: str) -> bool:
+        """Queue re-exporting ``image`` from a freshly saved ``source``, if the
+        two are known to be a plain export. False if they are not."""
+        scale = self.links.get(f"{source}|{image}")
+        if scale is None or (source, source_time) in self.export_asked:
+            return False
+        self.export_asked.add((source, source_time))
+        self.exports.put((source, image, scale))
+        return True
+
+    def _export_work(self) -> None:
+        while True:
+            source, image, scale = self.exports.get()
+            args = [str(ASEPRITE), "--batch", "--frame-range", "0,0", source]
+            if scale > 1:
+                args += ["--scale", str(scale)]
+            args += ["--save-as", image]
+            try:
+                subprocess.run(
+                    args,
+                    check=True,
+                    capture_output=True,
+                    timeout=60,
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                )
+                self.exported.put((Path(image).name, None))
+            except Exception as error:  # reported in the status line, never raised
+                self.exported.put((Path(image).name, str(error) or type(error).__name__))
 
     def compare(self, pair: tuple[str, float, str, float]) -> None:
         if pair not in self.compare_asked:
@@ -443,9 +500,18 @@ class Loader:
                 # A different size is a scaled export (trees are drawn at half
                 # size and doubled), not an out-of-date one: not flagged.
                 differs = drawn.size == exported.size and drawn.tobytes() != exported.tobytes()
+                link: int | None = None
+                if drawn.size == exported.size:
+                    link = None if differs else 1
+                else:
+                    k = exported.width // max(1, drawn.width)
+                    big = (drawn.width * k, drawn.height * k)
+                    if k > 1 and exported.size == big:
+                        grown = drawn.resize(big, Image.Resampling.NEAREST)
+                        link = k if grown.tobytes() == exported.tobytes() else None
             except Exception:
-                differs = False  # cannot tell -- do not cry wolf
-            self.compared.put((pair, differs))
+                differs, link = False, None  # cannot tell -- do not cry wolf
+            self.compared.put((pair, differs, link))
 
     def ask(self, stamp: tuple[str, float]) -> None:
         if stamp not in self.asked:
@@ -2168,9 +2234,25 @@ class Gallery:
         compared = False
         try:
             while True:
-                pair, differs = self.loader.compared.get_nowait()
+                pair, differs, link = self.loader.compared.get_nowait()
                 self.differs[pair] = differs
                 compared = True
+                source, source_time, image, image_time = pair
+                if link is not None:
+                    self.loader.remember(source, image, link)
+                elif source_time > image_time and image.lower().endswith(".png"):
+                    # The source was saved after its PNG and they no longer
+                    # match: export it again, so the game sees the edit.
+                    self.loader.export_again(source, source_time, image)
+        except queue.Empty:
+            pass
+        try:
+            while True:
+                name, error = self.loader.exported.get_nowait()
+                if error is None:
+                    self._say(f"저장 반영: {name} 을(를) 다시 내보냈어요")
+                else:
+                    self._say(f"{name} 내보내기 실패: {error[:80]}")
         except queue.Empty:
             pass
         if compared:
