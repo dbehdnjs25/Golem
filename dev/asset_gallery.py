@@ -2178,10 +2178,16 @@ class Gallery:
                 + "\n".join(sorted({stand_in(a.category) for a in used}))
                 + "\n게임은 그대로 실행돼요. 다음에 게임을 켤 때부터 적용돼요.",
             ).pack(fill="x", padx=18, pady=(12, 0))
+        # The buttons are packed FIRST, against the bottom edge. Packed last,
+        # they got whatever the file list left over -- and a Text asks for 24
+        # lines, so they got nothing and the dialog had no way to confirm.
+        buttons = tk.Frame(dialog, bg="#141416")
+        buttons.pack(side="bottom", fill="x", padx=18, pady=(0, 18))
         body = tk.Frame(dialog, bg="#141416")
         body.pack(fill="both", expand=True, padx=18, pady=12)
         listing = tk.Text(
             body,
+            height=6,  # a floor, not a size: it grows into whatever room is left
             wrap="none",
             bg="#1c1c1f",
             fg="#d0d0d6",
@@ -2194,8 +2200,6 @@ class Gallery:
         listing.pack(fill="both", expand=True)
         listing.insert("1.0", "\n".join(p.relative_to(ROOT).as_posix() for p in targets))
         listing.configure(state="disabled")
-        buttons = tk.Frame(dialog, bg="#141416")
-        buttons.pack(fill="x", padx=18, pady=(0, 18))
 
         def execute() -> None:
             dialog.destroy()
