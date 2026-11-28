@@ -31,7 +31,12 @@ _images: dict[ItemKind, tuple[pygame.Surface, ...]] = {}
 _missing: set[ItemKind] = set()  # art not on disk; drawn plain until it appears
 _own_shadow: dict[ItemKind, bool] = {}
 _generation = art.generation  # the caches above hold pictures from this one
-WORLD_TREE_SIZE = (96, 128)
+# The 48x64 sources, drawn at two and a quarter times. Two was a touch small
+# against the player; three towered. The quarter costs a little crispness --
+# some source pixels come out two wide and some three -- but the scaling is
+# nearest-neighbour and happens once at load, so it reads as a slightly
+# uneven line rather than as blur.
+WORLD_TREE_SIZE = (108, 144)
 _shadow: pygame.Surface | None = None
 
 
@@ -39,7 +44,7 @@ def tree_shadow() -> pygame.Surface:
     """A flat ground shadow anchors the larger tree without blurring its sprite."""
     global _shadow
     if _shadow is None:
-        _shadow = pygame.Surface((56, 16), pygame.SRCALPHA)
+        _shadow = pygame.Surface((63, 18), pygame.SRCALPHA)  # grown with the tree
         pygame.draw.ellipse(_shadow, (24, 32, 20, 64), _shadow.get_rect())
     return _shadow
 
