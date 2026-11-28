@@ -94,7 +94,7 @@ def recover_wasteland(source):
 def main():
     files = {
         "trees": ("bog", "burnt_forest", "snowfield", "wind_plateau"),
-        "grassland/objects": ("tree_base",),
+        "grassland/objects": ("grassland_tree",),
         "resources": ("stone", "wood", "copper_ore", "iron_ore", "gold_ore", "zinc_ore"),
     }
     for folder, names in files.items():
@@ -115,7 +115,8 @@ def main():
             with Image.open(path) as sheet:
                 assert sheet.size == (232, 60), "Unexpected hotbar layout"
                 left = 4 + 44*index
-                sheet.crop((left, 10, left+40, 50)).save(ui/f"{name}.png")
+                # The top ornament starts at y=8; include it and 2px padding.
+                sheet.crop((left, 6, left+40, 50)).save(ui/f"{name}.png")
 
     for name, size in {
         "stamina_bar": (136, 9), "dodge_bar": (136, 5),
