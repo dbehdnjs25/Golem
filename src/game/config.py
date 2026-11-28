@@ -178,7 +178,6 @@ WARD_COLOR: Final[tuple[int, int, int]] = (120, 220, 255)
 PEDESTAL_COLOR: Final[tuple[int, int, int]] = (150, 150, 165)
 NIGHT_DARKNESS: Final[int] = 150  # alpha of the night overlay, 0-255
 LOOT_COLOR: Final[tuple[int, int, int]] = (245, 200, 90)
-BLOCKED_COLOR: Final[tuple[int, int, int]] = (230, 90, 90)  # ringed when out of reach
 # How far in from the edge an off-screen pointer sits.
 COMPASS_MARGIN: Final[float] = 34.0
 LOOT_RADIUS: Final[float] = 16.0

@@ -51,7 +51,7 @@ from game.items.item_kinds import (
 )
 from game.items.recipes import STATION_OF, Recipe
 from game.items.staff import STAFF_ITEMS, Staff
-from game.items.tools import BARE_HAND, MiningTool, WeaponTool
+from game.items.tools import WeaponTool
 from game.render import art
 from game.render.floor import Floor
 from game.render.resources import resource_image, world_resource_image
@@ -1894,24 +1894,18 @@ class PlayScene(Scene):
                 pygame.draw.circle(surface, config.WHITE, at, config.STATION_RADIUS + 3, 2)
 
     def _draw_nodes(self, surface: pygame.Surface) -> None:
-        """Resource sprites or coloured nodes, with a ring on the one aimed at.
+        """Resource sprites or coloured nodes, and nothing drawn around them.
 
-        The ring is red when the tool in hand cannot take it. Without that,
-        being under-equipped looks exactly like the game ignoring the click.
+        Nodes in reach used to get a ring (red when the tool could not take
+        them). With the ground evenly wooded it lit up around the player
+        everywhere they walked, so it went. That ring was also the only sign
+        a node refuses the tool in hand; nothing replaces it yet.
 
         A node that yields something OTHER than itself is drawn with a fleck of
         what is in it. Only the obsidian stone by the lava does that today, and
         without the fleck it reads as an ordinary dark pebble -- a poor look for
         the one thing that opens the whole second ladder.
         """
-        # An empty hand still reaches for litter, so it gets a reach too.
-        tool = self.hotbar.active_tool or BARE_HAND
-        in_reach = (
-            mining.targets(self.facing, self.player.pos, self.fragments, tool.range)
-            if isinstance(tool, MiningTool)
-            else []
-        )
-        aimed = {id(node) for node in in_reach}
         for node in sorted(self.fragments, key=lambda fragment: fragment.pos.y):
             at = self.camera.world_to_screen(node.pos)
             tree = tree_image(node.kind, node.pos)
@@ -1933,15 +1927,6 @@ class PlayScene(Scene):
             if held is not node.kind:
                 pygame.draw.circle(surface, held.color, at, config.FRAGMENT_RADIUS * 0.45)
                 pygame.draw.circle(surface, config.OBSIDIAN_GLINT, at, config.FRAGMENT_RADIUS * 0.2)
-            if id(node) in aimed:
-                usable = mining.can_take(tool, node.kind)
-                ring = config.WHITE if usable else config.BLOCKED_COLOR
-                radius = (
-                    art.get_width() / 2 + 2
-                    if art is not None and tree is None
-                    else config.FRAGMENT_RADIUS + 4
-                )
-                pygame.draw.circle(surface, ring, at, radius, 2)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
         """The ward's rim, or the empty pedestal waiting for the shards."""
