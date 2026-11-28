@@ -23,13 +23,25 @@ class Fragment:
     # spawner's, and let go once the player is far enough away.
     grove: bool = False
 
+    # Full health when it was first struck. Trees and ore are not worth the
+    # same number of swings, and a bar has to be a share of something.
+    whole: float = config.FRAGMENT_HP
+
     @property
     def is_depleted(self) -> bool:
         return self.hp <= 0
+
+    @property
+    def worked(self) -> float:
+        """How much of it has been taken, 0 to 1. Nothing shown at 0."""
+        if self.whole <= 0:
+            return 0.0
+        return max(0.0, min(1.0, 1.0 - self.hp / self.whole))
 
     def damage(self, amount: float) -> bool:
         """Reduce hp by ``amount``. Return True only on the call that depletes it."""
         if self.is_depleted:
             return False
+        self.whole = max(self.whole, self.hp)
         self.hp -= amount
         return self.is_depleted

@@ -352,3 +352,85 @@ def test_wind_is_paid_once_however_many_are_dug():
         return player.max_stamina - player.stamina
 
     assert spent(1) == spent(3)
+
+
+# --- the node shows how far through it is --------------------------------
+
+
+def test_an_untouched_node_shows_nothing():
+    # An untouched world must not be covered in gauges.
+    from game.entities.fragment import Fragment
+
+    assert Fragment(pos=pygame.Vector2(0, 0)).worked == 0.0
+
+
+def test_a_struck_node_is_part_way_through():
+    from game.entities.fragment import Fragment
+
+    node = Fragment(pos=pygame.Vector2(0, 0))
+    node.damage(node.hp / 2)
+    assert 0.4 < node.worked < 0.6
+
+
+def test_a_spent_node_is_all_the_way_through():
+    from game.entities.fragment import Fragment
+
+    node = Fragment(pos=pygame.Vector2(0, 0))
+    node.damage(node.hp)
+    assert node.worked == 1.0
+
+
+def test_a_tougher_node_measures_against_its_own_health():
+    # Trees and ore are not worth the same number of swings, and a bar has to
+    # be a share of something.
+    from game.entities.fragment import Fragment
+
+    big = Fragment(pos=pygame.Vector2(0, 0), hp=200.0)
+    big.damage(100.0)
+    assert 0.4 < big.worked < 0.6
+
+
+def test_the_bar_never_runs_backwards():
+    from game.entities.fragment import Fragment
+
+    node = Fragment(pos=pygame.Vector2(0, 0))
+    node.damage(10.0)
+    once = node.worked
+    node.damage(10.0)
+    assert node.worked > once
+
+
+def test_the_bar_is_drawn_over_everything_that_would_hide_it():
+    # It was swallowed twice: by the canopy of the tree further down the
+    # screen, and by the red reach-fan of the tool denting it.
+    import pygame as pg
+
+    from game import config as cfg
+    from game.core import controls as ctl
+    from game.items.item_kinds import CRUDE_AXE, WOOD
+    from game.scenes.play import PlayScene
+
+    scene = PlayScene()
+    scene.hotbar.slots[0] = None
+    scene.hotbar.add(CRUDE_AXE, 1)
+    scene.hotbar.select(0)
+    tree = min(
+        (f for f in scene.fragments if f.kind is WOOD),
+        key=lambda f: scene.player.pos.distance_to(f.pos),
+    )
+    scene.handle_event(pg.event.Event(pg.KEYDOWN, key=scene.controls.keys_for(ctl.ACTION)[0]))
+    for _ in range(int(1.0 / cfg.FIXED_DT)):
+        scene.player.pos.update(tree.pos - pg.Vector2(40, 0))
+        scene.facing.update(1, 0)
+        scene.update(cfg.FIXED_DT)
+    scene.camera.center_on(scene.player.pos)
+    assert tree.worked > 0
+
+    surface = pg.Surface(cfg.SCREEN_SIZE)
+    scene.draw(surface)
+    found = any(
+        surface.get_at((x, y))[:3] == cfg.NODE_BAR_COLOR
+        for x in range(surface.get_width())
+        for y in range(surface.get_height())
+    )
+    assert found

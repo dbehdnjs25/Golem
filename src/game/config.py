@@ -89,6 +89,13 @@ PLAYER_RADIUS: Final[float] = 14.0
 
 # --- Mining / fragments -----------------------------------------------------
 FRAGMENT_HP: Final[float] = 60.0
+# A bar over a node that is being worked on. Nothing is drawn until the first
+# blow lands, so an untouched world is not covered in gauges.
+NODE_BAR_WIDTH: Final[int] = 34
+NODE_BAR_HEIGHT: Final[int] = 5
+NODE_BAR_LIFT: Final[int] = 14  # how far above the node it floats
+NODE_BAR_COLOR: Final[tuple[int, int, int]] = (226, 214, 150)
+NODE_BAR_BACK: Final[tuple[int, int, int]] = (38, 34, 30)
 FRAGMENT_RADIUS: Final[float] = 10.0
 MINING_DPS: Final[float] = 40.0  # hp per second while channelling
 MINING_RANGE: Final[float] = 96.0  # player-to-fragment distance

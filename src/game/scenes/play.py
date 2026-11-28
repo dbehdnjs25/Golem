@@ -1338,6 +1338,7 @@ class PlayScene(Scene):
         self._draw_tricks(surface)  # over the floor, under everything alive
         self._draw_boss(surface)  # under the player, who must never be hidden
         self._draw_hitboxes(surface)
+        self._draw_node_bars(surface)  # over the reach-fan that is denting them
         at = self.camera.world_to_screen(self.player.pos)
         pygame.draw.circle(surface, config.PLAYER_COLOR, at, self.player.radius)
         self._draw_facing(surface, at)
@@ -1927,6 +1928,37 @@ class PlayScene(Scene):
             if held is not node.kind:
                 pygame.draw.circle(surface, held.color, at, config.FRAGMENT_RADIUS * 0.45)
                 pygame.draw.circle(surface, config.OBSIDIAN_GLINT, at, config.FRAGMENT_RADIUS * 0.2)
+
+    def _draw_node_bars(self, surface: pygame.Surface) -> None:
+        """Every node being worked on, over the top of everything in the world.
+
+        A second pass, and a late one. Drawn with the node it belongs to, a
+        bar was swallowed twice over: by the canopy of whatever tree stood
+        further down the screen, and by the red reach-fan of the very tool
+        that was putting the dent in it.
+        """
+        for node in self.fragments:
+            if node.worked > 0:
+                self._draw_worked(surface, node, self.camera.world_to_screen(node.pos))
+
+    def _draw_worked(self, surface: pygame.Surface, node: Fragment, at: pygame.Vector2) -> None:
+        """How far through a node is, while it is being worked on.
+
+        A tree takes two and a half seconds of swinging and showed nothing at
+        all for them: no chips, no bar, no change. Holding the key at a tree
+        that was in fact coming down was indistinguishable from holding it at
+        one the axe could not touch, and the honest conclusion to draw from
+        that is that the game is broken.
+        """
+        share = node.worked
+        if share <= 0:
+            return
+        wide = config.NODE_BAR_WIDTH
+        top = at.y - config.FRAGMENT_RADIUS - config.NODE_BAR_LIFT
+        back = pygame.Rect(round(at.x - wide / 2), round(top), wide, config.NODE_BAR_HEIGHT)
+        pygame.draw.rect(surface, config.NODE_BAR_BACK, back)
+        done = pygame.Rect(back.left, back.top, round(wide * (1 - share)), back.height)
+        pygame.draw.rect(surface, config.NODE_BAR_COLOR, done)
 
     def _draw_ward(self, surface: pygame.Surface) -> None:
         """The ward's rim, or the empty pedestal waiting for the shards."""
