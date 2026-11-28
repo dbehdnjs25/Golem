@@ -1,0 +1,10 @@
+{
+  "canvas": [32, 32],
+  "anchor": [16, 30],
+  "sheet": "player_sheet.png",
+  "aseprite": "player.aseprite",
+  "directions": ["down", "up", "left", "right"],
+  "frames_per_direction": 1,
+  "animation": "idle",
+  "runtime_integrated": false
+}
